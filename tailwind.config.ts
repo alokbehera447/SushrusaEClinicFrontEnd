@@ -63,14 +63,26 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Medical theme colors
-				medical: {
-					blue: '#007BFF',
-					'blue-light': '#4DA8DA',
-					green: '#00B894',
-					'green-light': '#00D2A4',
-					gray: '#6C757D',
-					'gray-light': '#F8F9FA'
+				// Modern theme colors
+				earth: {
+					green: '#4CAF50',
+					'green-light': '#81C784',
+					'green-dark': '#388E3C'
+				},
+				sand: {
+					warm: '#FFF8E1',
+					'warm-dark': '#FFF3C4'
+				},
+				orange: {
+					deep: '#FF7043',
+					'deep-light': '#FF8A65',
+					'deep-dark': '#F4511E'
+				},
+				midnight: '#1C1C1C',
+				aqua: {
+					DEFAULT: '#00B8D4',
+					light: '#26C6DA',
+					dark: '#0097A7'
 				}
 			},
 			borderRadius: {
@@ -112,16 +124,29 @@ export default {
 					'100%': {
 						transform: 'translateX(0)'
 					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.6s ease-out',
-				'slide-in': 'slide-in 0.5s ease-out'
+				'slide-in': 'slide-in 0.5s ease-out',
+				'float': 'float 3s ease-in-out infinite'
 			},
 			fontFamily: {
 				'sans': ['Inter', 'system-ui', 'sans-serif'],
+			},
+			boxShadow: {
+				'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
+				'modern': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
 			}
 		}
 	},
