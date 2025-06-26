@@ -7,72 +7,79 @@ const HowItWorksSection = () => {
     {
       step: "01",
       icon: UserPlus,
-      title: "Register & Profile Setup",
-      description: "Create your secure account and complete your health profile in minutes",
-      color: "medical-blue"
+      title: "Create Your Profile",
+      description: "Set up your secure health profile in under 3 minutes with our guided process"
     },
     {
       step: "02", 
       icon: Video,
-      title: "Consult with Doctors",
-      description: "Book appointments and connect with certified healthcare professionals",
-      color: "medical-green"
+      title: "Connect with Doctors",
+      description: "Book consultations and meet with certified healthcare professionals instantly"
     },
     {
       step: "03",
       icon: FileText,
-      title: "Get Your Prescription",
-      description: "Receive digital prescriptions and access your medical records instantly",
-      color: "medical-blue"
+      title: "Receive Care",
+      description: "Get digital prescriptions, treatment plans, and access your complete health records"
     }
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-24 bg-gradient-to-br from-sand-warm/30 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            How It Works
+        <div className="text-center mb-20 space-y-6">
+          <div className="inline-flex items-center space-x-3 bg-earth-green/10 px-6 py-3 rounded-full border border-earth-green/20">
+            <div className="w-2 h-2 bg-earth-green rounded-full"></div>
+            <span className="text-sm font-semibold text-earth-green tracking-wide">SIMPLE PROCESS</span>
+          </div>
+          
+          <h2 className="text-4xl md:text-5xl font-bold text-midnight leading-tight">
+            Get Started in
+            <span className="text-earth-green block">Three Easy Steps</span>
           </h2>
-          <p className="text-lg text-medical-gray max-w-2xl mx-auto">
-            Getting started with SUSHRUSA eClinic is simple and straightforward. 
-            Follow these three easy steps to begin your digital healthcare journey.
+          
+          <p className="text-xl text-midnight/70 max-w-3xl mx-auto leading-relaxed">
+            Our streamlined process makes accessing quality healthcare simple, 
+            fast, and completely secure.
           </p>
         </div>
 
         <div className="relative">
-          {/* Steps */}
-          <div className="grid md:grid-cols-3 gap-8 relative">
+          <div className="grid md:grid-cols-3 gap-12 relative">
             {steps.map((step, index) => (
-              <div key={index} className="text-center relative">
-                {/* Step Number */}
-                <div className="relative mb-8">
-                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                    step.color === 'medical-blue' ? 'bg-medical-blue' : 'bg-medical-green'
-                  }`}>
-                    <step.icon className="w-10 h-10 text-white" />
+              <div key={index} className="text-center relative group">
+                {/* Step Card */}
+                <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-10 shadow-soft hover:shadow-modern transition-all duration-500 hover:-translate-y-2">
+                  {/* Step Number */}
+                  <div className="relative mb-8">
+                    <div className="w-24 h-24 bg-gradient-to-br from-earth-green to-aqua rounded-2xl flex items-center justify-center mx-auto shadow-modern">
+                      <step.icon className="w-12 h-12 text-white" />
+                    </div>
+                    <div className="absolute -top-3 -right-3 bg-midnight text-white rounded-xl w-12 h-8 flex items-center justify-center font-bold text-sm">
+                      {step.step}
+                    </div>
                   </div>
-                  <div className="absolute -top-2 -right-2 bg-white border-4 border-gray-100 rounded-full w-10 h-10 flex items-center justify-center">
-                    <span className="text-sm font-bold text-medical-gray">{step.step}</span>
-                  </div>
-                </div>
 
-                {/* Content */}
-                <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                <p className="text-medical-gray">{step.description}</p>
+                  {/* Content */}
+                  <h3 className="text-2xl font-bold mb-4 text-midnight group-hover:text-earth-green transition-colors duration-300">
+                    {step.title}
+                  </h3>
+                  <p className="text-midnight/70 leading-relaxed text-lg">
+                    {step.description}
+                  </p>
+                </div>
 
                 {/* Arrow for desktop */}
                 {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-8 -right-4 z-10">
-                    <ArrowRight className="w-8 h-8 text-medical-gray/30" />
+                  <div className="hidden md:block absolute top-16 -right-6 z-10">
+                    <div className="w-12 h-12 bg-aqua/10 rounded-full flex items-center justify-center">
+                      <ArrowRight className="w-6 h-6 text-aqua" />
+                    </div>
                   </div>
                 )}
               </div>
             ))}
           </div>
-
-          {/* Connecting line for desktop */}
-          <div className="hidden md:block absolute top-10 left-1/6 right-1/6 h-0.5 bg-medical-gray/20 -z-10"></div>
         </div>
       </div>
     </section>

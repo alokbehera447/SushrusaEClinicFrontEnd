@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   User, 
   Calendar, 
@@ -16,111 +16,73 @@ const ServicesSection = () => {
     {
       icon: User,
       title: "Patient Registration",
-      description: "Quick and secure patient onboarding with digital health profiles",
-      color: "earth-green"
+      description: "Quick and secure digital onboarding with comprehensive health profiles"
     },
     {
       icon: Calendar,
-      title: "Appointment Booking",
-      description: "Easy scheduling with real-time availability and automated reminders",
-      color: "aqua"
+      title: "Smart Scheduling",
+      description: "AI-powered appointment booking with real-time availability"
     },
     {
       icon: Video,
       title: "Video Consultations",
-      description: "High-quality video calls with healthcare professionals",
-      color: "earth-green"
+      description: "HD video calls with certified healthcare professionals"
     },
     {
       icon: FileText,
-      title: "ePrescription",
-      description: "Digital prescriptions with direct pharmacy integration",
-      color: "orange-deep"
+      title: "Digital Prescriptions",
+      description: "Instant e-prescriptions with direct pharmacy integration"
     },
     {
       icon: Database,
-      title: "Medical Records",
-      description: "Secure storage and access to complete health history",
-      color: "aqua"
+      title: "Health Records",
+      description: "Secure cloud storage for complete medical history"
     },
     {
       icon: Pill,
-      title: "Pharmacy Fulfillment",
-      description: "Seamless prescription fulfillment and medication delivery",
-      color: "earth-green"
-    },
-    {
-      icon: Settings,
-      title: "Admin Dashboard",
-      description: "Comprehensive management tools for healthcare providers",
-      color: "orange-deep"
+      title: "Pharmacy Network",
+      description: "Seamless medication delivery and prescription fulfillment"
     }
   ];
 
-  const getColorClasses = (color: string) => {
-    switch (color) {
-      case 'earth-green':
-        return {
-          bg: 'bg-earth-green/10',
-          bgHover: 'group-hover:bg-earth-green/20',
-          text: 'text-earth-green'
-        };
-      case 'aqua':
-        return {
-          bg: 'bg-aqua/10',
-          bgHover: 'group-hover:bg-aqua/20',
-          text: 'text-aqua'
-        };
-      case 'orange-deep':
-        return {
-          bg: 'bg-orange-deep/10',
-          bgHover: 'group-hover:bg-orange-deep/20',
-          text: 'text-orange-deep'
-        };
-      default:
-        return {
-          bg: 'bg-earth-green/10',
-          bgHover: 'group-hover:bg-earth-green/20',
-          text: 'text-earth-green'
-        };
-    }
-  };
-
   return (
-    <section id="services" className="py-20 bg-gradient-to-b from-white to-sand-warm">
+    <section id="services" className="py-24 bg-gradient-to-b from-white to-sand-warm/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center space-x-2 bg-earth-green/10 px-4 py-2 rounded-full mb-4">
-            <span className="text-sm font-medium text-earth-green">Our Services</span>
+        <div className="text-center mb-20 space-y-6">
+          <div className="inline-flex items-center space-x-3 bg-earth-green/10 px-6 py-3 rounded-full border border-earth-green/20">
+            <div className="w-2 h-2 bg-earth-green rounded-full"></div>
+            <span className="text-sm font-semibold text-earth-green tracking-wide">COMPREHENSIVE SERVICES</span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-midnight mb-6">
-            Comprehensive Healthcare Solutions
+          
+          <h2 className="text-4xl md:text-5xl font-bold text-midnight leading-tight">
+            Everything You Need for
+            <span className="text-earth-green block">Modern Healthcare</span>
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Modern digital healthcare services designed to streamline 
-            your medical experience and improve health outcomes.
+          
+          <p className="text-xl text-midnight/70 max-w-3xl mx-auto leading-relaxed">
+            Our integrated platform combines cutting-edge technology with personalized care 
+            to deliver exceptional healthcare experiences.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {services.map((service, index) => {
-            const colorClasses = getColorClasses(service.color);
-            return (
-              <Card key={index} className="group hover:shadow-modern transition-all duration-300 hover:-translate-y-2 border-0 shadow-soft bg-white rounded-2xl overflow-hidden">
-                <CardHeader className="text-center pb-4">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${colorClasses.bg} ${colorClasses.bgHover} transition-all duration-300`}>
-                    <service.icon className={`w-8 h-8 ${colorClasses.text}`} />
-                  </div>
-                  <CardTitle className="text-xl font-semibold text-midnight">{service.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <CardDescription className="text-gray-600 leading-relaxed">
-                    {service.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {services.map((service, index) => (
+            <Card key={index} className="group hover:shadow-modern transition-all duration-500 hover:-translate-y-3 border-0 shadow-soft bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden">
+              <CardHeader className="text-center pb-6 pt-10">
+                <div className="w-20 h-20 bg-gradient-to-br from-earth-green/10 to-aqua/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <service.icon className="w-10 h-10 text-earth-green" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-midnight group-hover:text-earth-green transition-colors duration-300">
+                  {service.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-center px-8 pb-10">
+                <p className="text-midnight/70 leading-relaxed text-lg">
+                  {service.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </section>
