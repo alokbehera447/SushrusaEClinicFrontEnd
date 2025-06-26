@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -7,7 +6,7 @@ import {
   Video, 
   FileText, 
   Database, 
-  Pharmacy, 
+  Pill, 
   Settings 
 } from 'lucide-react';
 
@@ -44,7 +43,7 @@ const ServicesSection = () => {
       color: "medical-blue"
     },
     {
-      icon: Pharmacy,
+      icon: Pill,
       title: "Pharmacy Fulfillment",
       description: "Seamless prescription fulfillment and medication delivery",
       color: "medical-green"
