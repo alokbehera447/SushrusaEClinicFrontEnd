@@ -5,6 +5,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import WorkflowDemo from "./pages/WorkflowDemo";
+import Login from "./pages/Login";
+import FindDoctors from "./pages/FindDoctors";
+
+// Import dashboard pages
+import SuperAdminDashboardPage from "./pages/SuperAdminDashboard";
+import AdminDashboardPage from "./pages/AdminDashboard";
+import DoctorDashboardPage from "./pages/DoctorDashboard";
+import PatientDashboardPage from "./pages/PatientDashboard";
+
+// Import all workflow components
+import AppointmentBooking from "@/components/workflow/AppointmentBooking";
+import PatientRegistration from "@/components/workflow/PatientRegistration";
+import PaymentProcessing from "@/components/workflow/PaymentProcessing";
+import PrescriptionWriter from "@/components/workflow/PrescriptionWriter";
+import QueueManagement from "@/components/workflow/QueueManagement";
+import VideoConsultation from "@/components/workflow/VideoConsultation";
+import DoctorSchedule from "@/components/workflow/DoctorSchedule";
+import AnalyticsDashboard from "@/components/workflow/AnalyticsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -15,8 +34,29 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/find-doctors" element={<FindDoctors />} />
+          
+          {/* Dashboard Routes */}
+          <Route path="/superadmin/dashboard" element={<SuperAdminDashboardPage />} />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/doctor/dashboard" element={<DoctorDashboardPage />} />
+          <Route path="/patient/dashboard" element={<PatientDashboardPage />} />
+          
+          {/* Workflow Demo Routes */}
+          <Route path="/workflow-demo" element={<WorkflowDemo />} />
+          <Route path="/workflow/appointment-booking" element={<AppointmentBooking />} />
+          <Route path="/workflow/patient-registration" element={<PatientRegistration />} />
+          <Route path="/workflow/payment-processing" element={<PaymentProcessing />} />
+          <Route path="/workflow/prescription-writer" element={<PrescriptionWriter />} />
+          <Route path="/workflow/queue-management" element={<QueueManagement />} />
+          <Route path="/workflow/video-consultation" element={<VideoConsultation />} />
+          <Route path="/workflow/doctor-schedule" element={<DoctorSchedule />} />
+          <Route path="/workflow/analytics" element={<AnalyticsDashboard />} />
+          
+          {/* Catch-all route - must be last */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

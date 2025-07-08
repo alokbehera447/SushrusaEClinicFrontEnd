@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Heart, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 
@@ -10,7 +9,7 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-6">
             <div className="flex items-center space-x-3">
-              <div className="bg-earth-green p-3 rounded-2xl">
+              <div className="bg-[#E17726] p-3 rounded-2xl">
                 <Heart className="h-8 w-8 text-white" />
               </div>
               <div>
@@ -30,7 +29,7 @@ const Footer = () => {
             <ul className="space-y-4">
               {['Home', 'Services', 'About Us', 'Contact', 'Privacy Policy', 'Terms of Service'].map((link) => (
                 <li key={link}>
-                  <a href="#" className="text-white/70 hover:text-earth-green transition-colors duration-300 text-lg">
+                  <a href="#" className="text-white/70 hover:text-[#E17726] transition-colors duration-300 text-lg">
                     {link}
                   </a>
                 </li>
@@ -57,8 +56,8 @@ const Footer = () => {
             <h3 className="text-xl font-bold text-white mb-6">Get in Touch</h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-earth-green/20 rounded-xl flex items-center justify-center">
-                  <Phone className="w-6 h-6 text-earth-green" />
+                <div className="w-12 h-12 bg-[#E17726]/20 rounded-xl flex items-center justify-center">
+                  <Phone className="w-6 h-6 text-[#E17726]" />
                 </div>
                 <span className="text-white/70 text-lg">+1 (555) 123-4567</span>
               </div>
@@ -69,8 +68,8 @@ const Footer = () => {
                 <span className="text-white/70 text-lg">hello@sushrusa.com</span>
               </div>
               <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-earth-green/20 rounded-xl flex items-center justify-center mt-1">
-                  <MapPin className="w-6 h-6 text-earth-green" />
+                <div className="w-12 h-12 bg-[#E17726]/20 rounded-xl flex items-center justify-center mt-1">
+                  <MapPin className="w-6 h-6 text-[#E17726]" />
                 </div>
                 <span className="text-white/70 text-lg leading-relaxed">
                   123 Healthcare Avenue<br />

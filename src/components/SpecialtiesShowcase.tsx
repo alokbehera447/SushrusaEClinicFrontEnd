@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -61,29 +60,29 @@ const SpecialtiesShowcase = () => {
   return (
     <section className="py-24 bg-gradient-to-b from-white to-sand-warm/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20 space-y-6">
-          <div className="inline-flex items-center space-x-3 bg-earth-green/10 px-6 py-3 rounded-full border border-earth-green/20">
-            <div className="w-2 h-2 bg-earth-green rounded-full"></div>
-            <span className="text-sm font-semibold text-earth-green tracking-wide">MEDICAL SPECIALTIES</span>
+        <div className="text-center mb-10 md:mb-20 space-y-4 md:space-y-6">
+          <div className="inline-flex items-center space-x-3 bg-[#E17726]/10 px-6 py-3 rounded-full border border-[#E17726]/20">
+            <div className="w-2 h-2 bg-[#E17726] rounded-full"></div>
+            <span className="text-sm font-semibold text-[#E17726] tracking-wide">MEDICAL SPECIALTIES</span>
           </div>
           
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-midnight leading-tight">
             Expert care across
-            <span className="text-earth-green block">all specialties</span>
+            <span className="text-[#E17726] block">all specialties</span>
           </h2>
           
-          <p className="text-xl md:text-2xl text-midnight/70 max-w-4xl mx-auto leading-relaxed">
+          <p className="text-base md:text-xl md:md:text-2xl text-midnight/70 max-w-4xl mx-auto leading-relaxed mt-2 md:mt-0">
             Our board-certified specialists provide world-class care across multiple medical disciplines, 
             ensuring you receive the right treatment from the right expert.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {specialties.map((specialty, index) => (
             <Card key={index} className="group hover:shadow-modern transition-all duration-500 hover:-translate-y-3 border-0 shadow-soft bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden">
               <CardContent className="p-0">
                 {/* Image Section */}
-                <div className="aspect-[4/3] bg-gradient-to-br from-earth-green/5 to-aqua/5 relative overflow-hidden">
+                <div className="aspect-[4/3] bg-gradient-to-br from-[#E17726]/5 to-aqua/5 relative overflow-hidden">
                   <img 
                     src="/placeholder.svg" 
                     alt={specialty.image}
@@ -93,7 +92,7 @@ const SpecialtiesShowcase = () => {
                   
                   {/* Icon overlay */}
                   <div className="absolute top-6 left-6 w-14 h-14 bg-white/90 rounded-2xl flex items-center justify-center">
-                    <specialty.icon className="w-7 h-7 text-earth-green" />
+                    <specialty.icon className="w-7 h-7 text-[#E17726]" />
                   </div>
                   
                   {/* Patient count */}
@@ -106,7 +105,7 @@ const SpecialtiesShowcase = () => {
                 
                 {/* Content Section */}
                 <div className="p-8">
-                  <h3 className="text-2xl font-bold text-midnight mb-3 group-hover:text-earth-green transition-colors duration-300">
+                  <h3 className="text-2xl font-bold text-midnight mb-3 group-hover:text-[#E17726] transition-colors duration-300">
                     {specialty.title}
                   </h3>
                   <p className="text-midnight/70 leading-relaxed text-lg">
