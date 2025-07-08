@@ -41,9 +41,9 @@ const App = () => (
           
           {/* Dashboard Routes */}
           <Route path="/superadmin/dashboard" element={<SuperAdminDashboardPage />} />
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-          <Route path="/doctor/dashboard" element={<DoctorDashboardPage />} />
-          <Route path="/patient/dashboard" element={<PatientDashboardPage />} />
+          {/* <Route path="/admin/dashboard" element={<AdminDashboardPage />} /> */}
+          {/* <Route path="/doctor/dashboard" element={<DoctorDashboardPage />} /> */}
+          {/* <Route path="/patient/dashboard" element={<PatientDashboardPage />} /> */}
           
           {/* Workflow Demo Routes */}
           <Route path="/workflow-demo" element={<WorkflowDemo />} />
