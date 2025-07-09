@@ -3,33 +3,36 @@ import { Heart, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin } fr
 
 const Footer = () => {
   return (
-    <footer className="bg-midnight text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+    <footer id="contact" className="bg-midnight text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
           {/* Company Info */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center space-x-3">
-              <div className="bg-[#E17726] p-3 rounded-2xl">
-                <Heart className="h-8 w-8 text-white" />
+              <div className="bg-[#E17726] p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
               <div>
-                <span className="text-2xl font-bold">SUSHRUSA</span>
+                <span className="text-xl sm:text-2xl font-bold">SUSHRUSA</span>
                 <span className="text-sm text-white/60 block">eClinic Platform</span>
               </div>
             </div>
-            <p className="text-white/70 text-lg leading-relaxed">
+            <p className="text-white/70 text-base sm:text-lg leading-relaxed">
               Your trusted digital healthcare partner, delivering innovative solutions 
               for modern medical care with compassion and excellence.
             </p>
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white mb-6">Quick Links</h3>
-            <ul className="space-y-4">
+          <div className="space-y-4 sm:space-y-6">
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Quick Links</h3>
+            <ul className="space-y-3 sm:space-y-4">
               {['Home', 'Services', 'About Us', 'Contact', 'Privacy Policy', 'Terms of Service'].map((link) => (
                 <li key={link}>
-                  <a href="#" className="text-white/70 hover:text-[#E17726] transition-colors duration-300 text-lg">
+                  <a 
+                    href="#" 
+                    className="text-white/70 hover:text-[#E17726] transition-colors duration-300 text-base sm:text-lg block py-1 min-h-[44px] flex items-center"
+                  >
                     {link}
                   </a>
                 </li>
@@ -38,12 +41,15 @@ const Footer = () => {
           </div>
 
           {/* Services */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white mb-6">Our Services</h3>
-            <ul className="space-y-4">
+          <div className="space-y-4 sm:space-y-6">
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Our Services</h3>
+            <ul className="space-y-3 sm:space-y-4">
               {['Video Consultations', 'Digital Prescriptions', 'Health Records', 'Smart Scheduling', 'Pharmacy Network', 'Emergency Support'].map((service) => (
                 <li key={service}>
-                  <a href="#" className="text-white/70 hover:text-aqua transition-colors duration-300 text-lg">
+                  <a 
+                    href="#" 
+                    className="text-white/70 hover:text-aqua transition-colors duration-300 text-base sm:text-lg block py-1 min-h-[44px] flex items-center"
+                  >
                     {service}
                   </a>
                 </li>
@@ -52,26 +58,36 @@ const Footer = () => {
           </div>
 
           {/* Contact Info */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white mb-6">Get in Touch</h3>
+          <div className="space-y-4 sm:space-y-6">
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Get in Touch</h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-[#E17726]/20 rounded-xl flex items-center justify-center">
-                  <Phone className="w-6 h-6 text-[#E17726]" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#E17726]/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-[#E17726]" />
                 </div>
-                <span className="text-white/70 text-lg">+1 (555) 123-4567</span>
+                <a 
+                  href="tel:+15551234567"
+                  className="text-white/70 text-base sm:text-lg hover:text-[#E17726] transition-colors duration-300 min-h-[44px] flex items-center"
+                >
+                  +1 (555) 123-4567
+                </a>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-aqua/20 rounded-xl flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-aqua" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-aqua/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-aqua" />
                 </div>
-                <span className="text-white/70 text-lg">hello@sushrusa.com</span>
+                <a 
+                  href="mailto:hello@sushrusa.com"
+                  className="text-white/70 text-base sm:text-lg hover:text-aqua transition-colors duration-300 min-h-[44px] flex items-center"
+                >
+                  hello@sushrusa.com
+                </a>
               </div>
               <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-[#E17726]/20 rounded-xl flex items-center justify-center mt-1">
-                  <MapPin className="w-6 h-6 text-[#E17726]" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#E17726]/20 rounded-xl flex items-center justify-center mt-1 flex-shrink-0">
+                  <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-[#E17726]" />
                 </div>
-                <span className="text-white/70 text-lg leading-relaxed">
+                <span className="text-white/70 text-base sm:text-lg leading-relaxed">
                   123 Healthcare Avenue<br />
                   Medical District, MD 12345
                 </span>
@@ -79,10 +95,20 @@ const Footer = () => {
             </div>
 
             {/* Social Links */}
-            <div className="flex space-x-4 pt-6">
-              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, index) => (
-                <a key={index} href="#" className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white/70 hover:text-aqua hover:bg-aqua/20 transition-all duration-300">
-                  <Icon className="w-6 h-6" />
+            <div className="flex space-x-3 sm:space-x-4 pt-4 sm:pt-6">
+              {[
+                { Icon: Facebook, href: '#' },
+                { Icon: Twitter, href: '#' },
+                { Icon: Instagram, href: '#' },
+                { Icon: Linkedin, href: '#' }
+              ].map(({ Icon, href }, index) => (
+                <a 
+                  key={index} 
+                  href={href} 
+                  className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl flex items-center justify-center text-white/70 hover:text-aqua hover:bg-aqua/20 transition-all duration-300 hover-lift"
+                  aria-label={`Follow us on ${Icon.name}`}
+                >
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </a>
               ))}
             </div>
@@ -90,11 +116,11 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/20 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-white/60 text-lg">
+        <div className="border-t border-white/20 mt-12 sm:mt-16 pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <p className="text-white/60 text-base sm:text-lg text-center md:text-left">
             © 2024 SUSHRUSA eClinic. All rights reserved.
           </p>
-          <p className="text-white/60 text-lg mt-2 md:mt-0">
+          <p className="text-white/60 text-base sm:text-lg text-center md:text-right">
             HIPAA Compliant • SSL Secured • ISO Certified
           </p>
         </div>

@@ -110,7 +110,7 @@ const ImageContentBlocks = () => {
                 </h2>
                 
                 <div className="space-y-4">
-                  <h3 className="text-xl md:text-2xl font-semibold text-transparent bg-clip-text bg-gradient-orange">
+                  <h3 className="text-xl md:text-2xl font-semibold text-[#E17726]">
                     {block.subtitle}
                   </h3>
                   

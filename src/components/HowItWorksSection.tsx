@@ -95,15 +95,15 @@ const HowItWorksSection = () => {
           
           <div className="space-y-6">
             <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-midnight leading-tight">
-              <span className="block">Get Started in</span>
-              <span className="block text-transparent bg-clip-text bg-gradient-orange">
-                Three Easy Steps
+              <span className="block">How SUSHRUSA</span>
+              <span className="block text-[#E17726]">
+                Works
               </span>
             </h2>
             
-            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Our streamlined process makes accessing quality healthcare 
-              <span className="text-[#E17726] font-semibold"> simple, fast, and completely secure</span>.
+            <p className="text-xl md:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Experience seamless healthcare with our <span className="text-[#E17726] font-semibold">step-by-step process</span>. 
+              From registration to consultation, we've simplified every aspect of your healthcare journey.
             </p>
           </div>
         </div>

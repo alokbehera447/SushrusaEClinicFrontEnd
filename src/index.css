@@ -37,47 +37,32 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
@@ -198,15 +183,6 @@
   }
 }
 
-@keyframes blue-pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
-  }
-}
-
 @keyframes gradient-shift {
   0%, 100% {
     background-position: 0% 50%;
@@ -216,224 +192,277 @@
   }
 }
 
-/* Custom color definitions for the healthcare design system */
-@layer utilities {
-  .text-midnight {
-    @apply text-gray-900;
-  }
-  
-  .bg-midnight {
-    @apply bg-gray-900;
-  }
-  
-  .text-aqua {
-    @apply text-cyan-600;
-  }
-  
-  .bg-aqua {
-    @apply bg-cyan-600;
-  }
-  
-  .border-aqua {
-    @apply border-cyan-600;
-  }
-  
-  .hover\\:bg-aqua:hover {
-    @apply hover:bg-cyan-600;
-  }
-  
-  .border-sand-warm {
-    @apply border-orange-100;
-  }
-  
-  .bg-sand-warm {
-    @apply bg-orange-100;
-  }
-  
-  .shadow-soft {
-    box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
-  }
-  
-  .shadow-modern {
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  }
-  
-  .shadow-glow {
-    box-shadow: 0 0 50px rgba(225, 119, 38, 0.15);
-  }
-  
-  .shadow-xl-colored {
-    box-shadow: 0 25px 50px -12px rgba(225, 119, 38, 0.25);
-  }
-  
-  /* Glass morphism effect */
-  .glass {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-  
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  /* Animation Classes */
-  .animate-fade-in-up {
-    animation: fadeInUp 0.8s ease-out forwards;
-  }
-  
-  .animate-fade-in-left {
-    animation: fadeInLeft 0.8s ease-out forwards;
-  }
-  
-  .animate-fade-in-right {
-    animation: fadeInRight 0.8s ease-out forwards;
-  }
-  
-  .animate-slide-in-down {
-    animation: slideInDown 0.6s ease-out forwards;
-  }
-  
-  .animate-scale-in {
-    animation: scaleIn 0.6s ease-out forwards;
-  }
-  
-  .animate-scale-in-bounce {
-    animation: scaleInBounce 0.8s ease-out forwards;
-  }
-  
+/* Custom Text Colors */
+.text-midnight {
+  color: #1C1C1C;
+}
+
+.bg-midnight {
+  background-color: #1C1C1C;
+}
+
+.text-aqua {
+  color: #00B8D4;
+}
+
+.bg-aqua {
+  background-color: #00B8D4;
+}
+
+.border-aqua {
+  border-color: #00B8D4;
+}
+
+.hover\:bg-aqua:hover {
+  background-color: #00B8D4;
+}
+
+.border-sand-warm {
+  border-color: #FFF8E1;
+}
+
+.bg-sand-warm {
+  background-color: #FFF8E1;
+}
+
+.shadow-soft {
+  box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-modern {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(225, 119, 38, 0.3);
+}
+
+.shadow-xl-colored {
+  box-shadow: 0 25px 50px -12px rgba(225, 119, 38, 0.15), 
+              0 20px 25px -5px rgba(0, 184, 212, 0.1);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.glass-dark {
+  background: rgba(28, 28, 28, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animation Classes */
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.8s ease-out forwards;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.8s ease-out forwards;
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 0.8s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.6s ease-out forwards;
+}
+
+.animate-scale-in-bounce {
+  animation: scaleInBounce 0.8s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-blue-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Animation Delays */
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animation-delay-500 {
+  animation-delay: 0.5s;
+}
+
+.animation-delay-600 {
+  animation-delay: 0.6s;
+}
+
+.animation-delay-700 {
+  animation-delay: 0.7s;
+}
+
+.animation-delay-800 {
+  animation-delay: 0.8s;
+}
+
+/* Gradient Backgrounds */
+.bg-gradient-orange {
+  background: linear-gradient(135deg, #E17726 0%, #FF8A56 100%);
+}
+
+.bg-gradient-blue {
+  background: linear-gradient(135deg, #00B8D4 0%, #26C6DA 100%);
+}
+
+.bg-gradient-hero {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+}
+
+.bg-gradient-mesh {
+  background-image: 
+    radial-gradient(at 40% 20%, rgba(225, 119, 38, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(0, 184, 212, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(225, 119, 38, 0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(0, 184, 212, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(225, 119, 38, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, rgba(0, 184, 212, 0.1) 0px, transparent 50%);
+}
+
+/* Interactive Effects */
+.hover-lift {
+  transform: translateY(0);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.hover-scale {
+  transform: scale(1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  box-shadow: 0 0 0 rgba(225, 119, 38, 0);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(225, 119, 38, 0.3);
+}
+
+/* Fade in sections */
+.fade-in-section {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease-out;
+}
+
+.fade-in-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Modern button styles */
+.btn-modern {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-modern:hover::before {
+  left: 100%;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Reduce animation intensity on mobile for better performance */
   .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-  
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-  
-  .animate-blue-pulse-glow {
-    animation: blue-pulse-glow 2s ease-in-out infinite;
-  }
-  
-  .animate-gradient {
-    background-size: 200% 200%;
-    animation: gradient-shift 3s ease infinite;
-  }
-  
-  /* Staggered Animation Delays */
-  .animation-delay-100 {
-    animation-delay: 0.1s;
-  }
-  
-  .animation-delay-200 {
-    animation-delay: 0.2s;
-  }
-  
-  .animation-delay-300 {
-    animation-delay: 0.3s;
-  }
-  
-  .animation-delay-400 {
-    animation-delay: 0.4s;
-  }
-  
-  .animation-delay-500 {
-    animation-delay: 0.5s;
-  }
-  
-  .animation-delay-600 {
-    animation-delay: 0.6s;
-  }
-  
-  .animation-delay-700 {
-    animation-delay: 0.7s;
-  }
-  
-  .animation-delay-800 {
-    animation-delay: 0.8s;
-  }
-  
-  /* Gradient Backgrounds */
-  .bg-gradient-orange {
-    background: linear-gradient(135deg, #E17726 0%, #FF8A56 100%);
-  }
-  
-  .bg-gradient-blue {
-    background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
-  }
-  
-  .bg-gradient-hero {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
-  }
-  
-  .bg-gradient-mesh {
-    background: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 1) 0px, transparent 50%),
-                radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
-                radial-gradient(at 0% 50%, hsla(355, 85%, 93%, 1) 0px, transparent 50%),
-                radial-gradient(at 80% 50%, hsla(340, 100%, 76%, 1) 0px, transparent 50%),
-                radial-gradient(at 0% 100%, hsla(22, 100%, 77%, 1) 0px, transparent 50%),
-                radial-gradient(at 80% 100%, hsla(242, 100%, 70%, 1) 0px, transparent 50%),
-                radial-gradient(at 0% 0%, hsla(343, 100%, 76%, 1) 0px, transparent 50%);
-  }
-  
-  /* Hover Transform Effects */
-  .hover-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation-duration: 6s;
   }
   
   .hover-lift:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
   }
   
-  .hover-scale {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure touch targets are large enough */
+  button, 
+  a[role="button"], 
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
   }
   
-  .hover-scale:hover {
-    transform: scale(1.05);
+  /* Reduce blur effects on mobile for better performance */
+  .glass {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
   
-  .hover-glow {
-    transition: box-shadow 0.3s ease;
+  .glass-dark {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
   
-  .hover-glow:hover {
-    box-shadow: 0 0 30px rgba(225, 119, 38, 0.3);
+  .animate-float {
+    animation: none;
   }
-  
-  /* Intersection Observer Animation States */
-  .fade-in-section {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .fade-in-section.is-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  
-  /* Modern Button Styles */
-  .btn-modern {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .btn-modern::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
-  }
-  
-  .btn-modern:hover::before {
-    left: 100%;
-  }
+}
+
+/* Focus styles for better accessibility */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #E17726;
+  outline-offset: 2px;
+  border-radius: 4px;
 }

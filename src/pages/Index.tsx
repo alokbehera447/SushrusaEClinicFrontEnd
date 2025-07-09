@@ -34,27 +34,39 @@ const Index = () => {
       const target = e.target as HTMLAnchorElement;
       if (target.hash) {
         e.preventDefault();
-        const element = document.querySelector(target.hash);
+        const targetId = target.hash.replace('#', '');
+        const element = document.getElementById(targetId);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          const offsetTop = element.offsetTop - 80; // Account for navbar height
+          window.scrollTo({
+            top: offsetTop,
+            behavior: 'smooth'
+          });
         }
       }
     };
 
     document.addEventListener('click', handleAnchorClick);
 
-    // Parallax effect for background elements
+    // Optimized parallax effect for background elements
+    let ticking = false;
     const handleScroll = () => {
-      const scrolled = window.pageYOffset;
-      const parallaxElements = document.querySelectorAll('.parallax');
-      
-      parallaxElements.forEach((element) => {
-        const rate = scrolled * -0.5;
-        (element as HTMLElement).style.transform = `translateY(${rate}px)`;
-      });
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrolled = window.pageYOffset;
+          const parallaxElements = document.querySelectorAll('.parallax');
+          
+          parallaxElements.forEach((element) => {
+            const rate = scrolled * -0.3; // Reduced parallax intensity for better mobile performance
+            (element as HTMLElement).style.transform = `translateY(${rate}px)`;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     // Cleanup
     return () => {
@@ -65,7 +77,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
+    <div className="min-h-screen bg-white">
       <Navbar />
       
       <main className="relative">
@@ -73,30 +85,32 @@ const Index = () => {
         <HeroSection />
         
         {/* Image Content Blocks */}
-        <div className="fade-in-section">
+        <div id="content-blocks" className="fade-in-section">
           <ImageContentBlocks />
         </div>
         
         {/* Services Section */}
-        <ServicesSection />
+        <div id="services" className="fade-in-section">
+          <ServicesSection />
+        </div>
         
         {/* Specialties Showcase */}
-        <div className="fade-in-section">
+        <div id="specialties" className="fade-in-section">
           <SpecialtiesShowcase />
         </div>
         
         {/* How It Works Section */}
-        <div className="fade-in-section">
+        <div id="how-it-works" className="fade-in-section">
           <HowItWorksSection />
         </div>
         
         {/* About Section */}
-        <div className="fade-in-section">
+        <div id="about" className="fade-in-section">
           <AboutSection />
         </div>
         
         {/* Testimonials Section */}
-        <div className="fade-in-section">
+        <div id="testimonials" className="fade-in-section">
           <TestimonialsSection />
         </div>
       </main>
@@ -122,7 +136,7 @@ const ScrollToTopButton = () => {
       }
     };
 
-    window.addEventListener('scroll', toggleVisibility);
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
     return () => window.removeEventListener('scroll', toggleVisibility);
   }, []);
 
@@ -135,14 +149,14 @@ const ScrollToTopButton = () => {
 
   return (
     <button
-      className={`fixed bottom-8 right-8 z-50 bg-gradient-orange hover:shadow-xl-colored text-white p-4 rounded-full transition-all duration-300 hover-lift btn-modern ${
+      className={`fixed bottom-6 right-4 sm:bottom-8 sm:right-8 z-50 bg-gradient-orange hover:shadow-xl-colored text-white p-3 sm:p-4 rounded-full transition-all duration-300 hover-lift btn-modern min-h-[48px] min-w-[48px] sm:min-h-[56px] sm:min-w-[56px] ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
       }`}
       onClick={scrollToTop}
       aria-label="Scroll to top"
     >
       <svg
-        className="w-6 h-6"
+        className="w-5 h-5 sm:w-6 sm:h-6 mx-auto"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

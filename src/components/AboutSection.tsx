@@ -71,7 +71,7 @@ const AboutSection = () => {
   }, []);
 
   return (
-    <section id="about" className="py-32 bg-gradient-to-b from-white via-gray-50/30 to-white relative overflow-hidden">
+    <section className="py-32 bg-gradient-to-b from-white via-gray-50/30 to-white relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-[#E17726]/5 to-transparent rounded-full blur-3xl animate-float"></div>
@@ -96,7 +96,7 @@ const AboutSection = () => {
           <div className="space-y-6">
             <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-midnight leading-tight">
               <span className="block">Leading Healthcare</span>
-              <span className="block text-transparent bg-clip-text bg-gradient-blue">
+              <span className="block text-[#00B8D4]">
                 Innovation
               </span>
             </h2>
