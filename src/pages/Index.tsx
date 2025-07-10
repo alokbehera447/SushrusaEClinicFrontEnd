@@ -8,7 +8,6 @@ import HowItWorksSection from '@/components/HowItWorksSection';
 import ImageContentBlocks from '@/components/ImageContentBlocks';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import Footer from '@/components/Footer';
-import LocationSearchBar from '../components/LocationSearchBar';
 
 const Index = () => {
   useEffect(() => {
@@ -81,7 +80,6 @@ const Index = () => {
     <div className="min-h-screen bg-white">
       <header className="w-full flex flex-col sticky top-0 z-40">
         <Navbar />
-        <LocationSearchBar />
       </header>
       
       <main className="relative">

@@ -88,7 +88,7 @@ const Register = () => {
         localStorage.setItem('phoneNumber', phoneNumber);
         localStorage.setItem('userInfo', JSON.stringify(userInfo));
         localStorage.setItem('isNewUser', 'true');
-        alert('Registration successful! Welcome to Sushrusa eClinic.');
+        alert('Welcome to Sushrusa eClinic! Your account has been created successfully.');
         navigate('/patient/dashboard');
       } else {
         alert('Invalid OTP. Please try again.');
@@ -114,33 +114,40 @@ const Register = () => {
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
-    const match = cleaned.match(/^(\d{0,5})(\d{0,5})$/);
+    // Allow up to 10 digits for Indian mobile numbers
+    const limited = cleaned.slice(0, 10);
+    const match = limited.match(/^(\d{0,5})(\d{0,5})$/);
     if (match) {
       return match[1] + (match[2] ? ' ' + match[2] : '');
     }
-    return cleaned;
+    return limited;
   };
 
   const getStepTitle = () => {
     switch (step) {
-      case 'phone': return 'Phone Number';
-      case 'info': return 'Basic Information';
-      case 'otp': return 'Verify OTP';
-      default: return 'Register';
+      case 'phone': return 'Get Started';
+      case 'info': return 'Tell Us About You';
+      case 'otp': return 'Verify Your Account';
+      default: return 'Join Us';
     }
   };
 
   const getStepDescription = () => {
     switch (step) {
-      case 'phone': return 'Enter your phone number';
-      case 'info': return 'Provide your basic details';
-      case 'otp': return `Code sent to ${phoneNumber}`;
+      case 'phone': return 'We\'ll send you a secure verification code';
+      case 'info': return 'Help us personalize your experience';
+      case 'otp': return `Verification code sent to ${phoneNumber}`;
       default: return 'Create your account';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{
+        background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%)'
+      }}
+    >
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -168,7 +175,8 @@ const Register = () => {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-midnight mb-2">Patient Registration</h2>
+            <h2 className="text-3xl font-bold text-midnight mb-2">Join Sushrusa eClinic</h2>
+            <p className="text-gray-600 text-lg">Your journey to better health starts here</p>
           </div>
 
           {/* Progress Steps */}
@@ -222,11 +230,16 @@ const Register = () => {
                         id="phone"
                         type="tel"
                         value={formatPhoneNumber(phoneNumber)}
-                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\s/g, ''))}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/\D/g, '');
+                          if (cleaned.length <= 10) {
+                            setPhoneNumber(cleaned);
+                          }
+                        }}
                         placeholder="Enter your phone number"
                         required
                         className="w-full pl-10"
-                        maxLength={10}
+                        maxLength={12}
                       />
                     </div>
                   </div>
@@ -241,7 +254,7 @@ const Register = () => {
                     disabled={phoneNumber.length !== 10 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Verifying..." : "Continue"}
+                    {isLoading ? "Verifying..." : "Send Verification Code"}
                   </Button>
                 </form>
               )}
@@ -301,7 +314,7 @@ const Register = () => {
                     disabled={!userInfo.firstName || !userInfo.lastName || !userInfo.dateOfBirth || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Processing..." : "Send OTP"}
+                    {isLoading ? "Processing..." : "Continue to Verification"}
                   </Button>
 
                   {/* Back to Phone */}
@@ -363,7 +376,7 @@ const Register = () => {
                     disabled={otp.join('').length !== 6 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Creating Account..." : "Create Account"}
+                    {isLoading ? "Setting up your account..." : "Complete Registration"}
                   </Button>
 
                   {/* Back to Info */}

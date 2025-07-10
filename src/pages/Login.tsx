@@ -114,7 +114,12 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{
+        background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%)'
+      }}
+    >
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -142,19 +147,19 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-midnight mb-2">Welcome Back</h2>
-            <p className="text-gray-600">Sign in with your phone number</p>
+            <h2 className="text-3xl font-bold text-midnight mb-2">Welcome Back to Sushrusa</h2>
+            <p className="text-gray-600 text-lg">Continue your health journey with us</p>
           </div>
 
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl text-center text-midnight">
-                {step === 'phone' ? 'Enter Phone Number' : 'Verify OTP'}
+                {step === 'phone' ? 'Sign In Securely' : 'Verify Your Identity'}
               </CardTitle>
               <CardDescription className="text-center text-gray-600">
                 {step === 'phone' 
-                  ? 'We\'ll send you a verification code' 
-                  : `Code sent to ${phoneNumber}`
+                  ? 'We\'ll send you a secure verification code' 
+                  : `Verification code sent to ${phoneNumber}`
                 }
               </CardDescription>
             </CardHeader>
@@ -164,11 +169,11 @@ const Login = () => {
                   {/* Role Selection */}
                   <div className="space-y-2">
                     <Label htmlFor="role" className="text-sm font-medium text-gray-700">
-                      Select Role
+                      Role
                     </Label>
                     <Select value={selectedRole} onValueChange={handleRoleChange}>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose your role" />
+                        <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="super_admin">Super Admin</SelectItem>
@@ -182,7 +187,7 @@ const Login = () => {
                   {/* Phone Number */}
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                      Phone Number
+                      Mobile Number
                     </Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -191,7 +196,7 @@ const Login = () => {
                         type="tel"
                         value={formatPhoneNumber(phoneNumber)}
                         onChange={(e) => setPhoneNumber(e.target.value.replace(/\s/g, ''))}
-                        placeholder="Enter your phone number"
+                        placeholder="Enter your mobile number"
                         required
                         className="w-full pl-10"
                         maxLength={10}
@@ -202,12 +207,12 @@ const Login = () => {
                   {/* Test Credentials Info */}
                   {selectedRole && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-800 font-medium">Test Phone Number:</p>
+                      <p className="text-sm text-blue-800 font-medium">Demo Credentials:</p>
                       <p className="text-sm text-blue-700">
-                        Phone: <span className="font-mono bg-white px-1 rounded">{dummyCredentials[selectedRole as keyof typeof dummyCredentials]?.phone}</span>
+                        Mobile: <span className="font-mono bg-white px-1 rounded">{dummyCredentials[selectedRole as keyof typeof dummyCredentials]?.phone}</span>
                       </p>
                       <p className="text-sm text-blue-700 mt-1">
-                        OTP: <span className="font-mono bg-white px-1 rounded">123456</span>
+                        Code: <span className="font-mono bg-white px-1 rounded">123456</span>
                       </p>
                     </div>
                   )}
@@ -218,7 +223,7 @@ const Login = () => {
                     disabled={!selectedRole || phoneNumber.length !== 10 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Sending OTP..." : "Send OTP"}
+                    {isLoading ? "Sending verification code..." : "Send Verification Code"}
                   </Button>
                 </form>
               ) : (
@@ -226,7 +231,7 @@ const Login = () => {
                   {/* OTP Input */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
-                      Enter 6-digit OTP
+                      Enter verification code
                     </Label>
                     <div className="flex justify-center space-x-2">
                       {otp.map((digit, index) => (
@@ -248,7 +253,7 @@ const Login = () => {
                   <div className="text-center">
                     {countdown > 0 ? (
                       <p className="text-sm text-gray-500">
-                        Resend OTP in <span className="font-semibold text-[#E17726]">{countdown}s</span>
+                        Resend code in <span className="font-semibold text-[#E17726]">{countdown}s</span>
                       </p>
                     ) : (
                       <button
@@ -256,7 +261,7 @@ const Login = () => {
                         onClick={handleResendOtp}
                         className="text-sm text-[#E17726] hover:text-[#c9651e] font-medium"
                       >
-                        Resend OTP
+                        Resend verification code
                       </button>
                     )}
                   </div>
@@ -267,7 +272,7 @@ const Login = () => {
                     disabled={otp.join('').length !== 6 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Verifying..." : "Verify OTP"}
+                    {isLoading ? "Verifying..." : "Sign In"}
                   </Button>
 
                   {/* Back to Phone */}
@@ -281,7 +286,7 @@ const Login = () => {
                       }}
                       className="text-sm text-gray-600 hover:text-gray-800 font-medium"
                     >
-                      ← Back to phone number
+                      ← Back to sign in
                     </button>
                   </div>
                 </form>
@@ -289,9 +294,9 @@ const Login = () => {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
+                  New to Sushrusa?{' '}
                   <Link to="/register" className="text-[#E17726] hover:text-[#c9651e] font-medium">
-                    Register here
+                    Create your account
                   </Link>
                 </p>
               </div>

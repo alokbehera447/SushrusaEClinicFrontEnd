@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { format } from "date-fns";
-import { CalendarIcon, Clock, User, Video, Phone, MapPin, DollarSign, Search, Star, CheckCircle, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Clock, User, Video, Phone, MapPin, DollarSign, Search, Star, CheckCircle, AlertCircle } from 'lucide-react';
 
-const AppointmentBookingForm = () => {
+interface AppointmentBookingFormProps {
+  onAppointmentCreated?: (appointmentData: any) => void;
+}
+
+const AppointmentBookingForm = ({ onAppointmentCreated }: AppointmentBookingFormProps) => {
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
@@ -116,29 +116,66 @@ const AppointmentBookingForm = () => {
   };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    
-    const appointmentDetails = {
-      ...appointmentData,
-      doctor: selectedDoctor,
-      date: selectedDate,
-      timeSlot: selectedTimeSlot,
-      consultationType,
-      fee: selectedDoctor?.consultationFee[consultationType as keyof typeof selectedDoctor.consultationFee]
-    };
+    try {
+      setIsSubmitting(true);
+      
+      // Validate required fields
+      if (!selectedDoctor || !selectedDate || !selectedTimeSlot || !consultationType || !appointmentData.patientName) {
+        alert('Please fill in all required fields');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const appointmentDetails = {
+        ...appointmentData,
+        doctor: selectedDoctor.name,
+        specialty: selectedDoctor.specialty,
+        date: selectedDate,
+        time: selectedTimeSlot,
+        consultationType,
+        fee: selectedDoctor?.consultationFee[consultationType as keyof typeof selectedDoctor.consultationFee] || 0,
+        patient: {
+          name: appointmentData.patientName,
+          phone: appointmentData.patientPhone || '',
+          age: 30 // This would come from patient data
+        }
+      };
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Appointment booked:', appointmentDetails);
-      alert('Appointment booked successfully!');
+      // Simulate API call
+      setTimeout(() => {
+        console.log('Appointment booked:', appointmentDetails);
+        alert('Appointment booked successfully!');
+        setIsSubmitting(false);
+        
+        // Call the callback to add appointment to dashboard
+        if (onAppointmentCreated) {
+          onAppointmentCreated(appointmentDetails);
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error booking appointment:', error);
+      alert('An error occurred while booking the appointment. Please try again.');
       setIsSubmitting(false);
-      // Reset form or redirect
-    }, 2000);
+    }
   };
 
   const getConsultationFee = () => {
     if (!selectedDoctor || !consultationType) return 0;
     return selectedDoctor.consultationFee[consultationType as keyof typeof selectedDoctor.consultationFee];
+  };
+
+  // Safe render function to prevent crashes
+  const renderSelectContent = (items: { value: string; label: string }[]) => {
+    try {
+      return items.map(item => (
+        <SelectItem key={item.value} value={item.value}>
+          {item.label}
+        </SelectItem>
+      ));
+    } catch (error) {
+      console.error('Error rendering select items:', error);
+      return null;
+    }
   };
 
   return (
@@ -184,7 +221,7 @@ const AppointmentBookingForm = () => {
                   className="pl-10 h-11"
                 />
               </div>
-              <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
+              <Select value={selectedSpecialty || ''} onValueChange={setSelectedSpecialty}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select specialty" />
                 </SelectTrigger>
@@ -339,12 +376,13 @@ const AppointmentBookingForm = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Select Date *</Label>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  disabled={(date) => date < new Date() || date > new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
-                  className="rounded-md border"
+                <Input
+                  type="date"
+                  value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
+                  min={new Date().toISOString().split('T')[0]}
+                  max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  className="h-11"
                 />
               </div>
 
@@ -484,16 +522,18 @@ const AppointmentBookingForm = () => {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Urgency Level</Label>
                 <Select 
-                  value={appointmentData.urgency} 
+                  value={appointmentData.urgency || 'routine'} 
                   onValueChange={(value) => handleInputChange('urgency', value)}
                 >
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select urgency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="routine">Routine</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                    <SelectItem value="emergency">Emergency</SelectItem>
+                    {renderSelectContent([
+                      { value: 'routine', label: 'Routine' },
+                      { value: 'urgent', label: 'Urgent' },
+                      { value: 'emergency', label: 'Emergency' }
+                    ])}
                   </SelectContent>
                 </Select>
               </div>
@@ -550,7 +590,7 @@ const AppointmentBookingForm = () => {
                 <div>
                   <p className="text-sm text-gray-600">Date & Time</p>
                   <p className="font-semibold">
-                    {selectedDate && format(selectedDate, "PPP")} at {selectedTimeSlot}
+                    {selectedDate && selectedDate.toLocaleDateString()} at {selectedTimeSlot}
                   </p>
                 </div>
                 <div>

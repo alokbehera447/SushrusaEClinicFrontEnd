@@ -64,13 +64,14 @@ const Navbar = () => {
   }, [isMenuOpen]);
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-transparent'}`}>
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : ''}`}>
       {/* Animated Gradient Background - only when not scrolled */}
       {!isScrolled && (
-        <div className="absolute inset-0 w-full h-full bg-gradient-hero overflow-hidden pointer-events-none z-0">
-          <div className="absolute inset-0 bg-gradient-mesh opacity-30"></div>
-          <div className="absolute top-2 left-2 w-16 h-16 bg-gradient-to-br from-[#E17726]/20 to-transparent rounded-full blur-2xl animate-float"></div>
-          <div className="absolute top-6 right-2 w-24 h-24 bg-gradient-to-br from-cyan-400/20 to-transparent rounded-full blur-2xl animate-float animation-delay-300"></div>
+        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute inset-0 bg-gradient-hero"></div>
+          <div className="absolute inset-0 bg-gradient-mesh opacity-40"></div>
+          <div className="absolute -top-4 left-2 w-32 h-32 bg-gradient-to-br from-[#E17726]/30 to-transparent rounded-full blur-2xl animate-float"></div>
+          <div className="absolute -top-2 right-2 w-40 h-40 bg-gradient-to-br from-cyan-400/30 to-transparent rounded-full blur-2xl animate-float animation-delay-300"></div>
         </div>
       )}
       

@@ -19,20 +19,23 @@ const HeroSection = () => {
   }, []);
 
   return (
-    <section id="home" className="relative min-h-[300px] sm:min-h-[400px] bg-gradient-hero overflow-hidden">
+    <section id="home" className="relative min-h-[300px] sm:min-h-[400px] bg-gradient-hero overflow-hidden pt-14 sm:pt-16 lg:pt-20">
       {/* Animated Background Elements */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-0">
+        {/* Top Animated Mesh Blobs - new creative design */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[420px] h-[180px] sm:w-[600px] sm:h-[220px] bg-gradient-to-br from-[#E17726]/60 via-[#FF8A56]/50 to-cyan-400/50 rounded-full blur-3xl opacity-90 animate-float-slow z-[1]"></div>
+        <div className="absolute -top-40 right-[-20px] sm:right-[-40px] w-40 h-40 sm:w-56 sm:h-56 bg-gradient-to-br from-cyan-400/60 to-transparent rounded-full blur-2xl opacity-80 animate-float animation-delay-700 z-[2]"></div>
         {/* Main gradient mesh */}
-        <div className="absolute inset-0 bg-gradient-mesh opacity-30"></div>
+        <div className="absolute inset-0 bg-gradient-mesh opacity-40 z-[0]"></div>
         
         {/* Floating Elements */}
-        <div className="absolute top-20 left-4 sm:left-10 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-br from-[#E17726]/20 to-transparent rounded-full blur-3xl animate-float"></div>
-        <div className="absolute top-40 right-4 sm:right-20 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-br from-cyan-400/20 to-transparent rounded-full blur-3xl animate-float animation-delay-300"></div>
-        <div className="absolute bottom-20 left-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full blur-3xl animate-float animation-delay-500"></div>
+        <div className="absolute top-20 left-4 sm:left-10 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-br from-[#E17726]/30 to-transparent rounded-full blur-3xl animate-float z-[1]"></div>
+        <div className="absolute top-40 right-4 sm:right-20 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-br from-cyan-400/30 to-transparent rounded-full blur-3xl animate-float animation-delay-300 z-[1]"></div>
+        <div className="absolute bottom-20 left-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-br from-purple-400/30 to-transparent rounded-full blur-3xl animate-float animation-delay-500 z-[1]"></div>
         
         {/* Interactive cursor glow - hidden on mobile */}
         <div 
-          className="pointer-events-none absolute w-96 h-96 bg-gradient-to-r from-[#E17726]/10 to-cyan-400/10 rounded-full blur-3xl transition-all duration-1000 ease-out hidden lg:block"
+          className="pointer-events-none absolute w-96 h-96 bg-gradient-to-r from-[#E17726]/10 to-cyan-400/10 rounded-full blur-3xl transition-all duration-1000 ease-out hidden lg:block z-[3]"
           style={{
             left: mousePosition.x - 192,
             top: mousePosition.y - 192,
