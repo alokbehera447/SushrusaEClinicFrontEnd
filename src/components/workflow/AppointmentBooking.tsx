@@ -48,7 +48,7 @@ const AppointmentBooking = () => {
       rating: 4.8,
       experience: '15 years',
       fee: 500,
-      image: '/placeholder.svg',
+      image: '/doctor-avatar-1.svg',
       nextAvailable: '10:30 AM'
     },
     {
@@ -58,7 +58,7 @@ const AppointmentBooking = () => {
       rating: 4.6,
       experience: '12 years',
       fee: 400,
-      image: '/placeholder.svg',
+      image: '/doctor-avatar-2.svg',
       nextAvailable: '11:15 AM'
     },
     {
@@ -68,7 +68,7 @@ const AppointmentBooking = () => {
       rating: 4.9,
       experience: '18 years',
       fee: 600,
-      image: '/placeholder.svg',
+      image: '/doctor-avatar-3.svg',
       nextAvailable: '2:00 PM'
     }
   ];

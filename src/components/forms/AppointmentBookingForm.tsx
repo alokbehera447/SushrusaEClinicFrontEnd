@@ -48,7 +48,7 @@ const AppointmentBookingForm = ({ onAppointmentCreated }: AppointmentBookingForm
         video: 600,
         phone: 400
       },
-      image: "/placeholder.svg",
+      image: "/doctor-avatar-1.svg",
       availability: {
         days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
         timeSlots: ['09:00', '09:30', '10:00', '10:30', '11:00', '14:00', '14:30', '15:00', '15:30', '16:00']
@@ -67,7 +67,7 @@ const AppointmentBookingForm = ({ onAppointmentCreated }: AppointmentBookingForm
         video: 450,
         phone: 300
       },
-      image: "/placeholder.svg",
+      image: "/doctor-avatar-2.svg",
       availability: {
         days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
         timeSlots: ['10:00', '10:30', '11:00', '11:30', '15:00', '15:30', '16:00', '16:30']
@@ -86,7 +86,7 @@ const AppointmentBookingForm = ({ onAppointmentCreated }: AppointmentBookingForm
         video: 750,
         phone: 500
       },
-      image: "/placeholder.svg",
+      image: "/doctor-avatar-3.svg",
       availability: {
         days: ['monday', 'wednesday', 'friday'],
         timeSlots: ['09:00', '09:30', '10:00', '14:00', '14:30', '15:00']

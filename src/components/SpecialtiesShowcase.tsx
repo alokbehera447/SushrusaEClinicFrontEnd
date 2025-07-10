@@ -84,7 +84,7 @@ const SpecialtiesShowcase = () => {
                 {/* Image Section */}
                 <div className="aspect-[4/3] bg-gradient-to-br from-[#E17726]/5 to-aqua/5 relative overflow-hidden">
                   <img 
-                    src="/placeholder.svg" 
+                    src="/healthcare-consultation.svg" 
                     alt={specialty.image}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />

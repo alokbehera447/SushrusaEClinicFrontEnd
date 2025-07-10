@@ -40,7 +40,7 @@ const ImageContentBlocks = () => {
       subtitle: "Innovation meets compassion",
       description: "Our state-of-the-art digital platform combines cutting-edge technology with personalized care to deliver exceptional healthcare experiences.",
       buttonText: "Explore our technology",
-      image: "/img3.jpeg",
+      image: "/medical-technology.svg",
       imagePlaceholder: "Medical technology and innovation",
       reversed: false,
       badge: "INNOVATION",

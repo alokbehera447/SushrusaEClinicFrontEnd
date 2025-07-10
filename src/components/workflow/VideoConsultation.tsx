@@ -134,11 +134,11 @@ const VideoConsultation = () => {
                 <div className="flex items-center justify-center h-full">
                   {isVideoOn ? (
                     <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                      <Avatar className="w-32 h-32">
-                        <AvatarFallback className="bg-[#E17726] text-white text-4xl font-bold">
-                          DR
-                        </AvatarFallback>
-                      </Avatar>
+                      <img 
+                        src="/doctor-avatar-1.svg" 
+                        alt="Doctor" 
+                        className="w-32 h-32 rounded-full"
+                      />
                     </div>
                   ) : (
                     <div className="text-center text-white">
@@ -157,11 +157,11 @@ const VideoConsultation = () => {
                 </div>
                 <div className="flex items-center justify-center h-full">
                   <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                    <Avatar className="w-32 h-32">
-                      <AvatarFallback className="bg-aqua text-white text-4xl font-bold">
-                        {patientInfo.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
+                    <img 
+                      src="/patient-avatar-1.svg" 
+                      alt="Patient" 
+                      className="w-32 h-32 rounded-full"
+                    />
                   </div>
                 </div>
               </Card>
@@ -245,11 +245,11 @@ const VideoConsultation = () => {
                 {activeTab === 'patient-info' && (
                   <div className="space-y-4">
                     <div className="text-center">
-                      <Avatar className="w-16 h-16 mx-auto mb-3">
-                        <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold text-lg">
-                          {patientInfo.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
+                      <img 
+                        src="/patient-avatar-1.svg" 
+                        alt="Patient" 
+                        className="w-16 h-16 mx-auto mb-3 rounded-full"
+                      />
                       <h3 className="font-bold text-midnight">{patientInfo.name}</h3>
                       <p className="text-sm text-gray-600">{patientInfo.id}</p>
                     </div>

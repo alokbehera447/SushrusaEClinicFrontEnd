@@ -86,11 +86,11 @@ const DoctorDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <Avatar className="w-10 h-10">
-                <AvatarFallback className="bg-[#E17726] text-white font-semibold">
-                  DR
-                </AvatarFallback>
-              </Avatar>
+              <img 
+                src="/doctor-avatar-1.svg" 
+                alt="Doctor" 
+                className="w-10 h-10 rounded-full"
+              />
               <div>
                 <h1 className="text-xl font-bold text-midnight">Dr. Rajesh Verma</h1>
                 <p className="text-sm text-gray-600">Cardiologist • Sushrusa Clinic</p>
@@ -173,11 +173,11 @@ const DoctorDashboard = () => {
                             <div className="text-sm font-semibold text-[#E17726]">{consultation.time}</div>
                             <div className="text-xs text-gray-500">{consultation.type}</div>
                           </div>
-                          <Avatar className="w-12 h-12">
-                            <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                              {consultation.patient.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
+                          <img 
+                            src="/patient-avatar-1.svg" 
+                            alt="Patient" 
+                            className="w-12 h-12 rounded-full"
+                          />
                           <div>
                             <h4 className="font-semibold text-midnight">{consultation.patient.name}</h4>
                             <p className="text-sm text-gray-600">{consultation.patient.age}yr, {consultation.patient.gender}</p>

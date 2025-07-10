@@ -357,11 +357,11 @@ const AdminDashboard = () => {
                       {appointments.map((appointment, index) => (
                         <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                           <div className="flex items-center space-x-4">
-                            <Avatar className="w-12 h-12">
-                              <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                                {appointment.patient.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
+                            <img 
+                              src="/patient-avatar-1.svg" 
+                              alt="Patient" 
+                              className="w-12 h-12 rounded-full"
+                            />
                             <div>
                               <h4 className="font-semibold text-midnight">{appointment.patient.name}</h4>
                               <p className="text-sm text-gray-600">{appointment.doctor} • {appointment.specialty}</p>
@@ -465,11 +465,11 @@ const AdminDashboard = () => {
                             <div className="text-sm font-semibold text-[#E17726]">{appointment.id}</div>
                             <div className="text-xs text-gray-500">{appointment.time}</div>
                           </div>
-                          <Avatar className="w-12 h-12">
-                            <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                              {appointment.patient.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
+                          <img 
+                            src="/patient-avatar-2.svg" 
+                            alt="Patient" 
+                            className="w-12 h-12 rounded-full"
+                          />
                           <div>
                             <h4 className="font-semibold text-midnight">{appointment.patient.name}</h4>
                             <p className="text-sm text-gray-600 flex items-center">
@@ -670,11 +670,11 @@ const AdminDashboard = () => {
                               <div className="text-sm font-semibold text-[#E17726]">{patient.id}</div>
                               <div className="text-xs text-gray-500">Age: {patient.age}</div>
                             </div>
-                            <Avatar className="w-12 h-12">
-                              <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                                {patient.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
+                            <img 
+                              src="/patient-avatar-3.svg" 
+                              alt="Patient" 
+                              className="w-12 h-12 rounded-full"
+                            />
                             <div>
                               <h4 className="font-semibold text-midnight">{patient.name}</h4>
                               <p className="text-sm text-gray-600 flex items-center">
@@ -872,11 +872,11 @@ const AdminDashboard = () => {
                               <div className="text-sm font-semibold text-[#E17726]">{transaction.id}</div>
                               <div className="text-xs text-gray-500">{transaction.time}</div>
                             </div>
-                            <Avatar className="w-12 h-12">
-                              <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                                {transaction.patient.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
+                            <img 
+                              src="/patient-avatar-1.svg" 
+                              alt="Patient" 
+                              className="w-12 h-12 rounded-full"
+                            />
                             <div>
                               <h4 className="font-semibold text-midnight">{transaction.patient}</h4>
                               <p className="text-sm text-gray-600">{transaction.type}</p>
@@ -949,11 +949,11 @@ const AdminDashboard = () => {
                           <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>
                           <div className="text-xs text-gray-500">{consultation.time}</div>
                         </div>
-                        <Avatar className="w-12 h-12">
-                          <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                            {consultation.patient.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
+                        <img 
+                          src="/patient-avatar-2.svg" 
+                          alt="Patient" 
+                          className="w-12 h-12 rounded-full"
+                        />
                         <div>
                           <h4 className="font-semibold text-midnight">{consultation.patient}</h4>
                           <p className="text-sm text-gray-600">{consultation.doctor}</p>
@@ -1217,11 +1217,11 @@ const AdminDashboard = () => {
                               <div className="text-sm font-semibold text-[#E17726]">{prescription.id}</div>
                               <div className="text-xs text-gray-500">{prescription.time}</div>
                             </div>
-                            <Avatar className="w-12 h-12">
-                              <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                                {prescription.patient.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
+                            <img 
+                              src="/patient-avatar-3.svg" 
+                              alt="Patient" 
+                              className="w-12 h-12 rounded-full"
+                            />
                             <div>
                               <h4 className="font-semibold text-midnight">{prescription.patient}</h4>
                               <p className="text-sm text-gray-600">{prescription.doctor}</p>
