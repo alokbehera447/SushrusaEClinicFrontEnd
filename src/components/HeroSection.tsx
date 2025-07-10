@@ -40,12 +40,12 @@ const HeroSection = () => {
         ></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-0 pb-16 sm:pb-32">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-center min-h-[calc(100vh-8rem)]">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16 sm:pb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-center min-h-[calc(100vh-12rem)]">
           {/* Left Content */}
           <div className={`space-y-6 sm:space-y-8 ${isVisible ? 'animate-fade-in-left' : 'opacity-0'}`}>
             {/* Badge */}
-            <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full shadow-soft hover-glow group cursor-pointer animate-slide-in-down border-2 border-[#E17726]/40 backdrop-blur-md">
+            <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full hover-glow group cursor-pointer animate-slide-in-down border-2 border-[#E17726]/40 backdrop-blur-md">
               <div className="relative">
                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-orange rounded-full animate-pulse-glow"></div>
                 <div className="absolute inset-0 w-2 h-2 sm:w-3 sm:h-3 bg-[#E17726] rounded-full animate-ping"></div>
@@ -54,14 +54,14 @@ const HeroSection = () => {
               <span className="text-xs sm:text-sm font-bold text-[#E17726] tracking-wide uppercase">Rural Healthcare</span>
             </div>
             {/* Trust Badge */}
-            <div className="inline-flex items-center space-x-2 bg-white/80 px-3 py-1 rounded-full shadow border border-gray-200 mt-2 animate-fade-in-up animation-delay-150">
+            <div className="inline-flex items-center space-x-2 bg-white/80 px-3 py-1 rounded-full border border-gray-200 mt-2 animate-fade-in-up animation-delay-150">
               <Award className="w-4 h-4 text-emerald-500" />
               <span className="text-xs font-semibold text-gray-700">Trusted by 10,000+ patients</span>
             </div>
             
             {/* Main Heading */}
             <div className="space-y-4 sm:space-y-6 animation-delay-200">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-midnight leading-[1.1] tracking-tight drop-shadow-xl">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-midnight leading-[1.1] tracking-tight">
                 <span className="block animate-fade-in-up">Superspeciality Care</span>
                 <span className="block bg-gradient-to-r from-[#E17726] to-[#FF8A56] bg-clip-text text-transparent animate-fade-in-up animation-delay-100 pb-1">
                   Everywhere
@@ -77,7 +77,7 @@ const HeroSection = () => {
               <Link to="/login" className="group">
                 <Button 
                   size="lg" 
-                  className="w-full sm:w-auto bg-gradient-orange hover:shadow-xl-colored text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 group-hover:scale-105"
+                  className="w-full sm:w-auto bg-gradient-orange text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 group-hover:scale-105"
                 >
                   <Calendar className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:rotate-12 transition-transform duration-300" />
                   Book Consultation
@@ -100,20 +100,20 @@ const HeroSection = () => {
           {/* Right Content - Enhanced Visual */}
           <div className={`relative mt-8 lg:mt-0 ${isVisible ? 'animate-fade-in-right animation-delay-200' : 'opacity-0'}`}>
             {/* Floating 24x7 Badge */}
-            <div className="absolute -top-8 right-0 z-20 flex items-center space-x-2 bg-gradient-to-r from-[#E17726]/90 to-cyan-400/90 text-white px-4 py-2 rounded-full shadow-lg animate-fade-in-up animation-delay-300 border-2 border-white/30">
+            <div className="absolute -top-8 right-0 z-20 flex items-center space-x-2 bg-gradient-to-r from-[#E17726]/90 to-cyan-400/90 text-white px-4 py-2 rounded-full animate-fade-in-up animation-delay-300 border-2 border-white/30">
               <Clock className="w-5 h-5" />
               <span className="font-bold text-sm tracking-wide">24x7 Superspecialist Access</span>
             </div>
             {/* Main Visual Container with proper relative positioning */}
             <div className="relative w-full max-w-lg mx-auto lg:mx-0">
               {/* Primary Card */}
-              <div className="relative z-10 glass rounded-3xl p-4 sm:p-6 shadow-xl-colored hover-lift group">
+              <div className="relative z-10 glass rounded-3xl p-4 sm:p-6 group">
                 {/* Video/Image Section */}
                 <div className="relative rounded-2xl overflow-hidden mb-3 sm:mb-4 group-hover:scale-105 transition-transform duration-500">
                   {/* Fallback Image */}
                   <div className="w-full h-48 sm:h-64 md:h-72 bg-gradient-to-br from-[#E17726]/20 to-cyan-400/20 flex items-center justify-center rounded-2xl">
                     <div className="text-center space-y-4">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-orange rounded-full flex items-center justify-center mx-auto shadow-xl animate-pulse-glow">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-orange rounded-full flex items-center justify-center mx-auto animate-pulse-glow">
                         <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                       </div>
                       <div>

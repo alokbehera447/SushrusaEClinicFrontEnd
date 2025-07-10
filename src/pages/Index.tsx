@@ -78,15 +78,13 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white pt-16 sm:pt-20">
-      <header className="w-full flex flex-col">
+    <div className="min-h-screen bg-white">
+      <header className="w-full flex flex-col sticky top-0 z-40">
         <Navbar />
-        <div className="w-full">
-          <LocationSearchBar />
-        </div>
+        <LocationSearchBar />
       </header>
       
-      <main className="relative mt-0">
+      <main className="relative">
         {/* Hero Section */}
         <HeroSection />
         
