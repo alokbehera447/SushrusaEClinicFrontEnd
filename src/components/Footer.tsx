@@ -1,7 +1,17 @@
 import React from 'react';
 import { Heart, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
+  const quickLinks = [
+    { name: 'Home', href: '/' },
+    { name: 'Services', href: '#services' },
+    { name: 'About Us', href: '#about' },
+    { name: 'Contact', href: '#contact' },
+    { name: 'Privacy Policy', href: '/privacy-policy' },
+    { name: 'Terms of Service', href: '/terms-of-service' }
+  ];
+
   return (
     <footer id="contact" className="bg-midnight text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
@@ -27,14 +37,14 @@ const Footer = () => {
           <div className="space-y-4 sm:space-y-6">
             <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Quick Links</h3>
             <ul className="space-y-3 sm:space-y-4">
-              {['Home', 'Services', 'About Us', 'Contact', 'Privacy Policy', 'Terms of Service'].map((link) => (
-                <li key={link}>
-                  <a 
-                    href="#" 
+              {quickLinks.map((link) => (
+                <li key={link.name}>
+                  <Link 
+                    to={link.href}
                     className="text-white/70 hover:text-[#E17726] transition-colors duration-300 text-base sm:text-lg block py-1 min-h-[44px] flex items-center"
                   >
-                    {link}
-                  </a>
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>

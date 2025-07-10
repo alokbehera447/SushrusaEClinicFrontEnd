@@ -9,6 +9,8 @@ import WorkflowDemo from "./pages/WorkflowDemo";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import FindDoctors from "./pages/FindDoctors";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 // Import dashboard pages
 import SuperAdminDashboardPage from "./pages/SuperAdminDashboard";
@@ -40,6 +42,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/find-doctors" element={<FindDoctors />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
           
           {/* Dashboard Routes */}
           <Route path="/superadmin/dashboard" element={<SuperAdminDashboardPage />} />
