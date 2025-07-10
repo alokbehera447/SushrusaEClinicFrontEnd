@@ -64,12 +64,14 @@ const Navbar = () => {
   }, [isMenuOpen]);
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
-      isScrolled 
-        ? 'glass shadow-xl backdrop-blur-xl border-b border-white/20' 
-        : 'bg-transparent'
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 bg-transparent`}>
+      {/* Animated Gradient Background */}
+      <div className="absolute inset-0 w-full h-full bg-gradient-hero overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-mesh opacity-30"></div>
+        <div className="absolute top-2 left-2 w-16 h-16 bg-gradient-to-br from-[#E17726]/20 to-transparent rounded-full blur-2xl animate-float"></div>
+        <div className="absolute top-6 right-2 w-24 h-24 bg-gradient-to-br from-cyan-400/20 to-transparent rounded-full blur-2xl animate-float animation-delay-300"></div>
+      </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
         <div className="flex justify-between items-center h-16 sm:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group hover-scale">
@@ -114,7 +116,7 @@ const Navbar = () => {
                 Login
               </Button>
             </Link>
-            <Link to="/login" className="group">
+            <Link to="/register" className="group">
               <Button className="bg-gradient-orange hover:shadow-xl-colored text-white rounded-full px-4 lg:px-6 py-2 font-semibold transition-all duration-300 hover-lift btn-modern group-hover:scale-105">
                 <span className="flex items-center">
                   Register
@@ -175,7 +177,7 @@ const Navbar = () => {
                     Login
                   </Button>
                 </Link>
-                <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/register" onClick={() => setIsMenuOpen(false)}>
                   <Button className="w-full bg-gradient-orange hover:shadow-xl-colored text-white rounded-xl font-semibold transition-all duration-300 btn-modern min-h-[44px]">
                     <span className="flex items-center justify-center">
                       Register

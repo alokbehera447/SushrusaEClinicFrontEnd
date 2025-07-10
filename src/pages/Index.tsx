@@ -8,6 +8,7 @@ import HowItWorksSection from '@/components/HowItWorksSection';
 import ImageContentBlocks from '@/components/ImageContentBlocks';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import Footer from '@/components/Footer';
+import LocationSearchBar from '../components/LocationSearchBar';
 
 const Index = () => {
   useEffect(() => {
@@ -77,10 +78,15 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
+    <div className="min-h-screen bg-white pt-16 sm:pt-20">
+      <header className="w-full flex flex-col">
+        <Navbar />
+        <div className="w-full">
+          <LocationSearchBar />
+        </div>
+      </header>
       
-      <main className="relative">
+      <main className="relative mt-0">
         {/* Hero Section */}
         <HeroSection />
         

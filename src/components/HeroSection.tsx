@@ -19,7 +19,7 @@ const HeroSection = () => {
   }, []);
 
   return (
-    <section id="home" className="relative min-h-screen bg-gradient-hero overflow-hidden">
+    <section id="home" className="relative min-h-[300px] sm:min-h-[400px] bg-gradient-hero overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
         {/* Main gradient mesh */}
@@ -40,7 +40,7 @@ const HeroSection = () => {
         ></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pb-32">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 sm:pt-0 pb-16 sm:pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-center min-h-[calc(100vh-8rem)]">
           {/* Left Content */}
           <div className={`space-y-6 sm:space-y-8 ${isVisible ? 'animate-fade-in-left' : 'opacity-0'}`}>

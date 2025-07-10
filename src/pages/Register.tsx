@@ -3,27 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight, User, Calendar } from 'lucide-react';
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [step, setStep] = useState<'phone' | 'info' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
-  // Dummy phone numbers for testing
-  const dummyCredentials = {
-    'super_admin': { phone: '9876543210', redirect: '/superadmin/dashboard' },
-    'admin': { phone: '9876543211', redirect: '/admin/dashboard' },
-    'doctor': { phone: '9876543212', redirect: '/doctor/dashboard' },
-    'patient': { phone: '9876543213', redirect: '/patient/dashboard' }
-  };
+  // Basic user info
+  const [userInfo, setUserInfo] = useState({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: ''
+  });
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -34,15 +31,18 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  const handleRoleChange = (role: string) => {
-    setSelectedRole(role);
-    // Pre-fill phone number when role is selected
-    if (dummyCredentials[role as keyof typeof dummyCredentials]) {
-      setPhoneNumber(dummyCredentials[role as keyof typeof dummyCredentials].phone);
-    }
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate API call delay
+    setTimeout(() => {
+      setStep('info');
+      setIsLoading(false);
+    }, 1000);
   };
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -50,7 +50,7 @@ const Login = () => {
     setTimeout(() => {
       setOtpSent(true);
       setStep('otp');
-      setCountdown(30); // 30 seconds countdown
+      setCountdown(30);
       setIsLoading(false);
     }, 1000);
   };
@@ -82,13 +82,14 @@ const Login = () => {
 
     // Simulate API call delay
     setTimeout(() => {
-      const roleCredentials = dummyCredentials[selectedRole as keyof typeof dummyCredentials];
-      
-      if (roleCredentials && phoneNumber === roleCredentials.phone && otpString === '123456') {
+      if (otpString === '123456') {
         // Simulate setting authentication token/state
-        localStorage.setItem('userRole', selectedRole);
+        localStorage.setItem('userRole', 'patient');
         localStorage.setItem('phoneNumber', phoneNumber);
-        navigate(roleCredentials.redirect);
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        localStorage.setItem('isNewUser', 'true');
+        alert('Registration successful! Welcome to Sushrusa eClinic.');
+        navigate('/patient/dashboard');
       } else {
         alert('Invalid OTP. Please try again.');
         setOtp(['', '', '', '', '', '']);
@@ -104,6 +105,13 @@ const Login = () => {
     alert('OTP resent successfully!');
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    setUserInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
     const match = cleaned.match(/^(\d{0,5})(\d{0,5})$/);
@@ -111,6 +119,24 @@ const Login = () => {
       return match[1] + (match[2] ? ' ' + match[2] : '');
     }
     return cleaned;
+  };
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 'phone': return 'Phone Number';
+      case 'info': return 'Basic Information';
+      case 'otp': return 'Verify OTP';
+      default: return 'Register';
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (step) {
+      case 'phone': return 'Enter your phone number';
+      case 'info': return 'Provide your basic details';
+      case 'otp': return `Code sent to ${phoneNumber}`;
+      default: return 'Create your account';
+    }
   };
 
   return (
@@ -142,47 +168,53 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-midnight mb-2">Welcome Back</h2>
-            <p className="text-gray-600">Sign in with your phone number</p>
+            <h2 className="text-3xl font-bold text-midnight mb-2">Patient Registration</h2>
+          </div>
+
+          {/* Progress Steps */}
+          <div className="flex justify-center items-center space-x-4 mb-8">
+            {['phone', 'info', 'otp'].map((stepName, index) => (
+              <div key={stepName} className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                  step === stepName 
+                    ? 'bg-[#E17726] text-white' 
+                    : step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName)
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName) ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    index + 1
+                  )}
+                </div>
+                {index < 2 && (
+                  <div className={`w-12 h-1 mx-2 ${
+                    step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName)
+                    ? 'bg-green-500'
+                    : 'bg-gray-200'
+                  }`}></div>
+                )}
+              </div>
+            ))}
           </div>
 
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl text-center text-midnight">
-                {step === 'phone' ? 'Enter Phone Number' : 'Verify OTP'}
+                {getStepTitle()}
               </CardTitle>
               <CardDescription className="text-center text-gray-600">
-                {step === 'phone' 
-                  ? 'We\'ll send you a verification code' 
-                  : `Code sent to ${phoneNumber}`
-                }
+                {getStepDescription()}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {step === 'phone' ? (
-                <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                  {/* Role Selection */}
-                  <div className="space-y-2">
-                    <Label htmlFor="role" className="text-sm font-medium text-gray-700">
-                      Select Role
-                    </Label>
-                    <Select value={selectedRole} onValueChange={handleRoleChange}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="doctor">Doctor</SelectItem>
-                        <SelectItem value="patient">Patient</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+              {step === 'phone' && (
+                <form onSubmit={handlePhoneSubmit} className="space-y-6">
                   {/* Phone Number */}
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                      Phone Number
+                      Phone Number *
                     </Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -199,29 +231,93 @@ const Login = () => {
                     </div>
                   </div>
 
-                  {/* Test Credentials Info */}
-                  {selectedRole && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-800 font-medium">Test Phone Number:</p>
-                      <p className="text-sm text-blue-700">
-                        Phone: <span className="font-mono bg-white px-1 rounded">{dummyCredentials[selectedRole as keyof typeof dummyCredentials]?.phone}</span>
-                      </p>
-                      <p className="text-sm text-blue-700 mt-1">
-                        OTP: <span className="font-mono bg-white px-1 rounded">123456</span>
-                      </p>
-                    </div>
-                  )}
+                  {/* Test Info */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-800 font-medium">Test OTP: <span className="font-mono bg-white px-1 rounded">123456</span></p>
+                  </div>
 
-                  {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={!selectedRole || phoneNumber.length !== 10 || isLoading}
+                    disabled={phoneNumber.length !== 10 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Sending OTP..." : "Send OTP"}
+                    {isLoading ? "Verifying..." : "Continue"}
                   </Button>
                 </form>
-              ) : (
+              )}
+
+              {step === 'info' && (
+                <form onSubmit={handleInfoSubmit} className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                          First Name *
+                        </Label>
+                        <Input
+                          id="firstName"
+                          value={userInfo.firstName}
+                          onChange={(e) => handleInputChange('firstName', e.target.value)}
+                          placeholder="Enter first name"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                          Last Name *
+                        </Label>
+                        <Input
+                          id="lastName"
+                          value={userInfo.lastName}
+                          onChange={(e) => handleInputChange('lastName', e.target.value)}
+                          placeholder="Enter last name"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700">
+                        Date of Birth *
+                      </Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          id="dateOfBirth"
+                          type="date"
+                          value={userInfo.dateOfBirth}
+                          onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                          required
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={!userInfo.firstName || !userInfo.lastName || !userInfo.dateOfBirth || isLoading}
+                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
+                  >
+                    {isLoading ? "Processing..." : "Send OTP"}
+                  </Button>
+
+                  {/* Back to Phone */}
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => setStep('phone')}
+                      className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                    >
+                      ← Back to phone number
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {step === 'otp' && (
                 <form onSubmit={handleOtpSubmit} className="space-y-6">
                   {/* OTP Input */}
                   <div className="space-y-2">
@@ -267,21 +363,21 @@ const Login = () => {
                     disabled={otp.join('').length !== 6 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
                   >
-                    {isLoading ? "Verifying..." : "Verify OTP"}
+                    {isLoading ? "Creating Account..." : "Create Account"}
                   </Button>
 
-                  {/* Back to Phone */}
+                  {/* Back to Info */}
                   <div className="text-center">
                     <button
                       type="button"
                       onClick={() => {
-                        setStep('phone');
+                        setStep('info');
                         setOtpSent(false);
                         setOtp(['', '', '', '', '', '']);
                       }}
                       className="text-sm text-gray-600 hover:text-gray-800 font-medium"
                     >
-                      ← Back to phone number
+                      ← Back to information
                     </button>
                   </div>
                 </form>
@@ -289,9 +385,9 @@ const Login = () => {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
-                  <Link to="/register" className="text-[#E17726] hover:text-[#c9651e] font-medium">
-                    Register here
+                  Already have an account?{' '}
+                  <Link to="/login" className="text-[#E17726] hover:text-[#c9651e] font-medium">
+                    Sign in here
                   </Link>
                 </p>
               </div>
@@ -303,4 +399,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Register; 

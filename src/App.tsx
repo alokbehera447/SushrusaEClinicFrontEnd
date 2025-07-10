@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import WorkflowDemo from "./pages/WorkflowDemo";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import FindDoctors from "./pages/FindDoctors";
 
 // Import dashboard pages
@@ -37,6 +38,7 @@ const App = () => (
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/find-doctors" element={<FindDoctors />} />
           
           {/* Dashboard Routes */}
