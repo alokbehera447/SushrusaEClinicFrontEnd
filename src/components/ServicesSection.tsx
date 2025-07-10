@@ -146,11 +146,11 @@ const ServicesSection = () => {
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch">
           {services.map((service, index) => (
             <Card 
               key={index} 
-              className={`group relative overflow-hidden border-0 shadow-modern bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl transition-all duration-700 hover:shadow-xl-colored h-full flex flex-col ${
+              className={`group relative overflow-hidden border-0 shadow-modern bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl transition-all duration-700 hover:shadow-xl-colored flex flex-col h-[600px] ${
                 visibleCards[index] 
                   ? 'opacity-100 translate-y-0' 
                   : 'opacity-0 translate-y-8'
@@ -198,7 +198,7 @@ const ServicesSection = () => {
                   {/* Action Button */}
                   <Button 
                     variant="outline" 
-                    className="w-full group-hover:border-current transition-colors duration-300 min-h-[44px] flex-shrink-0"
+                    className="w-full group-hover:border-current transition-colors duration-300 min-h-[44px] flex-shrink-0 mt-auto"
                   >
                     Learn More
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
