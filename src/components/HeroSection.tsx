@@ -61,9 +61,9 @@ const HeroSection = () => {
             
             {/* Main Heading */}
             <div className="space-y-4 sm:space-y-6 animation-delay-200">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-midnight leading-[0.9] tracking-tight drop-shadow-xl">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-midnight leading-[1.1] tracking-tight drop-shadow-xl">
                 <span className="block animate-fade-in-up">Superspeciality Care</span>
-                <span className="block bg-gradient-to-r from-[#E17726] to-[#FF8A56] bg-clip-text text-transparent animate-fade-in-up animation-delay-100">
+                <span className="block bg-gradient-to-r from-[#E17726] to-[#FF8A56] bg-clip-text text-transparent animate-fade-in-up animation-delay-100 pb-1">
                   Everywhere
                 </span>
               </h1>
