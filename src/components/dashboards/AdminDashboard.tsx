@@ -25,7 +25,8 @@ import {
   Activity,
   DollarSign,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 
 // Error Boundary Component
@@ -84,7 +85,7 @@ const AdminDashboard = () => {
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
+  const [expandedConsultation, setExpandedConsultation] = useState<string | null>(null);
 
   // Shared state for appointments and consultations
   const [appointments, setAppointments] = useState([
@@ -126,7 +127,7 @@ const AdminDashboard = () => {
     }
   ]);
 
-  const [consultations, setConsultations] = useState([
+  const [consultations, setConsultations] = useState<any[]>([
     { 
       id: 'CON001', 
       appointmentId: 'APT002',
@@ -136,7 +137,14 @@ const AdminDashboard = () => {
       status: 'ongoing',
       duration: '15 min',
       type: 'video',
-      startTime: '14:30'
+      startTime: '14:30',
+      prescription: {
+        id: 'RX001',
+        status: 'active',
+        medicines: ['Metformin 500mg', 'Glimepiride 1mg'],
+        instructions: 'Take Metformin with meals twice daily. Take Glimepiride 30 minutes before breakfast.',
+        writtenDate: '2024-01-16'
+      } as any
     },
     { 
       id: 'CON002', 
@@ -147,7 +155,8 @@ const AdminDashboard = () => {
       status: 'waiting',
       duration: '30 min',
       type: 'video',
-      startTime: '15:00'
+      startTime: '15:00',
+      prescription: null
     },
     { 
       id: 'CON003', 
@@ -158,7 +167,14 @@ const AdminDashboard = () => {
       status: 'scheduled',
       duration: '30 min',
       type: 'phone',
-      startTime: '15:30'
+      startTime: '15:30',
+      prescription: {
+        id: 'RX003',
+        status: 'active',
+        medicines: ['Ibuprofen 400mg', 'Paracetamol 500mg', 'Vitamin D3 1000IU'],
+        instructions: 'Take Ibuprofen for pain relief as needed. Take Paracetamol for fever. Take Vitamin D3 once daily.',
+        writtenDate: '2024-01-15'
+      }
     }
   ]);
 
@@ -175,8 +191,7 @@ const AdminDashboard = () => {
     { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'consultations', label: 'Consultations', icon: Video },
-    { id: 'prescriptions', label: 'Prescriptions', icon: FileText }
+    { id: 'consultations', label: 'Consultations', icon: Video }
   ];
 
   const getStatusColor = (status: string) => {
@@ -407,14 +422,7 @@ const AdminDashboard = () => {
                       <CreditCard className="w-5 h-5 mr-3" />
                       Process Payment
                     </Button>
-                    <Button 
-                      onClick={() => setShowPrescriptionForm(true)}
-                      variant="outline" 
-                      className="w-full justify-start h-12 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-100"
-                    >
-                      <FileText className="w-5 h-5 mr-3" />
-                      Write Prescription
-                    </Button>
+
                   </CardContent>
                 </Card>
               </div>
@@ -972,6 +980,14 @@ const AdminDashboard = () => {
                           {consultation.status}
                         </Badge>
                         <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white rounded-lg"
+                            onClick={() => setExpandedConsultation(expandedConsultation === consultation.id ? null : consultation.id)}
+                          >
+                            {expandedConsultation === consultation.id ? 'Hide Details' : 'Manage'}
+                          </Button>
                           {consultation.status === 'ongoing' && (
                             <Button 
                               size="sm" 
@@ -994,6 +1010,145 @@ const AdminDashboard = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Detailed Management Section */}
+                      {expandedConsultation === consultation.id && (
+                        <div className="mt-4 p-6 bg-white rounded-lg border border-gray-200 shadow-lg">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Consultation Details */}
+                            <div className="space-y-4">
+                              <h5 className="font-semibold text-midnight text-lg border-b pb-2">Consultation Details</h5>
+                              <div className="space-y-3">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Patient Name:</span>
+                                  <span className="font-medium">{consultation.patient}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Doctor:</span>
+                                  <span className="font-medium">{consultation.doctor}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Consultation Type:</span>
+                                  <span className="font-medium">{consultation.type}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Time:</span>
+                                  <span className="font-medium">{consultation.time}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Duration:</span>
+                                  <span className="font-medium">{consultation.duration}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Status:</span>
+                                  <Badge className={
+                                    consultation.status === 'ongoing' ? 'bg-green-100 text-green-800' :
+                                    consultation.status === 'waiting' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-blue-100 text-blue-800'
+                                  }>
+                                    {consultation.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Prescription Management */}
+                            <div className="space-y-4">
+                              <h5 className="font-semibold text-midnight text-lg border-b pb-2">Prescription Management</h5>
+                              
+                              {consultation.prescription ? (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <h6 className="font-medium text-midnight">Prescription {consultation.prescription.id}</h6>
+                                    <Badge className={`${
+                                      consultation.prescription.status === 'active' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {consultation.prescription.status}
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="bg-gray-50 p-4 rounded-lg">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <p className="font-medium text-gray-700 mb-2">Medicines:</p>
+                                        <ul className="list-disc list-inside text-gray-600 space-y-1">
+                                          {consultation.prescription.medicines.map((medicine: string, idx: number) => (
+                                            <li key={idx}>{medicine}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                      <div>
+                                        <p className="font-medium text-gray-700 mb-2">Instructions:</p>
+                                        <p className="text-gray-600">{consultation.prescription.instructions}</p>
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Written on: {consultation.prescription.writtenDate}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button size="sm" variant="outline" className="border-aqua text-aqua hover:bg-aqua hover:text-white">
+                                      <FileText className="w-4 h-4 mr-2" />
+                                      Download PDF
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Mark Complete
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white">
+                                      <AlertCircle className="w-4 h-4 mr-2" />
+                                      Discontinue
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                    <div className="flex items-center mb-3">
+                                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
+                                      <span className="text-yellow-800 font-medium">No prescription written</span>
+                                    </div>
+                                    <p className="text-yellow-700 text-sm">Doctor will write prescription during or after the consultation.</p>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button variant="outline" className="border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white">
+                                      <FileText className="w-4 h-4 mr-2" />
+                                      View Consultation Notes
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Additional Actions */}
+                          <div className="mt-6 pt-4 border-t border-gray-200">
+                            <h5 className="font-semibold text-midnight mb-3">Additional Actions</h5>
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white">
+                                <Video className="w-4 h-4 mr-2" />
+                                Schedule Follow-up
+                              </Button>
+                              <Button size="sm" variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-600 hover:text-white">
+                                <FileText className="w-4 h-4 mr-2" />
+                                Add Notes
+                              </Button>
+                              <Button size="sm" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Mark as Reviewed
+                              </Button>
+                              <Button size="sm" variant="outline" className="border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Export Data
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>
@@ -1073,205 +1228,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* Prescriptions Tab */}
-          {activeTab === 'prescriptions' && (
-            <div className="space-y-6">
-              {!showPrescriptionForm ? (
-                <>
-                  {/* Prescription Statistics */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 mb-2">Today's Prescriptions</p>
-                            <p className="text-2xl font-bold text-midnight">18</p>
-                          </div>
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
-                            <FileText className="w-6 h-6 text-[#E17726]" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 mb-2">Pending Review</p>
-                            <p className="text-2xl font-bold text-midnight">3</p>
-                          </div>
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 flex items-center justify-center">
-                            <Clock className="w-6 h-6 text-yellow-600" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 mb-2">This Month</p>
-                            <p className="text-2xl font-bold text-midnight">456</p>
-                          </div>
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-blue-600" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 mb-2">Digital Sent</p>
-                            <p className="text-2xl font-bold text-midnight">89%</p>
-                          </div>
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
-                            <CheckCircle className="w-6 h-6 text-green-600" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
 
-                  {/* Search and Actions Bar */}
-                  <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1 relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                          <Input 
-                            placeholder="Search prescriptions by patient name, prescription ID..." 
-                            className="pl-10 h-11 rounded-xl border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
-                          />
-                        </div>
-                        <Button variant="outline" className="border-gray-300 h-11 px-6 rounded-xl">
-                          <Filter className="w-4 h-4 mr-2" />
-                          Filter
-                        </Button>
-                        <Button 
-                          onClick={() => setShowPrescriptionForm(true)}
-                          className="bg-[#E17726] hover:bg-[#c9651e] text-white h-11 px-6 rounded-xl"
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          Write Prescription
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Recent Prescriptions */}
-                  <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-xl font-bold text-midnight">Recent Prescriptions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {[
-                        { 
-                          id: 'RX001', 
-                          patient: 'Rahul Sharma', 
-                          doctor: 'Dr. Priya Singh',
-                          medications: 3,
-                          date: '2024-01-16',
-                          time: '2:45 PM',
-                          status: 'sent',
-                          condition: 'Hypertension'
-                        },
-                        { 
-                          id: 'RX002', 
-                          patient: 'Anita Devi', 
-                          doctor: 'Dr. Amit Kumar',
-                          medications: 2,
-                          date: '2024-01-16',
-                          time: '2:30 PM',
-                          status: 'pending',
-                          condition: 'Diabetes'
-                        },
-                        { 
-                          id: 'RX003', 
-                          patient: 'Suresh Gupta', 
-                          doctor: 'Dr. Neha Jain',
-                          medications: 4,
-                          date: '2024-01-16',
-                          time: '1:15 PM',
-                          status: 'sent',
-                          condition: 'Arthritis'
-                        },
-                        { 
-                          id: 'RX004', 
-                          patient: 'Priya Patel', 
-                          doctor: 'Dr. Ramesh Kumar',
-                          medications: 1,
-                          date: '2024-01-16',
-                          time: '12:50 PM',
-                          status: 'printed',
-                          condition: 'Migraine'
-                        }
-                      ].map((prescription, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                          <div className="flex items-center space-x-4">
-                            <div className="text-center">
-                              <div className="text-sm font-semibold text-[#E17726]">{prescription.id}</div>
-                              <div className="text-xs text-gray-500">{prescription.time}</div>
-                            </div>
-                            <img 
-                              src="/patient-avatar-3.svg" 
-                              alt="Patient" 
-                              className="w-12 h-12 rounded-full"
-                            />
-                            <div>
-                              <h4 className="font-semibold text-midnight">{prescription.patient}</h4>
-                              <p className="text-sm text-gray-600">{prescription.doctor}</p>
-                              <p className="text-sm text-gray-600">{prescription.condition} • {prescription.medications} medications</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-3">
-                            <div className="text-right">
-                              <div className="font-semibold text-midnight">{prescription.date}</div>
-                              <Badge className={
-                                prescription.status === 'sent' ? 'bg-green-100 text-green-800' :
-                                prescription.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-blue-100 text-blue-800'
-                              }>
-                                {prescription.status}
-                              </Badge>
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button size="sm" variant="outline" className="rounded-lg">
-                                <FileText className="w-4 h-4 mr-2" />
-                                View
-                              </Button>
-                              {prescription.status === 'pending' && (
-                                <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg">
-                                  Send
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-midnight">Write Prescription</h2>
-                    <Button 
-                      onClick={() => setShowPrescriptionForm(false)}
-                      variant="outline"
-                    >
-                      Back to Prescriptions
-                    </Button>
-                  </div>
-                  <PrescriptionWriterForm />
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </ErrorBoundary>

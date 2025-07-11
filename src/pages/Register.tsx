@@ -150,21 +150,22 @@ const Register = () => {
     >
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="bg-[#E17726] p-2 rounded-xl shadow-md">
-                <Heart className="h-6 w-6 text-white" />
+              <div className="bg-[#E17726] p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-md">
+                <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
               <div>
-                <span className="text-xl font-bold text-midnight">SUSHRUSA</span>
-                <span className="text-sm text-gray-500 ml-1">eClinic</span>
+                <span className="text-lg sm:text-xl font-bold text-midnight">SUSHRUSA</span>
+                <span className="text-xs sm:text-sm text-gray-500 ml-1">eClinic</span>
               </div>
             </Link>
             <Link to="/">
-              <Button variant="outline" className="border-gray-300">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
+              <Button variant="outline" className="border-gray-300 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 h-8 sm:h-10">
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back to Home</span>
+                <span className="sm:hidden">Home</span>
               </Button>
             </Link>
           </div>
@@ -172,18 +173,18 @@ const Register = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-        <div className="max-w-md w-full space-y-8">
+      <div className="flex-1 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-8 sm:py-12">
+        <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-midnight mb-2">Join Sushrusa eClinic</h2>
-            <p className="text-gray-600 text-lg">Your journey to better health starts here</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-midnight mb-2">Join Sushrusa eClinic</h2>
+            <p className="text-gray-600 text-base sm:text-lg">Your journey to better health starts here</p>
           </div>
 
           {/* Progress Steps */}
-          <div className="flex justify-center items-center space-x-4 mb-8">
+          <div className="flex justify-center items-center space-x-2 sm:space-x-4 mb-6 sm:mb-8">
             {['phone', 'info', 'otp'].map((stepName, index) => (
               <div key={stepName} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
                   step === stepName 
                     ? 'bg-[#E17726] text-white' 
                     : step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName)
@@ -191,13 +192,13 @@ const Register = () => {
                     : 'bg-gray-200 text-gray-600'
                 }`}>
                   {step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName) ? (
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                   ) : (
                     index + 1
                   )}
                 </div>
                 {index < 2 && (
-                  <div className={`w-12 h-1 mx-2 ${
+                  <div className={`w-8 sm:w-12 h-1 mx-1 sm:mx-2 ${
                     step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName)
                     ? 'bg-green-500'
                     : 'bg-gray-200'
@@ -208,17 +209,17 @@ const Register = () => {
           </div>
 
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl text-center text-midnight">
+            <CardHeader className="space-y-1 pb-4 sm:pb-6">
+              <CardTitle className="text-xl sm:text-2xl text-center text-midnight">
                 {getStepTitle()}
               </CardTitle>
-              <CardDescription className="text-center text-gray-600">
+              <CardDescription className="text-center text-gray-600 text-sm sm:text-base">
                 {getStepDescription()}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {step === 'phone' && (
-                <form onSubmit={handlePhoneSubmit} className="space-y-6">
+                <form onSubmit={handlePhoneSubmit} className="space-y-4 sm:space-y-6">
                   {/* Phone Number */}
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
@@ -246,13 +247,13 @@ const Register = () => {
 
                   {/* Test Info */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-800 font-medium">Test OTP: <span className="font-mono bg-white px-1 rounded">123456</span></p>
+                    <p className="text-xs sm:text-sm text-blue-800 font-medium">Test OTP: <span className="font-mono bg-white px-1 rounded">123456</span></p>
                   </div>
 
                   <Button
                     type="submit"
                     disabled={phoneNumber.length !== 10 || isLoading}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
+                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
                   >
                     {isLoading ? "Verifying..." : "Send Verification Code"}
                   </Button>
@@ -260,10 +261,10 @@ const Register = () => {
               )}
 
               {step === 'info' && (
-                <form onSubmit={handleInfoSubmit} className="space-y-6">
+                <form onSubmit={handleInfoSubmit} className="space-y-4 sm:space-y-6">
                   {/* Basic Information */}
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
                           First Name *
@@ -312,7 +313,7 @@ const Register = () => {
                   <Button
                     type="submit"
                     disabled={!userInfo.firstName || !userInfo.lastName || !userInfo.dateOfBirth || isLoading}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
+                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
                   >
                     {isLoading ? "Processing..." : "Continue to Verification"}
                   </Button>
@@ -322,7 +323,7 @@ const Register = () => {
                     <button
                       type="button"
                       onClick={() => setStep('phone')}
-                      className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium"
                     >
                       ← Back to phone number
                     </button>
@@ -333,11 +334,11 @@ const Register = () => {
               {step === 'otp' && (
                 <form onSubmit={handleOtpSubmit} className="space-y-6">
                   {/* OTP Input */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label className="text-sm font-medium text-gray-700">
                       Enter 6-digit OTP
                     </Label>
-                    <div className="flex justify-center space-x-2">
+                    <div className="flex justify-center space-x-2 sm:space-x-3">
                       {otp.map((digit, index) => (
                         <Input
                           key={index}
@@ -345,7 +346,7 @@ const Register = () => {
                           type="text"
                           value={digit}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
-                          className="w-12 h-12 text-center text-lg font-semibold"
+                          className="w-10 h-10 sm:w-12 sm:h-12 text-center text-base sm:text-lg font-semibold"
                           maxLength={1}
                           autoFocus={index === 0}
                         />
@@ -356,14 +357,14 @@ const Register = () => {
                   {/* Resend OTP */}
                   <div className="text-center">
                     {countdown > 0 ? (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs sm:text-sm text-gray-500">
                         Resend OTP in <span className="font-semibold text-[#E17726]">{countdown}s</span>
                       </p>
                     ) : (
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        className="text-sm text-[#E17726] hover:text-[#c9651e] font-medium"
+                        className="text-xs sm:text-sm text-[#E17726] hover:text-[#c9651e] font-medium"
                       >
                         Resend OTP
                       </button>
@@ -374,7 +375,7 @@ const Register = () => {
                   <Button
                     type="submit"
                     disabled={otp.join('').length !== 6 || isLoading}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2 px-4 rounded-lg font-medium text-base h-11"
+                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
                   >
                     {isLoading ? "Setting up your account..." : "Complete Registration"}
                   </Button>
@@ -388,7 +389,7 @@ const Register = () => {
                         setOtpSent(false);
                         setOtp(['', '', '', '', '', '']);
                       }}
-                      className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium"
                     >
                       ← Back to information
                     </button>
@@ -397,7 +398,7 @@ const Register = () => {
               )}
 
               <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600">
                   Already have an account?{' '}
                   <Link to="/login" className="text-[#E17726] hover:text-[#c9651e] font-medium">
                     Sign in here

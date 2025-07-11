@@ -19,7 +19,9 @@ import {
   Edit,
   Eye,
   Search,
-  Filter
+  Filter,
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 
 const PatientDashboard = () => {
@@ -47,7 +49,13 @@ const PatientDashboard = () => {
       status: 'completed',
       fee: 500,
       rating: 5,
-      clinic: 'Sushrusa Clinic - Delhi'
+      clinic: 'Sushrusa Clinic - Delhi',
+      prescription: {
+        id: 'RX001',
+        medicines: ['Atorvastatin 20mg', 'Metoprolol 50mg', 'Aspirin 75mg'],
+        instructions: 'Take once daily after breakfast',
+        status: 'active'
+      }
     },
     { 
       id: 'CON002', 
@@ -58,7 +66,13 @@ const PatientDashboard = () => {
       status: 'completed',
       fee: 400,
       rating: 4,
-      clinic: 'Sushrusa Clinic - Delhi'
+      clinic: 'Sushrusa Clinic - Delhi',
+      prescription: {
+        id: 'RX002',
+        medicines: ['Paracetamol 500mg', 'Vitamin D3'],
+        instructions: 'Take as needed for fever, Vitamin D3 once daily',
+        status: 'completed'
+      }
     },
     { 
       id: 'CON003', 
@@ -69,33 +83,16 @@ const PatientDashboard = () => {
       status: 'completed',
       fee: 600,
       rating: 5,
-      clinic: 'Sushrusa Clinic - Mumbai'
+      clinic: 'Sushrusa Clinic - Mumbai',
+      prescription: null // No prescription for this consultation
     }
   ];
 
-  const prescriptions = [
-    {
-      id: 'RX001',
-      doctor: 'Dr. Priya Singh',
-      date: '2024-01-15',
-      medicines: ['Atorvastatin 20mg', 'Metoprolol 50mg', 'Aspirin 75mg'],
-      instructions: 'Take once daily after breakfast',
-      status: 'active'
-    },
-    {
-      id: 'RX002',
-      doctor: 'Dr. Amit Kumar',
-      date: '2024-01-10',
-      medicines: ['Paracetamol 500mg', 'Vitamin D3'],
-      instructions: 'Take as needed for fever',
-      status: 'completed'
-    }
-  ];
+
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'consultations', label: 'Consultations', icon: Calendar },
-    { id: 'prescriptions', label: 'Prescriptions', icon: FileText },
     { id: 'profile', label: 'Profile', icon: User }
   ];
 
@@ -135,10 +132,6 @@ const PatientDashboard = () => {
               </Badge>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" className="border-aqua text-aqua hover:bg-aqua hover:text-white">
-                <Calendar className="w-4 h-4 mr-2" />
-                Book Appointment
-              </Button>
               <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white">
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Profile
@@ -191,7 +184,7 @@ const PatientDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-2">Active Prescriptions</p>
-                      <p className="text-3xl font-bold text-midnight">{prescriptions.filter(p => p.status === 'active').length}</p>
+                      <p className="text-3xl font-bold text-midnight">{consultationHistory.filter(c => c.prescription?.status === 'active').length}</p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-aqua/10 to-aqua/5 flex items-center justify-center">
                       <FileText className="w-6 h-6 text-aqua" />
@@ -331,42 +324,86 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Consultations List */}
+            {/* Consultations List with Prescriptions */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-xl font-bold text-midnight">Consultation History</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {consultationHistory.map((consultation, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>
-                        <div className="text-xs text-gray-500">{consultation.date}</div>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-midnight">{consultation.doctor}</h4>
-                        <p className="text-sm text-gray-600">{consultation.specialty}</p>
-                        <p className="text-xs text-gray-500">{consultation.clinic}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="font-semibold text-midnight">₹{consultation.fee}</div>
-                        <div className="flex items-center justify-end">
-                          {renderStars(consultation.rating)}
+                  <div key={index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-300">
+                    {/* Consultation Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-center">
+                          <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>
+                          <div className="text-xs text-gray-500">{consultation.date}</div>
+                          <div className="text-xs text-gray-500">{consultation.time}</div>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-midnight">{consultation.doctor}</h4>
+                          <p className="text-sm text-gray-600">{consultation.specialty}</p>
+                          <p className="text-xs text-gray-500">{consultation.clinic}</p>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="rounded-lg">
-                          View Details
-                        </Button>
-                        <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg">
-                          <Download className="w-4 h-4 mr-2" />
-                          Report
-                        </Button>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="font-semibold text-midnight">₹{consultation.fee}</div>
+                          <div className="flex items-center justify-end">
+                            {renderStars(consultation.rating)}
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" className="rounded-lg">
+                            View Details
+                          </Button>
+                          <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg">
+                            <Download className="w-4 h-4 mr-2" />
+                            Report
+                          </Button>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Prescription Section */}
+                    {consultation.prescription ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                            <h5 className="font-semibold text-blue-800">Prescription ({consultation.prescription.id})</h5>
+                            <Badge className={getStatusColor(consultation.prescription.status)}>
+                              {consultation.prescription.status}
+                            </Badge>
+                          </div>
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">Medicines:</p>
+                            <ul className="list-disc list-inside text-sm text-blue-700 ml-4 space-y-1">
+                              {consultation.prescription.medicines.map((medicine, idx) => (
+                                <li key={idx}>{medicine}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">Instructions:</p>
+                            <p className="text-sm text-blue-700 ml-4">{consultation.prescription.instructions}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          <FileText className="w-5 h-5" />
+                          <p className="text-sm">No prescription provided for this consultation</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -374,58 +411,203 @@ const PatientDashboard = () => {
           </div>
         )}
 
-        {/* Prescriptions Tab */}
-        {activeTab === 'prescriptions' && (
-          <div className="space-y-6">
+
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div className="space-y-8">
+            {/* Profile Header */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardContent className="p-8">
+                <div className="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
+                  {/* Profile Picture */}
+                  <div className="relative">
+                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#E17726]/20 to-aqua/20 flex items-center justify-center">
+                      <img 
+                        src="/patient-avatar-1.svg" 
+                        alt="Profile" 
+                        className="w-24 h-24 rounded-full"
+                      />
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-[#E17726] hover:bg-[#c9651e] text-white p-0"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Basic Info */}
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <h2 className="text-3xl font-bold text-midnight">{patientInfo.name}</h2>
+                      <p className="text-lg text-gray-600">Patient ID: PAT12345</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-lg bg-[#E17726]/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-[#E17726]" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Age & Gender</p>
+                          <p className="font-semibold text-midnight">{patientInfo.age} years, {patientInfo.gender}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                          <Heart className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Blood Group</p>
+                          <p className="font-semibold text-midnight">{patientInfo.bloodGroup}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-midnight flex items-center">
+                    <Phone className="w-5 h-5 mr-2 text-[#E17726]" />
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <Phone className="w-5 h-5 text-aqua" />
+                        <div>
+                          <p className="text-sm text-gray-600">Phone Number</p>
+                          <p className="font-semibold text-midnight">{patientInfo.phone}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-lg">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <Mail className="w-5 h-5 text-[#E17726]" />
+                        <div>
+                          <p className="text-sm text-gray-600">Email Address</p>
+                          <p className="font-semibold text-midnight">{patientInfo.email}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-lg">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="text-sm text-gray-600">Address</p>
+                          <p className="font-semibold text-midnight">{patientInfo.address}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-lg">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Medical Information */}
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-midnight flex items-center">
+                    <Heart className="w-5 h-5 mr-2 text-red-500" />
+                    Medical Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="w-5 h-5 text-[#E17726]" />
+                        <div>
+                          <p className="text-sm text-gray-600">Date of Birth</p>
+                          <p className="font-semibold text-midnight">15th March, 1982</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-lg">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <Heart className="w-5 h-5 text-red-500" />
+                        <div>
+                          <p className="text-sm text-gray-600">Blood Group</p>
+                          <p className="font-semibold text-midnight">{patientInfo.bloodGroup}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-lg">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <AlertCircle className="w-5 h-5 text-orange-500" />
+                        <div>
+                          <p className="text-sm text-gray-600">Known Allergies</p>
+                          <p className="font-semibold text-midnight">{patientInfo.allergies}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-lg">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Account Settings */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Prescriptions</CardTitle>
+                <CardTitle className="text-xl font-bold text-midnight flex items-center">
+                  <Settings className="w-5 h-5 mr-2 text-[#E17726]" />
+                  Account Settings
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {prescriptions.map((prescription, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="font-semibold text-midnight">{prescription.id}</h4>
-                        <p className="text-sm text-gray-600">{prescription.doctor} • {prescription.date}</p>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Badge className={getStatusColor(prescription.status)}>
-                          {prescription.status}
-                        </Badge>
-                        <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Medicines:</p>
-                      <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                        {prescription.medicines.map((medicine, idx) => (
-                          <li key={idx}>{medicine}</li>
-                        ))}
-                      </ul>
-                      <p className="text-sm text-gray-600 mt-2">
-                        <span className="font-medium">Instructions:</span> {prescription.instructions}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white h-12 rounded-xl">
+                    <Edit className="w-5 h-5 mr-2" />
+                    Edit Profile
+                  </Button>
+                  <Button variant="outline" className="w-full h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white">
+                    <Activity className="w-5 h-5 mr-2" />
+                    Privacy Settings
+                  </Button>
+                  <Button variant="outline" className="w-full h-12 rounded-xl border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white">
+                    <Download className="w-5 h-5 mr-2" />
+                    Download Data
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
-        )}
-
-        {/* Other tabs placeholder */}
-        {activeTab === 'profile' && (
-          <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-            <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">👤</div>
-              <h3 className="text-2xl font-bold text-midnight mb-2">Profile Management</h3>
-              <p className="text-gray-600">Profile editing interface will be available here.</p>
-            </CardContent>
-          </Card>
         )}
       </div>
     </div>
