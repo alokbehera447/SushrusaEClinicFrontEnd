@@ -123,10 +123,13 @@ const ImageContentBlocks = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="glass border-2 border-cyan-400 text-cyan-600 hover:bg-gradient-blue hover:text-white px-8 py-4 rounded-2xl font-bold text-lg h-auto btn-modern hover-lift transition-all duration-300 group"
+                className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border-2 border-[#E17726]/30 text-[#E17726] hover:bg-gradient-orange hover:text-white hover:border-[#E17726] px-8 py-4 rounded-2xl font-bold text-lg h-auto transition-all duration-500 hover:shadow-xl-colored hover:scale-105 hover:-translate-y-1"
               >
-                {block.buttonText}
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                <span className="relative z-10 flex items-center">
+                  {block.buttonText}
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform duration-300" />
+                </span>
+                <div className="absolute inset-0 bg-gradient-orange opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
               </Button>
 
               {/* Stats for first block */}

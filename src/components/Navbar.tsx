@@ -6,24 +6,37 @@ import { Menu, X, Heart, Sparkles } from 'lucide-react';
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      const currentScrollY = window.scrollY;
+      setIsScrolled(currentScrollY > 50);
+      
+      // Hide/show navbar on mobile based on scroll direction
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down and not at top
+        setIsVisible(false);
+      } else {
+        // Scrolling up or at top
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [lastScrollY]);
 
-  const navItems = [
-    { href: '#home', label: 'Home' },
-    { href: '#services', label: 'Services' },
-    { href: '#about', label: 'About' },
-    { href: '#contact', label: 'Contact' }
-  ];
+  // const navItems = [
+  //   { href: '#home', label: 'Home' },
+  //   { href: '#services', label: 'Services' },
+  //   { href: '#about', label: 'About' },
+  //   { href: '#contact', label: 'Contact' }
+  // ];
 
-  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>, href: string) => {
     e.preventDefault();
     const targetId = href.replace('#', '');
     const element = document.getElementById(targetId);
@@ -35,6 +48,24 @@ const Navbar = () => {
       });
       setIsMenuOpen(false);
     }
+  };
+
+  const handleMobileNavigation = (href: string) => {
+    // Close menu immediately
+    setIsMenuOpen(false);
+    
+    // Small delay to ensure menu closes before scrolling
+    setTimeout(() => {
+      const targetId = href.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        const offsetTop = element.offsetTop - 80;
+        window.scrollTo({
+          top: offsetTop,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
   };
 
   // Close mobile menu when clicking outside
@@ -64,16 +95,14 @@ const Navbar = () => {
   }, [isMenuOpen]);
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : ''}`}>
-      {/* Animated Gradient Background - only when not scrolled */}
-      {!isScrolled && (
-        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
-          <div className="absolute inset-0 bg-gradient-hero"></div>
-          <div className="absolute inset-0 bg-gradient-mesh opacity-40"></div>
-          <div className="absolute -top-4 left-2 w-32 h-32 bg-gradient-to-br from-[#E17726]/30 to-transparent rounded-full blur-2xl animate-float"></div>
-          <div className="absolute -top-2 right-2 w-40 h-40 bg-gradient-to-br from-cyan-400/30 to-transparent rounded-full blur-2xl animate-float animation-delay-300"></div>
-        </div>
-      )}
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'lg:bg-white/80 lg:backdrop-blur-md lg:shadow' : ''} ${!isVisible ? '-translate-y-full' : 'translate-y-0'}`}>
+      {/* Always show Animated Gradient Background */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-hero"></div>
+        <div className="absolute inset-0 bg-gradient-mesh opacity-40"></div>
+        <div className="absolute -top-4 left-2 w-32 h-32 bg-gradient-to-br from-[#E17726]/30 to-transparent rounded-full blur-2xl animate-float"></div>
+        <div className="absolute -top-2 right-2 w-40 h-40 bg-gradient-to-br from-cyan-400/30 to-transparent rounded-full blur-2xl animate-float animation-delay-300"></div>
+      </div>
       
       <div className="relative max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 z-10">
         <div className="flex justify-between items-center h-14 sm:h-16 lg:h-20">
@@ -97,17 +126,44 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-1 xl:space-x-2">
-            {navItems.map((item, index) => (
+            {/* navItems.map((item, index) => ( */}
               <a
-                key={item.href}
-                href={item.href}
-                onClick={(e) => handleSmoothScroll(e, item.href)}
-                className={`relative px-3 xl:px-6 py-2 text-midnight hover:text-[#E17726] transition-all duration-300 font-semibold tracking-wide group animate-slide-in-down animation-delay-${(index + 1) * 100}`}
+                key="home"
+                href="#home"
+                onClick={(e) => handleSmoothScroll(e, "#home")}
+                className={`relative px-3 xl:px-6 py-2 text-midnight hover:text-[#E17726] transition-all duration-300 font-semibold tracking-wide group animate-slide-in-down animation-delay-100`}
               >
-                {item.label}
+                Home
                 <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-orange group-hover:w-full group-hover:left-0 transition-all duration-300"></span>
               </a>
-            ))}
+              <a
+                key="services"
+                href="#services"
+                onClick={(e) => handleSmoothScroll(e, "#services")}
+                className={`relative px-3 xl:px-6 py-2 text-midnight hover:text-[#E17726] transition-all duration-300 font-semibold tracking-wide group animate-slide-in-down animation-delay-200`}
+              >
+                Services
+                <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-orange group-hover:w-full group-hover:left-0 transition-all duration-300"></span>
+              </a>
+              <a
+                key="about"
+                href="#about"
+                onClick={(e) => handleSmoothScroll(e, "#about")}
+                className={`relative px-3 xl:px-6 py-2 text-midnight hover:text-[#E17726] transition-all duration-300 font-semibold tracking-wide group animate-slide-in-down animation-delay-300`}
+              >
+                About
+                <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-orange group-hover:w-full group-hover:left-0 transition-all duration-300"></span>
+              </a>
+              <a
+                key="contact"
+                href="#contact"
+                onClick={(e) => handleSmoothScroll(e, "#contact")}
+                className={`relative px-3 xl:px-6 py-2 text-midnight hover:text-[#E17726] transition-all duration-300 font-semibold tracking-wide group animate-slide-in-down animation-delay-400`}
+              >
+                Contact
+                <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-orange group-hover:w-full group-hover:left-0 transition-all duration-300"></span>
+              </a>
+            {/* ))} */}
           </div>
 
           {/* CTA Buttons */}
@@ -157,45 +213,190 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        <div className={`lg:hidden mobile-menu-container overflow-hidden transition-all duration-500 ease-in-out ${
+        {/* Mobile Menu Overlay */}
+        <div className={`lg:hidden fixed inset-0 z-40 transition-all duration-500 ease-in-out ${
           isMenuOpen 
-            ? 'max-h-screen opacity-100 pb-4' 
-            : 'max-h-0 opacity-0 pb-0'
+            ? 'opacity-100 pointer-events-auto' 
+            : 'opacity-0 pointer-events-none'
         }`}>
-          <div className="glass rounded-xl p-4 mt-2 border border-white/20">
-            <div className="space-y-2">
-              {navItems.map((item, index) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={(e) => handleSmoothScroll(e, item.href)}
-                  className={`block px-3 py-2.5 text-midnight hover:text-[#E17726] hover:bg-[#E17726]/5 rounded-lg transition-all duration-300 font-semibold animate-fade-in-up animation-delay-${(index + 1) * 100} min-h-[40px] flex items-center text-sm`}
-                >
-                  {item.label}
-                </a>
-              ))}
+          {/* Modern Gradient Background Design */}
+          <div className="absolute inset-0 overflow-hidden">
+            {/* Primary gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"></div>
+            
+            {/* Animated gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#E17726]/20 via-transparent to-cyan-400/20 animate-pulse"></div>
+            
+            {/* Geometric pattern overlay */}
+            <div className="absolute inset-0 opacity-30">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_80%,rgba(225,119,38,0.1)_0%,transparent_50%)]"></div>
+              <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_20%,rgba(6,182,212,0.1)_0%,transparent_50%)]"></div>
+              <div className="absolute bottom-0 left-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.1)_0%,transparent_50%)]"></div>
+            </div>
+            
+            {/* Floating animated elements */}
+            <div className="absolute top-20 left-8 w-32 h-32 bg-gradient-to-br from-[#E17726]/30 to-orange-400/20 rounded-full blur-2xl animate-float"></div>
+            <div className="absolute top-40 right-12 w-24 h-24 bg-gradient-to-br from-cyan-400/30 to-blue-400/20 rounded-full blur-xl animate-float animation-delay-1000"></div>
+            <div className="absolute bottom-32 left-16 w-20 h-20 bg-gradient-to-br from-purple-400/25 to-pink-400/15 rounded-full blur-lg animate-float animation-delay-2000"></div>
+            <div className="absolute bottom-20 right-8 w-28 h-28 bg-gradient-to-br from-[#E17726]/20 to-yellow-400/15 rounded-full blur-2xl animate-float animation-delay-1500"></div>
+            
+            {/* Subtle mesh gradient */}
+            <div className="absolute inset-0 bg-gradient-mesh opacity-20"></div>
+            
+            {/* Animated dots pattern */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-[#E17726] rounded-full animate-pulse"></div>
+              <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse animation-delay-500"></div>
+              <div className="absolute bottom-1/3 left-1/3 w-1 h-1 bg-purple-400 rounded-full animate-pulse animation-delay-1000"></div>
+              <div className="absolute bottom-1/4 right-1/4 w-1.5 h-1.5 bg-[#E17726] rounded-full animate-pulse animation-delay-1500"></div>
+            </div>
+            
+            {/* Subtle grid pattern */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(225,119,38,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(225,119,38,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+          </div>
+          
+          {/* Mobile Menu Content */}
+          <div className="relative z-50 h-full flex flex-col mobile-menu-container">
+            {/* Header with Close Button */}
+            <div className="flex justify-between items-center p-6 border-b border-white/30 bg-white/40 backdrop-blur-md shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <div className="bg-gradient-orange p-2.5 rounded-xl shadow-lg">
+                    <Heart className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="absolute -top-1 -right-1">
+                    <Sparkles className="h-3 w-3 text-[#E17726] animate-pulse" />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xl font-black text-midnight">SUSHRUSA</span>
+                  <div className="text-xs text-gray-600 font-medium">eClinic</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsMenuOpen(false)} 
+                className="text-midnight hover:text-[#E17726] transition-all duration-300 p-3 rounded-xl hover:bg-white/50 hover:scale-110 group shadow-sm"
+                aria-label="Close menu"
+              >
+                <X className="h-6 w-6 group-hover:rotate-90 transition-transform duration-300" />
+              </button>
+            </div>
+            
+            {/* Navigation Items */}
+            <div className="flex-1 px-6 py-6">
+              <div className="space-y-3">
+                {/* navItems.map((item, index) => ( */}
+                  <button
+                    key="home"
+                    onClick={() => handleMobileNavigation("#home")}
+                    className={`group block w-full text-left px-5 py-4 text-midnight hover:text-[#E17726] hover:bg-white/60 rounded-xl transition-all duration-300 font-semibold animate-fade-in-up animation-delay-150 min-h-[48px] flex items-center text-base relative overflow-hidden backdrop-blur-sm border border-white/40 hover:border-[#E17726]/40 shadow-sm hover:shadow-md`}
+                  >
+                    {/* Gradient hover background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    
+                    {/* Icon indicator */}
+                    <div className="w-2.5 h-2.5 bg-gradient-orange rounded-full mr-3 group-hover:scale-150 transition-transform duration-300 shadow-sm"></div>
+                    
+                    <span className="relative z-10">Home</span>
+                    
+                    {/* Arrow indicator */}
+                    <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                      <svg className="w-4 h-4 text-[#E17726]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+                  <button
+                    key="services"
+                    onClick={() => handleMobileNavigation("#services")}
+                    className={`group block w-full text-left px-5 py-4 text-midnight hover:text-[#E17726] hover:bg-white/60 rounded-xl transition-all duration-300 font-semibold animate-fade-in-up animation-delay-200 min-h-[48px] flex items-center text-base relative overflow-hidden backdrop-blur-sm border border-white/40 hover:border-[#E17726]/40 shadow-sm hover:shadow-md`}
+                  >
+                    {/* Gradient hover background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    
+                    {/* Icon indicator */}
+                    <div className="w-2.5 h-2.5 bg-gradient-orange rounded-full mr-3 group-hover:scale-150 transition-transform duration-300 shadow-sm"></div>
+                    
+                    <span className="relative z-10">Services</span>
+                    
+                    {/* Arrow indicator */}
+                    <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                      <svg className="w-4 h-4 text-[#E17726]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+                  <button
+                    key="about"
+                    onClick={() => handleMobileNavigation("#about")}
+                    className={`group block w-full text-left px-5 py-4 text-midnight hover:text-[#E17726] hover:bg-white/60 rounded-xl transition-all duration-300 font-semibold animate-fade-in-up animation-delay-300 min-h-[48px] flex items-center text-base relative overflow-hidden backdrop-blur-sm border border-white/40 hover:border-[#E17726]/40 shadow-sm hover:shadow-md`}
+                  >
+                    {/* Gradient hover background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    
+                    {/* Icon indicator */}
+                    <div className="w-2.5 h-2.5 bg-gradient-orange rounded-full mr-3 group-hover:scale-150 transition-transform duration-300 shadow-sm"></div>
+                    
+                    <span className="relative z-10">About</span>
+                    
+                    {/* Arrow indicator */}
+                    <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                      <svg className="w-4 h-4 text-[#E17726]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+                  <button
+                    key="contact"
+                    onClick={() => handleMobileNavigation("#contact")}
+                    className={`group block w-full text-left px-5 py-4 text-midnight hover:text-[#E17726] hover:bg-white/60 rounded-xl transition-all duration-300 font-semibold animate-fade-in-up animation-delay-400 min-h-[48px] flex items-center text-base relative overflow-hidden backdrop-blur-sm border border-white/40 hover:border-[#E17726]/40 shadow-sm hover:shadow-md`}
+                  >
+                    {/* Gradient hover background */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    
+                    {/* Icon indicator */}
+                    <div className="w-2.5 h-2.5 bg-gradient-orange rounded-full mr-3 group-hover:scale-150 transition-transform duration-300 shadow-sm"></div>
+                    
+                    <span className="relative z-10">Contact</span>
+                    
+                    {/* Arrow indicator */}
+                    <div className="ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
+                      <svg className="w-4 h-4 text-[#E17726]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+                {/* ))} */}
+              </div>
               
-              <div className="pt-3 border-t border-gray-200/50 space-y-2">
-                <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="w-full glass border-cyan-400/50 text-cyan-600 hover:bg-gradient-blue hover:text-white rounded-lg font-semibold transition-all duration-300 btn-modern min-h-[40px] text-sm"
-                  >
+              {/* Decorative element */}
+              <div className="mt-8 text-center">
+                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#E17726]/10 to-cyan-400/10 rounded-full border border-[#E17726]/20 backdrop-blur-sm">
+                  <div className="w-1.5 h-1.5 bg-[#E17726] rounded-full animate-pulse"></div>
+                  <span className="text-xs text-midnight font-medium">Premium Healthcare</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Bottom CTA Buttons */}
+            <div className="p-6 border-t border-white/30 space-y-4 bg-white/40 backdrop-blur-md shadow-sm">
+              <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="w-full bg-white/60 border-white/50 text-midnight hover:bg-white hover:text-midnight rounded-xl font-semibold transition-all duration-300 btn-modern min-h-[48px] text-sm group hover:scale-[1.02] backdrop-blur-sm shadow-md hover:shadow-lg"
+                >
+                  <span className="flex items-center justify-center">
+                    <svg className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                     Login
-                  </Button>
-                </Link>
-                <Link to="/register" onClick={() => setIsMenuOpen(false)}>
-                  <Button 
-                    size="sm"
-                    className="w-full bg-gradient-orange text-white rounded-lg font-semibold transition-all duration-300 btn-modern min-h-[40px] text-sm"
-                  >
-                    <span className="flex items-center justify-center">
-                      Register
-                      <Sparkles className="w-3 h-3 ml-2" />
-                    </span>
-                  </Button>
+                  </span>
+                </Button>
+              </Link>
+              <div className="text-center">
+                <Link to="/register" onClick={() => setIsMenuOpen(false)} className="text-[#E17726] hover:text-[#FF8A56] font-semibold text-sm transition-colors duration-300">
+                  Don't have an account? Register here
                 </Link>
               </div>
             </div>
