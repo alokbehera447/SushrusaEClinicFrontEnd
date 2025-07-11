@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 const ServicesSection = () => {
-  const [visibleCards, setVisibleCards] = useState<boolean[]>([]);
+  const [visibleCards, setVisibleCards] = useState<boolean[]>([true, true, true, true, true, true]); // Initialize all cards as visible
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
@@ -104,6 +104,16 @@ const ServicesSection = () => {
   }, [isAutoPlaying, services.length]);
 
   useEffect(() => {
+    // For mobile, ensure cards are visible immediately
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+      // On mobile, show all cards immediately
+      setVisibleCards([true, true, true, true, true, true]);
+      return;
+    }
+
+    // Desktop intersection observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

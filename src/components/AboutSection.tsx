@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Award, Users, Clock, Heart, Sparkles, Star } from 'lucide-react';
 
 const AboutSection = () => {
-  const [visibleCards, setVisibleCards] = useState<boolean[]>([]);
-  const [isHeaderVisible, setIsHeaderVisible] = useState(false);
+  const [visibleCards, setVisibleCards] = useState<boolean[]>([true, true, true, true]); // Initialize all cards as visible
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true); // Initialize header as visible
   const sectionRef = useRef<HTMLDivElement>(null);
 
   const features = [
@@ -38,6 +38,17 @@ const AboutSection = () => {
   ];
 
   useEffect(() => {
+    // For mobile, ensure everything is visible immediately
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+      // On mobile, show everything immediately
+      setIsHeaderVisible(true);
+      setVisibleCards([true, true, true, true]);
+      return;
+    }
+
+    // Desktop intersection observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -81,7 +92,7 @@ const AboutSection = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div 
           ref={sectionRef}
-          className={`about-header text-center mb-12 sm:mb-16 lg:mb-20 space-y-4 sm:space-y-6 ${isHeaderVisible ? 'animate-fade-in-up' : 'opacity-0'}`}
+          className={`about-header text-center mb-12 sm:mb-16 lg:mb-20 space-y-4 sm:space-y-6 ${isHeaderVisible ? 'animate-fade-in-up' : 'opacity-100'}`}
         >
           <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-cyan-400/20 hover-glow group cursor-pointer">
             <div className="relative">
@@ -117,7 +128,7 @@ const AboutSection = () => {
               className={`feature-card text-center group ${
                 visibleCards[index] 
                   ? 'animate-scale-in' 
-                  : 'opacity-0'
+                  : 'opacity-100'
               }`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
@@ -165,7 +176,7 @@ const AboutSection = () => {
         </div>
 
         {/* Bottom CTA Section */}
-        <div className={`text-center mt-12 sm:mt-16 lg:mt-20 ${isHeaderVisible ? 'animate-fade-in-up animation-delay-600' : 'opacity-0'}`}>
+        <div className={`text-center mt-12 sm:mt-16 lg:mt-20 ${isHeaderVisible ? 'animate-fade-in-up animation-delay-600' : 'opacity-100'}`}>
           <div className="glass p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-3xl border border-white/20 hover-lift max-w-4xl mx-auto">
             <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-midnight mb-3 sm:mb-4">
               Experience Healthcare Excellence

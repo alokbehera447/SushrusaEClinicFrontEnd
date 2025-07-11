@@ -96,6 +96,11 @@ const Index = () => {
           <HeroSection />
         </section>
         
+        {/* Image Content Blocks - Three Component Sections */}
+        <section id="content-blocks" className="fade-in-section">
+          <ImageContentBlocks />
+        </section>
+        
         {/* Services Section - Mobile Slider */}
         <section id="services" className="fade-in-section">
           <ServicesSection />

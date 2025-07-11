@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Heart, Users, Award, Clock, Sparkles, Star, Shield } from 'lucide-react';
 
 const ImageContentBlocks = () => {
-  const [visibleBlocks, setVisibleBlocks] = useState<boolean[]>([]);
+  const [visibleBlocks, setVisibleBlocks] = useState<boolean[]>([true, true, true]); // Initialize all blocks as visible
   const sectionRef = useRef<HTMLElement>(null);
 
   const contentBlocks = [
@@ -49,6 +49,16 @@ const ImageContentBlocks = () => {
   ];
 
   useEffect(() => {
+    // For mobile, ensure blocks are visible immediately
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+      // On mobile, show all blocks immediately
+      setVisibleBlocks([true, true, true]);
+      return;
+    }
+
+    // Desktop intersection observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -74,7 +84,7 @@ const ImageContentBlocks = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-32 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
+    <section ref={sectionRef} className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 right-10 w-96 h-96 bg-gradient-to-br from-[#E17726]/5 to-transparent rounded-full blur-3xl animate-float"></div>
@@ -86,13 +96,16 @@ const ImageContentBlocks = () => {
           <div 
             key={block.id} 
             data-block-index={index}
-            className={`content-block flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-20 lg:mb-32 ${
+            className={`content-block flex flex-col lg:grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-20 items-center mb-16 sm:mb-20 lg:mb-32 ${
               index === contentBlocks.length - 1 ? 'mb-0' : ''
-            } ${visibleBlocks[index] ? 'animate-fade-in-up' : 'opacity-0'}`}
+            } ${window.innerWidth <= 768 ? 'opacity-100' : (visibleBlocks[index] ? 'animate-fade-in-up' : 'opacity-100')}`}
+            style={{ 
+              minHeight: '300px'
+            }}
           >
             {/* Content */}
-            <div className={`space-y-8 ${block.reversed ? 'lg:order-2' : ''} ${
-              visibleBlocks[index] ? (block.reversed ? 'animate-fade-in-right' : 'animate-fade-in-left') : 'opacity-0'
+            <div className={`space-y-6 sm:space-y-8 ${block.reversed ? 'lg:order-2' : ''} ${
+              window.innerWidth <= 768 ? 'opacity-100' : (visibleBlocks[index] ? (block.reversed ? 'animate-fade-in-right' : 'animate-fade-in-left') : 'opacity-100')
             } animation-delay-200`}>
               {/* Badge */}
               <div className="inline-flex items-center space-x-3 glass px-6 py-3 rounded-full border border-[#E17726]/20 hover-glow group cursor-pointer">
@@ -104,17 +117,17 @@ const ImageContentBlocks = () => {
                 <span className="text-sm font-bold text-[#E17726] tracking-wide">{block.badge}</span>
               </div>
 
-              <div className="space-y-6">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-midnight leading-tight">
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-midnight leading-tight">
                   {block.title}
                 </h2>
                 
-                <div className="space-y-4">
-                  <h3 className="text-xl md:text-2xl font-semibold text-[#E17726]">
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-[#E17726]">
                     {block.subtitle}
                   </h3>
                   
-                  <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl">
+                  <p className="text-base sm:text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl">
                     {block.description}
                   </p>
                 </div>
@@ -123,7 +136,7 @@ const ImageContentBlocks = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border-2 border-[#E17726]/30 text-[#E17726] hover:bg-gradient-orange hover:text-white hover:border-[#E17726] px-8 py-4 rounded-2xl font-bold text-lg h-auto transition-all duration-500 hover:shadow-xl-colored hover:scale-105 hover:-translate-y-1"
+                className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border-2 border-[#E17726]/30 text-[#E17726] hover:bg-gradient-orange hover:text-white hover:border-[#E17726] px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto transition-all duration-500 hover:shadow-xl-colored hover:scale-105 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center">
                   {block.buttonText}
@@ -156,34 +169,38 @@ const ImageContentBlocks = () => {
 
             {/* Image */}
             <div className={`relative ${block.reversed ? 'lg:order-1' : ''} ${
-              visibleBlocks[index] ? (block.reversed ? 'animate-fade-in-left' : 'animate-fade-in-right') : 'opacity-0'
+              window.innerWidth <= 768 ? 'opacity-100' : (visibleBlocks[index] ? (block.reversed ? 'animate-fade-in-left' : 'animate-fade-in-right') : 'opacity-100')
             } animation-delay-400`}>
               <div className="relative">
                 {/* Main Image Container */}
-                <div className="aspect-[4/3] glass rounded-3xl overflow-hidden shadow-xl-colored relative group hover-lift">
+                <div className="aspect-[4/3] sm:aspect-[4/3] glass rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl-colored relative group hover-lift">
                   <img 
                     src={block.image} 
                     alt={block.imagePlaceholder}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={(e) => {
+                      console.log('Image failed to load:', block.image);
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-midnight/30 via-transparent to-transparent"></div>
                   
                   {/* Floating badge */}
-                  <div className="absolute top-6 left-6 glass p-4 rounded-2xl shadow-modern hover-scale cursor-pointer animate-float">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-[#E17726] rounded-full animate-pulse"></div>
-                      <span className="text-sm font-bold text-midnight">SUSHRUSA eClinic</span>
+                  <div className="absolute top-3 sm:top-6 left-3 sm:left-6 glass p-2 sm:p-4 rounded-xl sm:rounded-2xl shadow-modern hover-scale cursor-pointer animate-float">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-[#E17726] rounded-full animate-pulse"></div>
+                      <span className="text-xs sm:text-sm font-bold text-midnight">SUSHRUSA eClinic</span>
                     </div>
                   </div>
 
                   {/* Quality Badge */}
-                  <div className="absolute bottom-6 right-6 glass p-3 rounded-xl shadow-modern hover-scale cursor-pointer animate-float animation-delay-500">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-gradient-orange rounded-lg flex items-center justify-center">
-                        <Star className="w-4 h-4 text-white" />
+                  <div className="absolute bottom-3 sm:bottom-6 right-3 sm:right-6 glass p-2 sm:p-3 rounded-lg sm:rounded-xl shadow-modern hover-scale cursor-pointer animate-float animation-delay-500">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-orange rounded-lg flex items-center justify-center">
+                        <Star className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                       </div>
                       <div>
-                        <div className="text-sm font-black text-midnight">Premium</div>
+                        <div className="text-xs sm:text-sm font-black text-midnight">Premium</div>
                         <div className="text-xs text-gray-600">Quality</div>
                       </div>
                     </div>
@@ -191,18 +208,18 @@ const ImageContentBlocks = () => {
                 </div>
 
                 {/* Floating Decorative Elements */}
-                <div className="absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-br from-cyan-400/20 to-transparent rounded-3xl hover-scale cursor-pointer animate-float"></div>
-                <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-gradient-to-br from-[#E17726]/20 to-transparent rounded-2xl hover-scale cursor-pointer animate-float animation-delay-300"></div>
+                <div className="absolute -top-3 sm:-top-6 -right-3 sm:-right-6 w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-cyan-400/20 to-transparent rounded-2xl sm:rounded-3xl hover-scale cursor-pointer animate-float"></div>
+                <div className="absolute -bottom-3 sm:-bottom-6 -left-3 sm:-left-6 w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-br from-[#E17726]/20 to-transparent rounded-xl sm:rounded-2xl hover-scale cursor-pointer animate-float animation-delay-300"></div>
                 
                 {/* Security Badge for middle image */}
                 {block.id === 2 && (
-                  <div className="absolute top-1/2 -translate-y-1/2 -left-8 glass p-4 rounded-2xl shadow-modern hover-scale cursor-pointer animate-float z-10">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-blue rounded-xl flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-white" />
+                  <div className="absolute top-1/2 -translate-y-1/2 -left-4 sm:-left-8 glass p-2 sm:p-4 rounded-xl sm:rounded-2xl shadow-modern hover-scale cursor-pointer animate-float z-10">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-blue rounded-lg sm:rounded-xl flex items-center justify-center">
+                        <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                       </div>
                       <div>
-                        <div className="text-sm font-black text-midnight">Secure</div>
+                        <div className="text-xs sm:text-sm font-black text-midnight">Secure</div>
                         <div className="text-xs text-gray-600">Platform</div>
                       </div>
                     </div>
