@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import PatientRegistrationForm from '@/components/forms/PatientRegistrationForm';
-import AppointmentBookingForm from '@/components/forms/AppointmentBookingForm';
 import PaymentProcessingForm from '@/components/forms/PaymentProcessingForm';
 import PrescriptionWriterForm from '@/components/forms/PrescriptionWriterForm';
 import { 
@@ -83,54 +82,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [expandedConsultation, setExpandedConsultation] = useState<string | null>(null);
 
-  // Shared state for appointments and consultations
-  const [appointments, setAppointments] = useState([
-    { 
-      id: 'APT001', 
-      patient: { name: 'Rahul Sharma', phone: '+91 98765 43210', age: 34 },
-      doctor: 'Dr. Priya Singh',
-      specialty: 'Cardiology',
-      time: '10:30 AM',
-      date: '2024-01-16',
-      status: 'scheduled',
-      fee: 500,
-      consultationType: 'in-person',
-      reason: 'Chest pain and shortness of breath'
-    },
-    { 
-      id: 'APT002', 
-      patient: { name: 'Anita Devi', phone: '+91 87654 32109', age: 28 },
-      doctor: 'Dr. Amit Kumar',
-      specialty: 'General Medicine',
-      time: '11:15 AM',
-      date: '2024-01-16',
-      status: 'in-progress',
-      fee: 400,
-      consultationType: 'video',
-      reason: 'Diabetes management follow-up'
-    },
-    { 
-      id: 'APT003', 
-      patient: { name: 'Suresh Gupta', phone: '+91 76543 21098', age: 45 },
-      doctor: 'Dr. Neha Jain',
-      specialty: 'Orthopedics',
-      time: '12:00 PM',
-      date: '2024-01-16',
-      status: 'completed',
-      fee: 600,
-      consultationType: 'in-person',
-      reason: 'Knee pain evaluation'
-    }
-  ]);
-
+  // Only consultations state
   const [consultations, setConsultations] = useState<any[]>([
     { 
       id: 'CON001', 
-      appointmentId: 'APT002',
       patient: 'Anita Devi', 
       doctor: 'Dr. Amit Kumar',
       time: '2:30 PM - 3:00 PM',
@@ -148,7 +106,6 @@ const AdminDashboard = () => {
     },
     { 
       id: 'CON002', 
-      appointmentId: 'APT004',
       patient: 'Priya Patel', 
       doctor: 'Dr. Ramesh Kumar',
       time: '3:00 PM - 3:30 PM',
@@ -160,7 +117,6 @@ const AdminDashboard = () => {
     },
     { 
       id: 'CON003', 
-      appointmentId: 'APT005',
       patient: 'Rajesh Kumar', 
       doctor: 'Dr. Neha Jain',
       time: '3:30 PM - 4:00 PM',
@@ -178,17 +134,17 @@ const AdminDashboard = () => {
     }
   ]);
 
-  // Mock data
+  // Updated stats: focus on consultations
   const todayStats = [
-    { label: 'Today\'s Appointments', value: '24', icon: Calendar, color: 'text-[#E17726]' },
+    { label: "Today's Consultations", value: '24', icon: Video, color: 'text-[#E17726]' },
     { label: 'Walk-in Patients', value: '8', icon: Users, color: 'text-aqua' },
     { label: 'Consultations Done', value: '18', icon: CheckCircle, color: 'text-green-600' },
     { label: 'Revenue Today', value: '₹12,450', icon: DollarSign, color: 'text-[#E17726]' },
   ];
 
+  // Tabs: remove appointments
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'appointments', label: 'Appointments', icon: Calendar },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'consultations', label: 'Consultations', icon: Video }
@@ -205,54 +161,10 @@ const AdminDashboard = () => {
   };
 
   // Function to add new appointment
-  const addAppointment = (appointmentData: any) => {
-    try {
-      const newAppointment = {
-        id: `APT${String(appointments.length + 1).padStart(3, '0')}`,
-        ...appointmentData,
-        status: 'scheduled'
-      };
-      setAppointments([...appointments, newAppointment]);
-      setShowAppointmentForm(false);
-    } catch (error) {
-      console.error('Error adding appointment:', error);
-      alert('An error occurred while adding the appointment. Please try again.');
-    }
-  };
+  // Removed as per edit hint
 
   // Function to start consultation from appointment
-  const startConsultation = (appointmentId: string) => {
-    try {
-      const appointment = appointments.find(apt => apt.id === appointmentId);
-      if (!appointment) return;
-
-      // Update appointment status
-      setAppointments(appointments.map(apt => 
-        apt.id === appointmentId ? { ...apt, status: 'in-progress' } : apt
-      ));
-
-      // Create consultation
-      const newConsultation = {
-        id: `CON${String(consultations.length + 1).padStart(3, '0')}`,
-        appointmentId: appointmentId,
-        patient: appointment.patient.name,
-        doctor: appointment.doctor,
-        time: `${appointment.time} - ${getEndTime(appointment.time)}`,
-        status: 'ongoing',
-        duration: '30 min',
-        type: appointment.consultationType === 'video' ? 'video' : 
-              appointment.consultationType === 'phone' ? 'phone' : 'in-person',
-        startTime: appointment.time
-      };
-      setConsultations([...consultations, newConsultation]);
-      
-      // Switch to consultations tab
-      setActiveTab('consultations');
-    } catch (error) {
-      console.error('Error starting consultation:', error);
-      alert('An error occurred while starting the consultation. Please try again.');
-    }
-  };
+  // Removed as per edit hint
 
   // Function to end consultation
   const endConsultation = (consultationId: string) => {
@@ -266,9 +178,7 @@ const AdminDashboard = () => {
       ));
 
       // Update corresponding appointment status
-      setAppointments(appointments.map(apt => 
-        apt.id === consultation.appointmentId ? { ...apt, status: 'completed' } : apt
-      ));
+      // Removed as per edit hint
     } catch (error) {
       console.error('Error ending consultation:', error);
       alert('An error occurred while ending the consultation. Please try again.');
@@ -276,17 +186,7 @@ const AdminDashboard = () => {
   };
 
   // Helper function to calculate end time
-  const getEndTime = (startTime: string) => {
-    const [time, period] = startTime.split(' ');
-    const [hours, minutes] = time.split(':').map(Number);
-    let endHours = hours + 1;
-    let endPeriod = period;
-    if (endHours > 12) {
-      endHours = 1;
-      endPeriod = period === 'AM' ? 'PM' : 'AM';
-    }
-    return `${endHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${endPeriod}`;
-  };
+  // Removed as per edit hint
 
   return (
     <ErrorBoundary>
@@ -369,7 +269,7 @@ const AdminDashboard = () => {
                       </Button>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {appointments.map((appointment, index) => (
+                      {consultations.map((consultation, index) => (
                         <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                           <div className="flex items-center space-x-4">
                             <img 
@@ -378,20 +278,20 @@ const AdminDashboard = () => {
                               className="w-12 h-12 rounded-full"
                             />
                             <div>
-                              <h4 className="font-semibold text-midnight">{appointment.patient.name}</h4>
-                              <p className="text-sm text-gray-600">{appointment.doctor} • {appointment.specialty}</p>
-                              <p className="text-xs text-gray-500">{appointment.time} • ₹{appointment.fee}</p>
+                              <h4 className="font-semibold text-midnight">{consultation.patient}</h4>
+                              <p className="text-sm text-gray-600">{consultation.doctor} • {consultation.type}</p>
+                              <p className="text-xs text-gray-500">{consultation.time} • ₹{consultation.fee}</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <Badge className={getStatusColor(appointment.status)}>
-                              {appointment.status.replace('-', ' ')}
+                            <Badge className={getStatusColor(consultation.status)}>
+                              {consultation.status.replace('-', ' ')}
                             </Badge>
-                            {appointment.status === 'scheduled' && (
+                            {consultation.status === 'scheduled' && (
                               <Button 
                                 size="sm" 
                                 className="bg-aqua hover:bg-aqua/90 text-white"
-                                onClick={() => startConsultation(appointment.id)}
+                                onClick={() => endConsultation(consultation.id)}
                               >
                                 <Video className="w-4 h-4 mr-2" />
                                 Start
@@ -432,7 +332,7 @@ const AdminDashboard = () => {
           {/* Appointments Tab */}
           {activeTab === 'appointments' && (
             <div className="space-y-6">
-              {!showAppointmentForm ? (
+              {!showPatientForm ? (
                 <>
                 {/* Search and Actions Bar */}
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
@@ -450,11 +350,11 @@ const AdminDashboard = () => {
                         Filter
                       </Button>
                       <Button 
-                        onClick={() => setShowAppointmentForm(true)}
+                        onClick={() => setShowPatientForm(true)}
                         className="bg-[#E17726] hover:bg-[#c9651e] text-white h-11 px-6 rounded-xl"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Book Appointment
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Register Patient
                       </Button>
                     </div>
                   </CardContent>
@@ -466,12 +366,12 @@ const AdminDashboard = () => {
                     <CardTitle className="text-xl font-bold text-midnight">All Appointments</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {appointments.map((appointment, index) => (
+                    {consultations.map((consultation, index) => (
                       <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-4">
                           <div className="text-center">
-                            <div className="text-sm font-semibold text-[#E17726]">{appointment.id}</div>
-                            <div className="text-xs text-gray-500">{appointment.time}</div>
+                            <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>
+                            <div className="text-xs text-gray-500">{consultation.time}</div>
                           </div>
                           <img 
                             src="/patient-avatar-2.svg" 
@@ -479,30 +379,30 @@ const AdminDashboard = () => {
                             className="w-12 h-12 rounded-full"
                           />
                           <div>
-                            <h4 className="font-semibold text-midnight">{appointment.patient.name}</h4>
+                            <h4 className="font-semibold text-midnight">{consultation.patient}</h4>
                             <p className="text-sm text-gray-600 flex items-center">
                               <Phone className="w-3 h-3 mr-1" />
-                              {appointment.patient.phone}
+                              {consultation.patient.phone}
                             </p>
-                            <p className="text-sm text-gray-600">{appointment.doctor} • {appointment.specialty}</p>
+                            <p className="text-sm text-gray-600">{consultation.doctor} • {consultation.specialty}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <div className="text-right">
-                            <div className="font-semibold text-midnight">₹{appointment.fee}</div>
-                            <Badge className={getStatusColor(appointment.status)}>
-                              {appointment.status.replace('-', ' ')}
+                            <div className="font-semibold text-midnight">₹{consultation.fee}</div>
+                            <Badge className={getStatusColor(consultation.status)}>
+                              {consultation.status.replace('-', ' ')}
                             </Badge>
                           </div>
                           <div className="flex space-x-2">
                             <Button size="sm" variant="outline" className="rounded-lg">
                               Edit
                             </Button>
-                            {appointment.status === 'scheduled' && (
+                            {consultation.status === 'scheduled' && (
                               <Button 
                                 size="sm" 
                                 className="bg-aqua hover:bg-aqua/90 text-white rounded-lg"
-                                onClick={() => startConsultation(appointment.id)}
+                                onClick={() => endConsultation(consultation.id)}
                               >
                                 <Video className="w-4 h-4 mr-2" />
                                 Start
@@ -520,14 +420,14 @@ const AdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-midnight">Book New Appointment</h2>
                     <Button 
-                      onClick={() => setShowAppointmentForm(false)}
+                      onClick={() => setShowPatientForm(false)}
                       variant="outline"
                     >
                       Back to Appointments
                     </Button>
                   </div>
                   <div className="w-full">
-                    <AppointmentBookingForm onAppointmentCreated={addAppointment} />
+                    {/* Removed AppointmentBookingForm */}
                   </div>
                 </div>
               )}

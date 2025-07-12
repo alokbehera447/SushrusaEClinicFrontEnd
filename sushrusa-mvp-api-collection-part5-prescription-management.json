@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "Sushrusa MVP - Prescription Management",
+    "_postman_id": "p5c1e4b0-4d4e-4b2a-9e4a-4c4c4c4c4c4c",
+    "description": "Prescription Management APIs for Sushrusa MVP. Includes endpoints for creating, retrieving, listing, updating prescriptions, and managing prescription items.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Prescription",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"consultation_id\": \"{{consultation_id}}\",\n  \"patient_id\": \"{{patient_id}}\",\n  \"doctor_id\": \"{{doctor_id}}\",\n  \"diagnosis\": \"Common cold\",\n  \"medications\": [\n    {\n      \"name\": \"Paracetamol\",\n      \"dosage\": \"500mg\",\n      \"frequency\": \"Every 6 hours\",\n      \"duration\": \"5 days\"\n    }\n  ],\n  \"instructions\": \"Take with food\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/prescriptions",
+          "host": ["{{base_url}}"],
+          "path": ["api", "prescriptions"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Prescription by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/prescriptions/{{prescription_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "prescriptions", "{{prescription_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Prescriptions (Patient)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patients/{{patient_id}}/prescriptions",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patients", "{{patient_id}}", "prescriptions"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Prescriptions (Doctor)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/doctors/{{doctor_id}}/prescriptions",
+          "host": ["{{base_url}}"],
+          "path": ["api", "doctors", "{{doctor_id}}", "prescriptions"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Prescription",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"diagnosis\": \"Updated diagnosis\",\n  \"instructions\": \"Updated instructions\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/prescriptions/{{prescription_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "prescriptions", "{{prescription_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Medication to Prescription",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Ibuprofen\",\n  \"dosage\": \"400mg\",\n  \"frequency\": \"Every 8 hours\",\n  \"duration\": \"3 days\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/prescriptions/{{prescription_id}}/medications",
+          "host": ["{{base_url}}"],
+          "path": ["api", "prescriptions", "{{prescription_id}}", "medications"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Remove Medication from Prescription",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/prescriptions/{{prescription_id}}/medications/{{medication_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "prescriptions", "{{prescription_id}}", "medications", "{{medication_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Prescription History",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/patients/{{patient_id}}/prescriptions/history",
+          "host": ["{{base_url}}"],
+          "path": ["api", "patients", "{{patient_id}}", "prescriptions", "history"]
+        }
+      },
+      "response": []
+    }
+  ]
+} 

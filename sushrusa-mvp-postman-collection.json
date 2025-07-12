@@ -1,0 +1,123 @@
+{
+  "info": {
+    "_postman_id": "b1e1e1e1-1234-5678-9101-abcdefabcdef",
+    "name": "Sushrusa Healthcare Platform - MVP APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for all MVP APIs of the Sushrusa Healthcare Platform, including phone/OTP authentication and all core features."
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91 98765 43210\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/send-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "send-otp"]
+            },
+            "description": "Send OTP to user's phone number for login."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP sent\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP (Login)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91 98765 43210\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/verify-otp",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "verify-otp"]
+            },
+            "description": "Verify OTP and log in the user. Returns access and refresh tokens."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"access\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": \"USR001\",\n      \"phone\": \"+91 98765 43210\",\n      \"role\": \"patient\",\n      \"name\": \"Rahul Sharma\"\n    }\n  },\n  \"message\": \"Login successful\",\n  \"timestamp\": \"2024-01-16T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Refresh the access token using a valid refresh token."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"access\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  },\n  \"message\": \"Token refreshed\",\n  \"timestamp\": \"2024-01-16T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "profile"]
+            },
+            "description": "Get the current user's profile."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"USR001\",\n    \"phone\": \"+91 98765 43210\",\n    \"role\": \"patient\",\n    \"name\": \"Rahul Sharma\",\n    \"profile\": {\n      \"date_of_birth\": \"1990-05-15\",\n      \"gender\": \"male\",\n      \"address\": {\n        \"city\": \"Mumbai\",\n        \"state\": \"Maharashtra\"\n      }\n    }\n  },\n  \"message\": \"Profile fetched successfully\",\n  \"timestamp\": \"2024-01-16T10:30:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+} 
