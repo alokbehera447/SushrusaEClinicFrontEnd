@@ -17,7 +17,8 @@ import {
   Calendar,
   Timer,
   Bell,
-  Stethoscope
+  Stethoscope,
+  AlertTriangle
 } from 'lucide-react';
 
 const QueueManagement = () => {
