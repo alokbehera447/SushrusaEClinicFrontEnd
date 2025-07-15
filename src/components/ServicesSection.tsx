@@ -156,7 +156,7 @@ const ServicesSection = () => {
   };
 
   return (
-    <section ref={sectionRef} className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
+    <section ref={sectionRef} className="py-0 sm:py-1 lg:py-2 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 right-4 sm:right-10 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-br from-[#E17726]/10 to-transparent rounded-full blur-3xl animate-float"></div>

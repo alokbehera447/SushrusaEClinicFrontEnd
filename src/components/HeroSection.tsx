@@ -68,7 +68,7 @@ const HeroSection = () => {
         </div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-8 sm:pb-16 z-10">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-0 sm:pb-1 z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start min-h-[calc(100vh-10rem)]">
           {/* Left Content */}
           <div className={`space-y-6 sm:space-y-8 ${isVisible ? 'animate-fade-in-left' : 'opacity-100'}`}>

@@ -24,6 +24,7 @@ import {
   Plus,
   Eye
 } from 'lucide-react';
+import DoctorAvailabilitySlots from '@/components/workflow/DoctorAvailabilitySlots';
 
 const DoctorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -248,6 +249,7 @@ const DoctorDashboard = () => {
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'consultations', label: 'Consultations', icon: Video },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'slot-booking', label: 'Slot Booking', icon: Clock },
     { id: 'earnings', label: 'Earnings', icon: DollarSign }
   ];
 
@@ -313,6 +315,11 @@ const DoctorDashboard = () => {
             </button>
           ))}
         </div>
+
+        {/* Slot Booking Tab */}
+        {activeTab === 'slot-booking' && (
+          <DoctorAvailabilitySlots />
+        )}
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
