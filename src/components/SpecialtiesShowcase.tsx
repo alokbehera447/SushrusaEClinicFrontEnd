@@ -120,7 +120,7 @@ const SpecialtiesShowcase = () => {
   };
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-white to-sand-warm/20">
+    <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-b from-white to-sand-warm/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-6">
           <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-[#E17726]/20 hover-glow group cursor-pointer">
