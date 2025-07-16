@@ -152,91 +152,69 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Main Testimonial Display */}
-        <div className="relative max-w-5xl mx-auto">
-          {/* Featured Testimonial Card */}
-          <Card className="group relative overflow-hidden glass border-0 shadow-xl-colored rounded-2xl sm:rounded-3xl hover-lift transition-all duration-700">
-            <CardContent className="p-6 sm:p-8 lg:p-12">
-              {/* Category Badge */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0 mb-6 sm:mb-8">
-                <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-[#E17726]/10 to-cyan-400/10 px-3 sm:px-4 py-2 rounded-full border border-[#E17726]/20">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-[#E17726]" />
-                  <span className="text-xs sm:text-sm font-bold text-[#E17726]">{currentTest.category}</span>
-                </div>
+        <div className="relative max-w-4xl mx-auto flex items-center justify-center">
+          {/* Redesigned Testimonial Card - Larger and More Balanced */}
+          <Card className="group relative overflow-hidden border border-gray-200 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300 bg-white/95 w-full">
+            <CardContent className="p-6 sm:p-10">
+              {/* Category and Rating */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="inline-flex items-center bg-[#E17726]/10 text-[#E17726] text-sm font-semibold px-3 py-1 rounded mr-2">
+                  <Quote className="w-4 h-4 mr-1" /> {currentTest.category}
+                </span>
                 <div className="flex items-center space-x-1">
                   {[...Array(currentTest.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current" />
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
                   ))}
                 </div>
               </div>
 
               {/* Quote */}
-              <div className="relative mb-6 sm:mb-8">
-                <div className="absolute -top-2 sm:-top-4 -left-2 sm:-left-4 text-[#E17726]/10">
-                  <Quote className="w-12 h-12 sm:w-16 sm:h-16" />
-                </div>
-                <p className="text-lg sm:text-xl lg:text-2xl text-gray-700 leading-relaxed font-medium italic relative z-10">
-                  "{currentTest.quote}"
-                </p>
-              </div>
+              <p className="text-base sm:text-lg text-gray-700 leading-relaxed font-normal italic mb-4">
+                "{currentTest.quote}"
+              </p>
 
-              {/* Highlight */}
-              <div className="inline-block bg-gradient-to-r from-[#E17726]/10 to-cyan-400/10 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-[#E17726]/20 mb-6 sm:mb-8">
-                <span className="text-sm sm:text-lg font-bold text-[#E17726]">{currentTest.highlight}</span>
-              </div>
+              {/* Highlight Tag */}
+              <span className="inline-block bg-[#E17726]/10 text-[#E17726] text-sm font-bold px-3 py-1 rounded mb-4">
+                {currentTest.highlight}
+              </span>
 
-              {/* Author Section */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 sm:space-x-6 pt-6 sm:pt-8 border-t border-gray-200/50">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="relative">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#E17726]/20 to-cyan-400/20 rounded-full flex items-center justify-center shadow-lg">
-                      <Users className="w-6 h-6 sm:w-8 sm:h-8 text-[#E17726]" />
-                    </div>
-                    {currentTest.verified && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                        <Award className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-lg sm:text-xl font-bold text-midnight">{currentTest.name}</h4>
-                    <p className="text-sm sm:text-base text-[#E17726] font-semibold">{currentTest.role}</p>
-                    <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-600">
-                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>{currentTest.location}</span>
-                    </div>
-                  </div>
+              {/* Author Row */}
+              <div className="flex items-center mt-3">
+                <img src={currentTest.avatar} alt={currentTest.name} className="w-12 h-12 rounded-full border border-gray-200 mr-4" />
+                <div className="flex flex-col">
+                  <span className="text-base font-semibold text-midnight">{currentTest.name}</span>
+                  <span className="text-sm text-gray-500">{currentTest.role} • {currentTest.location}</span>
                 </div>
-                
-                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
-                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>{currentTest.date}</span>
-                </div>
+                {currentTest.verified && (
+                  <span className="ml-3 bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-1" /> Verified
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Navigation Buttons */}
-          <div className="absolute top-1/2 -translate-y-1/2 -left-3 sm:-left-6 lg:-left-12">
+          {/* Navigation Buttons - Vertically Centered, Outside Card with Margin */}
+          <div className="absolute left-[-64px] top-1/2 -translate-y-1/2 z-10">
             <Button
               onClick={prevTestimonial}
               variant="outline"
               size="icon"
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift transition-all duration-300"
+              className="w-12 h-12 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift transition-all duration-300 mb-2"
               aria-label="Previous testimonial"
             >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              <ChevronLeft className="w-6 h-6" />
             </Button>
           </div>
-
-          <div className="absolute top-1/2 -translate-y-1/2 -right-3 sm:-right-6 lg:-right-12">
+          <div className="absolute right-[-64px] top-1/2 -translate-y-1/2 z-10">
             <Button
               onClick={nextTestimonial}
               variant="outline"
               size="icon"
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift transition-all duration-300"
+              className="w-12 h-12 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift transition-all duration-300 mb-2"
               aria-label="Next testimonial"
             >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              <ChevronRight className="w-6 h-6" />
             </Button>
           </div>
         </div>
