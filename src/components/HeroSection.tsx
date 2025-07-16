@@ -19,7 +19,7 @@ const HeroSection = () => {
   }, []);
 
   return (
-    <section id="home" className="relative min-h-screen bg-gradient-hero overflow-hidden pt-20 sm:pt-24 lg:pt-28">
+    <section id="home" className="relative bg-gradient-hero overflow-hidden pt-20 sm:pt-24 lg:pt-28">
       {/* Background Elements - Keep Original Style */}
       <div className="absolute inset-0 z-0">
         {/* Main gradient mesh */}
@@ -69,7 +69,7 @@ const HeroSection = () => {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-0 sm:pb-1 z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start min-h-[calc(100vh-10rem)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
           {/* Left Content */}
           <div className={`space-y-6 sm:space-y-8 ${isVisible ? 'animate-fade-in-left' : 'opacity-100'}`}>
             {/* Badge */}
@@ -194,9 +194,9 @@ const HeroSection = () => {
       </div>
 
       {/* Main Call-to-Action Buttons Section */}
-      <div className="mt-8 pt-8 pb-8 md:pb-10 px-4 bg-gradient-to-r from-amber-50/80 to-amber-100/80 relative overflow-hidden backdrop-blur-sm">
+      <div className="mt-8 pt-8 pb-4 md:pb-6 px-0 bg-gradient-to-r from-amber-50/80 to-amber-100/80 relative overflow-hidden backdrop-blur-sm w-full">
         {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10 pointer-events-none select-none">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="medical-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -206,43 +206,6 @@ const HeroSection = () => {
             </defs>
             <rect width="100%" height="100%" fill="url(#medical-pattern)" />
           </svg>
-        </div>
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col md:flex-row justify-center items-center gap-5 md:gap-8">
-            {/* 24/7 E-Clinic Access */}
-            <div className="w-full md:w-auto bg-gradient-to-r from-[#E17726] to-[#E17726]/80 text-white font-medium px-7 py-4 rounded-lg text-center text-base transition-all duration-300 hover:shadow-lg hover:shadow-[#E17726]/30 hover:scale-105 hover:-translate-y-1 flex items-center justify-center border border-[#E17726]/20 relative group overflow-hidden">
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#E17726]/0 via-white/20 to-[#E17726]/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              <span className="relative flex items-center">
-                <span className="w-10 h-10 flex items-center justify-center bg-white/20 rounded-full mr-3">
-                  <Clock className="w-5 h-5" />
-                </span>
-                24/7 E-Clinic Access
-              </span>
-            </div>
-            
-            {/* Advanced Diagnostics */}
-            <div className="w-full md:w-auto bg-gradient-to-r from-cyan-600 to-cyan-500 text-white font-medium px-7 py-4 rounded-lg text-center text-base transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/30 hover:scale-105 hover:-translate-y-1 flex items-center justify-center border border-cyan-500/20 relative group overflow-hidden">
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-cyan-600/0 via-white/20 to-cyan-600/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              <span className="relative flex items-center">
-                <span className="w-10 h-10 flex items-center justify-center bg-white/20 rounded-full mr-3">
-                  <Shield className="w-5 h-5" />
-                </span>
-                Advanced Diagnostics
-              </span>
-            </div>
-            
-            {/* Expert Specialists */}
-            <div className="w-full md:w-auto bg-gradient-to-r from-red-600 to-red-500 text-white font-medium px-7 py-4 rounded-lg text-center text-base transition-all duration-300 hover:shadow-lg hover:shadow-red-500/30 hover:scale-105 hover:-translate-y-1 flex items-center justify-center border border-red-500/20 relative group overflow-hidden">
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-red-600/0 via-white/20 to-red-600/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-              <span className="relative flex items-center">
-                <span className="w-10 h-10 flex items-center justify-center bg-white/20 rounded-full mr-3">
-                  <Users className="w-5 h-5" />
-                </span>
-                Expert Specialists
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </section>
