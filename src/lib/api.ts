@@ -1,5 +1,11 @@
 import { api } from './utils';
 
+// HTTP method helpers
+export const get = (url: string, config?: any) => api.get(url, config).then(res => res.data);
+export const post = (url: string, data?: any, config?: any) => api.post(url, data, config).then(res => res.data);
+export const put = (url: string, data?: any, config?: any) => api.put(url, data, config).then(res => res.data);
+export const del = (url: string, config?: any) => api.delete(url, config).then(res => res.data);
+
 // Types for patient data
 export interface PatientProfile {
   id: string;

@@ -68,6 +68,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { doctorApi, CreateDoctorUserData, CreateDoctorProfileData, DoctorProfile } from '@/lib/api';
+import ManageAdmins from './ManageAdmins';
 
 // Doctors Management Component
 const DoctorsManagement = () => {
@@ -3512,6 +3513,10 @@ const SuperAdminDashboard = () => {
   });
   const [overviewStatsLoading, setOverviewStatsLoading] = useState(true);
 
+  // State for recent clinics
+  const [recentClinics, setRecentClinics] = useState<EClinic[]>([]);
+  const [recentClinicsLoading, setRecentClinicsLoading] = useState(true);
+
   // Fetch user profile data
   const fetchUserProfile = async () => {
     try {
@@ -3550,10 +3555,31 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  // Fetch recent clinics
+  const fetchRecentClinics = async () => {
+    try {
+      setRecentClinicsLoading(true);
+      const response = await superAdminApi.getEClinics({ page: 1, page_size: 5, ordering: '-created_at' });
+      // Handle the paginated response structure
+      const clinics = response?.results || [];
+      setRecentClinics(clinics.slice(0, 3));
+    } catch (error) {
+      console.error('Error fetching recent clinics:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load recent clinics',
+        variant: 'destructive'
+      });
+    } finally {
+      setRecentClinicsLoading(false);
+    }
+  };
+
   // Load data on component mount
   useEffect(() => {
     fetchUserProfile();
     fetchOverviewStats();
+    fetchRecentClinics();
   }, []);
 
   // Real data from API - comprehensive platform overview
@@ -3566,17 +3592,13 @@ const SuperAdminDashboard = () => {
     { label: 'Total Revenue', value: `₹${(overviewStats.total_revenue.value || 0).toLocaleString('en-IN')}`, change: overviewStats.total_revenue.change || '+0', icon: DollarSign, color: 'text-aqua' }
   ];
 
-  const recentClinics = [
-    { name: 'Sushrusa Clinic - Delhi', location: 'New Delhi', status: 'Active', admins: 3, doctors: 8 },
-    { name: 'Sushrusa Clinic - Mumbai', location: 'Mumbai', status: 'Active', admins: 2, doctors: 6 },
-    { name: 'Sushrusa Clinic - Bangalore', location: 'Bangalore', status: 'Pending', admins: 1, doctors: 4 }
-  ];
+  // Removed static recentClinics - now using dynamic data from API
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'clinics', label: 'E-Clinics', icon: Building2 },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },
-    { id: 'admins', label: 'Admins', icon: UserCog },
+    { id: 'admins', label: 'Manage Admins', icon: UserCog },
     // { id: 'analytics', label: 'Analytics', icon: TrendingUp }
   ];
 
@@ -3691,12 +3713,8 @@ const SuperAdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* SuperAdmin Profile Card */}
               <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-6">
+                <CardHeader className="pb-6">
                   <CardTitle className="text-xl font-bold text-midnight">Profile Information</CardTitle>
-                  <Button size="sm" variant="outline" className="border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {loading ? (
@@ -3756,29 +3774,51 @@ const SuperAdminDashboard = () => {
 
               {/* Recent E-Clinics */}
               <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-6">
+                <CardHeader className="pb-6">
                   <CardTitle className="text-xl font-bold text-midnight">Recent E-Clinics</CardTitle>
-                  <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Clinic
-                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {recentClinics.map((clinic, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                      <div>
-                        <h4 className="font-semibold text-midnight">{clinic.name}</h4>
-                        <p className="text-sm text-gray-600">{clinic.location}</p>
-                        <div className="flex items-center space-x-4 mt-2">
-                          <span className="text-xs text-gray-500">{clinic.admins} Admins</span>
-                          <span className="text-xs text-gray-500">{clinic.doctors} Doctors</span>
+                  {recentClinicsLoading ? (
+                    // Loading skeleton for recent clinics
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse mb-2 w-3/4"></div>
+                          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                        </div>
+                        <div className="w-16 h-6 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                    ))
+                  ) : recentClinics.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Building2 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>No clinics found</p>
+                    </div>
+                  ) : (
+                    recentClinics.map((clinic, index) => (
+                      <div key={clinic.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div>
+                          <h4 className="font-semibold text-midnight">{clinic.name}</h4>
+                          <p className="text-sm text-gray-600">{clinic.city}, {clinic.state}</p>
+                          <div className="flex items-center space-x-4 mt-2">
+                            <span className="text-xs text-gray-500">{clinic.admin ? '1 Admin' : 'No Admin'}</span>
+                            <span className="text-xs text-gray-500">{clinic.clinic_type === 'virtual_clinic' ? 'Virtual Clinic' : clinic.clinic_type || 'E-Clinic'}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end space-y-1">
+                          <Badge className={clinic.is_active ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                            {clinic.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {clinic.is_verified && (
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">
+                              Verified
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <Badge className={clinic.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                        {clinic.status}
-                      </Badge>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
@@ -3790,26 +3830,28 @@ const SuperAdminDashboard = () => {
                 <CardContent className="space-y-4">
                   <Button 
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white justify-start h-12 rounded-xl"
-                    onClick={() => {
-                      setActiveTab('clinics');
-                      // This will trigger the E-Clinics tab which has its own stats
-                    }}
+                    onClick={() => setActiveTab('clinics')}
                   >
                     <Building2 className="w-5 h-5 mr-3" />
                     Add New E-Clinic
                   </Button>
-                  <Button variant="outline" className="w-full justify-start h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white"
+                    onClick={() => setActiveTab('doctors')}
+                  >
                     <Stethoscope className="w-5 h-5 mr-3" />
                     Register Doctor
                   </Button>
-                  <Button variant="outline" className="w-full justify-start h-12 rounded-xl border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start h-12 rounded-xl border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white"
+                    onClick={() => setActiveTab('admins')}
+                  >
                     <UserCog className="w-5 h-5 mr-3" />
-                    Create Admin Account
+                    Manage Admin Accounts
                   </Button>
-                  <Button variant="outline" className="w-full justify-start h-12 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-100">
-                    <BarChart3 className="w-5 h-5 mr-3" />
-                    Generate Report
-                  </Button>
+                  {/* Removed Generate Report button */}
                 </CardContent>
               </Card>
             </div>
@@ -3828,7 +3870,7 @@ const SuperAdminDashboard = () => {
 
         {/* Admins Tab Content */}
         {activeTab === 'admins' && (
-          <AdminsManagement />
+          <ManageAdmins />
         )}
 
         {/* Analytics Tab Content */}
