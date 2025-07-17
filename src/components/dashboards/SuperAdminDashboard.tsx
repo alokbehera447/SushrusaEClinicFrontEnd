@@ -309,12 +309,35 @@ const DoctorsManagement = () => {
     });
   };
 
-  const doctorStats = [
-    { label: 'Total Doctors', value: '156', change: '+12', icon: Stethoscope, color: 'text-[#E17726]' },
-    { label: 'Active Doctors', value: '142', change: '+8', icon: Activity, color: 'text-green-600' },
-    { label: 'New This Month', value: '23', change: '+15', icon: Plus, color: 'text-blue-600' },
-    { label: 'Avg Rating', value: '4.7', change: '+0.2', icon: Star, color: 'text-yellow-600' }
-  ];
+  const [doctorStats, setDoctorStats] = useState([
+    { label: 'Total Doctors', value: '0', change: '+0', icon: Stethoscope, color: 'text-[#E17726]' },
+    { label: 'Active Doctors', value: '0', change: '+0', icon: Activity, color: 'text-green-600' },
+    { label: 'New This Month', value: '0', change: '+0', icon: Plus, color: 'text-blue-600' },
+    { label: 'Avg Rating', value: '0.0', change: '+0.0', icon: Star, color: 'text-yellow-600' },
+    { label: 'Verified Doctors', value: '0', change: '+0', icon: CheckCircle, color: 'text-purple-600' },
+    { label: 'Avg Consultation Fee', value: '₹0', change: '+0', icon: DollarSign, color: 'text-emerald-600' }
+  ]);
+
+  // Fetch doctor statistics
+  const fetchDoctorStats = async () => {
+    try {
+      const stats = await doctorApi.getDoctorStats();
+      setDoctorStats([
+        { label: 'Total Doctors', value: stats.total_doctors.toString(), change: '+0', icon: Stethoscope, color: 'text-[#E17726]' },
+        { label: 'Active Doctors', value: stats.active_doctors.toString(), change: '+0', icon: Activity, color: 'text-green-600' },
+        { label: 'New This Month', value: stats.new_this_month.toString(), change: '+0', icon: Plus, color: 'text-blue-600' },
+        { label: 'Avg Rating', value: parseFloat(stats.avg_rating).toFixed(1), change: '+0.0', icon: Star, color: 'text-yellow-600' },
+        { label: 'Verified Doctors', value: stats.verified_doctors.toString(), change: '+0', icon: CheckCircle, color: 'text-purple-600' },
+        { label: 'Avg Consultation Fee', value: `₹${parseFloat(stats.average_consultation_fee).toFixed(0)}`, change: '+0', icon: DollarSign, color: 'text-emerald-600' }
+      ]);
+    } catch (error) {
+      console.error('Failed to fetch doctor stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctorStats();
+  }, []);
 
   return (
     <div className="space-y-6">

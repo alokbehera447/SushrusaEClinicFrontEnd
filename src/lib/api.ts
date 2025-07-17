@@ -584,6 +584,34 @@ export const doctorApi = {
     }>>(`/api/doctors/superadmin/${doctorId}/`);
     return response.data.data;
   },
+
+  // Get doctor statistics (SuperAdmin only)
+  getDoctorStats: async (): Promise<{
+    total_doctors: number;
+    active_doctors: number;
+    new_this_month: number;
+    avg_rating: string;
+    verified_doctors: number;
+    specialization_distribution: Record<string, number>;
+    experience_distribution: Record<string, number>;
+    average_consultation_fee: string;
+    top_rated_doctors: any[];
+    consultation_stats: Record<string, any>;
+  }> => {
+    const response = await api.get<ApiResponse<{
+      total_doctors: number;
+      active_doctors: number;
+      new_this_month: number;
+      avg_rating: string;
+      verified_doctors: number;
+      specialization_distribution: Record<string, number>;
+      experience_distribution: Record<string, number>;
+      average_consultation_fee: string;
+      top_rated_doctors: any[];
+      consultation_stats: Record<string, any>;
+    }>>('/api/doctors/stats/');
+    return response.data.data;
+  },
 };
 
 // Utility functions
