@@ -12,11 +12,11 @@ import { useAuth } from '@/context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user, isLoading } = useAuth();
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [accountType, setAccountType] = useState<string | null>(null);
@@ -30,6 +30,21 @@ const Login = () => {
     'doctor': { phone: '9876543212', redirect: '/doctor/dashboard' },
     'patient': { phone: '9876543213', redirect: '/patient/dashboard' }
   };
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      if (user.role === 'superadmin') {
+        navigate('/superadmin/dashboard');
+      } else if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (user.role === 'doctor') {
+        navigate('/doctor/dashboard');
+      } else {
+        navigate('/patient/dashboard');
+      }
+    }
+  }, [isAuthenticated, user, isLoading, navigate]);
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -78,9 +93,23 @@ const Login = () => {
     }
   }, [phoneNumber]);
 
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Don't render login form if already authenticated
+  if (isAuthenticated) {
+    return null;
+  }
+
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     setLoginError(null);
     try {
       await api.post('/api/auth/send-otp/', { phone: phoneNumber });
@@ -90,7 +119,7 @@ const Login = () => {
     } catch (err: unknown) {
       setLoginError('Failed to send OTP. Please check your number and try again.');
     }
-    setIsLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -114,7 +143,7 @@ const Login = () => {
       setLoginError('Please enter a valid 6-digit OTP');
       return;
     }
-    setIsLoading(true);
+    setIsSubmitting(true);
     setLoginError(null);
     try {
       const res = await api.post('/api/auth/verify-otp/', { phone: phoneNumber, otp: otpString });
@@ -141,7 +170,7 @@ const Login = () => {
       setLoginError('Invalid OTP. Please try again.');
       setOtp(['', '', '', '', '', '']);
     }
-    setIsLoading(false);
+    setIsSubmitting(false);
   };
 
   const handleResendOtp = () => {
@@ -253,10 +282,10 @@ const Login = () => {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={phoneNumber.length !== 10 || isLoading}
+                    disabled={phoneNumber.length !== 10 || isSubmitting}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
                   >
-                    {isLoading ? "Sending verification code..." : "Send Verification Code"}
+                    {isSubmitting ? "Sending verification code..." : "Send Verification Code"}
                   </Button>
                   {loginError && (
                     <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">
@@ -307,10 +336,10 @@ const Login = () => {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={otp.join('').length !== 6 || isLoading}
+                    disabled={otp.join('').length !== 6 || isSubmitting}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
                   >
-                    {isLoading ? "Verifying..." : "Sign In"}
+                    {isSubmitting ? "Verifying..." : "Sign In"}
                   </Button>
                   {loginError && (
                     <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">

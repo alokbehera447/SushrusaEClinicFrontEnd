@@ -14,6 +14,7 @@ interface AuthContextType {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (user: User, access: string, refresh: string) => void;
   logout: () => void;
   refreshAccessToken: () => Promise<string | null>;
@@ -25,17 +26,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Load from localStorage on mount
-    const storedUser = localStorage.getItem('userInfo');
-    const storedAccess = localStorage.getItem('accessToken');
-    const storedRefresh = localStorage.getItem('refreshToken');
-    if (storedUser && storedAccess && storedRefresh) {
-      setUser(JSON.parse(storedUser));
-      setAccessToken(storedAccess);
-      setRefreshToken(storedRefresh);
-    }
+    const initializeAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem('userInfo');
+        const storedAccess = localStorage.getItem('accessToken');
+        const storedRefresh = localStorage.getItem('refreshToken');
+        
+        if (storedUser && storedAccess && storedRefresh) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setAccessToken(storedAccess);
+          setRefreshToken(storedRefresh);
+          
+          // Verify token is still valid by making a profile request
+          try {
+            await api.get('/api/auth/profile/', {
+              headers: { Authorization: `Bearer ${storedAccess}` }
+            });
+          } catch (error) {
+            // Token is invalid, clear storage
+            localStorage.clear();
+            setUser(null);
+            setAccessToken(null);
+            setRefreshToken(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        localStorage.clear();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = (user: User, access: string, refresh: string) => {
@@ -72,7 +100,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, refreshToken, isAuthenticated: !!user && !!accessToken, login, logout, refreshAccessToken }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      accessToken, 
+      refreshToken, 
+      isAuthenticated: !!user && !!accessToken, 
+      isLoading,
+      login, 
+      logout, 
+      refreshAccessToken 
+    }}>
       {children}
     </AuthContext.Provider>
   );
