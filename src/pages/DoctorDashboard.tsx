@@ -3,14 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart, LogOut, ArrowLeft } from 'lucide-react';
 import DoctorDashboard from '@/components/dashboards/DoctorDashboard';
+import { useAuth } from '@/context/AuthContext';
 
 const DoctorDashboardPage = () => {
   const navigate = useNavigate();
-  const username = localStorage.getItem('username') || 'Doctor';
+  const { logout } = useAuth();
+  const username = 'Doctor';
 
   const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('username');
+    logout();
     navigate('/');
   };
 

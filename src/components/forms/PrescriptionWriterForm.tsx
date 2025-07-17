@@ -26,6 +26,22 @@ interface Medication {
   beforeFood: boolean;
 }
 
+// Define patient type
+interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  phone: string;
+}
+
+// Define drug type
+interface Drug {
+  name: string;
+  strength: string;
+  form: string;
+}
+
 const PrescriptionWriterForm = () => {
   const [prescriptionData, setPrescriptionData] = useState({
     patientId: '',
@@ -53,16 +69,19 @@ const PrescriptionWriterForm = () => {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [drugSearch, setDrugSearch] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [header, setHeader] = useState('Sushrusa eClinic\nAddress: ...\nContact: ...');
+  const [body, setBody] = useState('');
+  const [footer, setFooter] = useState('Thank you for visiting Sushrusa eClinic!\nFor emergencies, call ...');
 
   // Mock patient data
-  const patients = [
+  const patients: Patient[] = [
     { id: 'PAT001', name: 'Rahul Sharma', age: 34, gender: 'Male', phone: '+91 98765 43210' },
     { id: 'PAT002', name: 'Anita Devi', age: 28, gender: 'Female', phone: '+91 87654 32109' },
     { id: 'PAT003', name: 'Suresh Gupta', age: 45, gender: 'Male', phone: '+91 76543 21098' }
   ];
 
   // Mock drug database
-  const drugs = [
+  const drugs: Drug[] = [
     { name: 'Paracetamol', strength: '500mg', form: 'Tablet' },
     { name: 'Amoxicillin', strength: '250mg', form: 'Capsule' },
     { name: 'Ibuprofen', strength: '400mg', form: 'Tablet' },
@@ -84,7 +103,7 @@ const PrescriptionWriterForm = () => {
     patient.id.toLowerCase().includes(prescriptionData.patientId.toLowerCase())
   );
 
-  const selectPatient = (patient: any) => {
+  const selectPatient = (patient: Patient) => {
     setPrescriptionData(prev => ({
       ...prev,
       patientId: patient.id,
@@ -95,7 +114,7 @@ const PrescriptionWriterForm = () => {
     }));
   };
 
-  const addMedication = (drug?: any) => {
+  const addMedication = (drug?: Drug) => {
     const newMedication: Medication = {
       id: Date.now().toString(),
       name: drug ? drug.name : '',
@@ -111,7 +130,7 @@ const PrescriptionWriterForm = () => {
     setDrugSearch('');
   };
 
-  const updateMedication = (id: string, field: keyof Medication, value: any) => {
+  const updateMedication = (id: string, field: keyof Medication, value: string | boolean) => {
     setMedications(medications.map(med =>
       med.id === id ? { ...med, [field]: value } : med
     ));
@@ -121,7 +140,7 @@ const PrescriptionWriterForm = () => {
     setMedications(medications.filter(med => med.id !== id));
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean | Date | undefined) => {
     setPrescriptionData(prev => ({
       ...prev,
       [field]: value
@@ -454,7 +473,7 @@ const PrescriptionWriterForm = () => {
           </Card>
         </div>
 
-        {/* Right Column - Instructions & Actions */}
+        {/* Right Column - Preview */}
         <div className="space-y-6">
           {/* Follow-up */}
           <Card className="border-0 shadow-lg">
@@ -591,6 +610,95 @@ const PrescriptionWriterForm = () => {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* New: Header, Body, Footer fields */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-400/10 to-transparent">
+          <CardTitle className="flex items-center text-xl font-bold text-midnight">
+            <FileText className="w-5 h-5 mr-2 text-blue-600" />
+            Prescription Format (Header, Body, Footer)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="header" className="text-sm font-medium">Header (eClinic Info)</Label>
+            <Textarea
+              id="header"
+              value={header}
+              onChange={(e) => setHeader(e.target.value)}
+              placeholder="Clinic name, address, contact, etc."
+              className="min-h-[60px] font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="body" className="text-sm font-medium">Body (Editable Prescription Content)</Label>
+            <Textarea
+              id="body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Write diagnosis, medicines, instructions, etc. here as free text."
+              className="min-h-[120px] font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="footer" className="text-sm font-medium">Footer (eClinic Info)</Label>
+            <Textarea
+              id="footer"
+              value={footer}
+              onChange={(e) => setFooter(e.target.value)}
+              placeholder="Footer info, disclaimers, etc."
+              className="min-h-[60px] font-mono"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Right Column - Preview */}
+      <div className="space-y-6">
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-gray-400/10 to-transparent">
+            <CardTitle className="flex items-center text-xl font-bold text-midnight">
+              <Printer className="w-5 h-5 mr-2 text-gray-600" />
+              Prescription Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="bg-white border rounded-lg p-4 space-y-4 font-serif">
+              {/* Header */}
+              <div className="text-center border-b pb-2 whitespace-pre-line text-lg font-bold text-blue-900">
+                {header}
+              </div>
+              {/* Body (free text) */}
+              {body && (
+                <div className="whitespace-pre-line py-2 text-base text-gray-900">
+                  {body}
+                </div>
+              )}
+              {/* Structured fields preview */}
+              <div className="py-2 text-base text-gray-900">
+                <div><b>Patient:</b> {prescriptionData.patientName} ({prescriptionData.patientId})</div>
+                <div><b>Age/Gender:</b> {prescriptionData.patientAge} / {prescriptionData.patientGender}</div>
+                <div><b>Diagnosis:</b> {prescriptionData.diagnosis}</div>
+                <div><b>Symptoms:</b> {prescriptionData.symptoms}</div>
+                <div><b>Medications:</b></div>
+                <ul className="list-disc ml-6">
+                  {medications.map((med, idx) => (
+                    <li key={med.id}>
+                      {med.name} {med.strength} {med.form} - {med.dosage}, {med.frequency}, {med.duration} {med.beforeFood ? '(Before Food)' : ''} {med.instructions && `- ${med.instructions}`}
+                    </li>
+                  ))}
+                </ul>
+                <div><b>General Instructions:</b> {prescriptionData.generalInstructions}</div>
+                <div><b>Follow-up:</b> {prescriptionData.followUpDate ? `Yes, on ${format(prescriptionData.followUpDate, "PPP")}` : 'No'}</div>
+              </div>
+              {/* Footer */}
+              <div className="text-center border-t pt-2 whitespace-pre-line text-sm text-gray-700">
+                {footer}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

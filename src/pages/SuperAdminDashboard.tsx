@@ -3,14 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart, LogOut, ArrowLeft } from 'lucide-react';
 import SuperAdminDashboard from '@/components/dashboards/SuperAdminDashboard';
+import { useAuth } from '@/context/AuthContext';
 
 const SuperAdminDashboardPage = () => {
   const navigate = useNavigate();
-  const username = localStorage.getItem('username') || 'Super Admin';
+  const { logout } = useAuth();
+  const username = 'Super Admin';
 
   const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('username');
+    logout();
     navigate('/');
   };
 

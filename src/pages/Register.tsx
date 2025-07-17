@@ -5,15 +5,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight, User, Calendar } from 'lucide-react';
+import { api } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [step, setStep] = useState<'phone' | 'info' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   // Basic user info
   const [userInfo, setUserInfo] = useState({
@@ -34,25 +38,21 @@ const Register = () => {
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
+    setError(null);
+    try {
+      await api.post('/api/auth/send-otp/', { phone: phoneNumber });
       setStep('info');
-      setIsLoading(false);
-    }, 1000);
+    } catch (err) {
+      setError('Failed to send OTP. Please check your number and try again.');
+    }
+    setIsLoading(false);
   };
 
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      setOtpSent(true);
-      setStep('otp');
-      setCountdown(30);
-      setIsLoading(false);
-    }, 1000);
+    setStep('otp');
+    setOtpSent(true);
+    setCountdown(30);
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -72,37 +72,39 @@ const Register = () => {
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const otpString = otp.join('');
-    
     if (otpString.length !== 6) {
-      alert('Please enter a valid 6-digit OTP');
+      setError('Please enter a valid 6-digit OTP');
       return;
     }
-
     setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      if (otpString === '123456') {
-        // Simulate setting authentication token/state
-        localStorage.setItem('userRole', 'patient');
-        localStorage.setItem('phoneNumber', phoneNumber);
-        localStorage.setItem('userInfo', JSON.stringify(userInfo));
-        localStorage.setItem('isNewUser', 'true');
-        alert('Welcome to Sushrusa eClinic! Your account has been created successfully.');
+    setError(null);
+    try {
+      const res = await api.post('/api/auth/verify-otp/', { phone: phoneNumber, otp: otpString });
+      if (res.data && res.data.success && res.data.data && res.data.data.user) {
+        const user = res.data.data.user;
+        const access = res.data.data.access;
+        const refresh = res.data.data.refresh;
+        login(user, access, refresh);
         navigate('/patient/dashboard');
       } else {
-        alert('Invalid OTP. Please try again.');
+        setError('Invalid OTP or user.');
         setOtp(['', '', '', '', '', '']);
       }
-      setIsLoading(false);
-    }, 1000);
+    } catch (err) {
+      setError('Invalid OTP. Please try again.');
+      setOtp(['', '', '', '', '', '']);
+    }
+    setIsLoading(false);
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     setCountdown(30);
     setOtp(['', '', '', '', '', '']);
-    // Simulate resending OTP
-    alert('OTP resent successfully!');
+    try {
+      await api.post('/api/auth/send-otp/', { phone: phoneNumber });
+    } catch {
+      setError('Failed to resend OTP.');
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {

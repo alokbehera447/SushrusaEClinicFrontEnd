@@ -6,16 +6,22 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import axios from 'axios';
+import { api } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [selectedRole, setSelectedRole] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [accountType, setAccountType] = useState<string | null>(null);
+  const [accountTypeError, setAccountTypeError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Dummy phone numbers for testing
   const dummyCredentials = {
@@ -34,25 +40,57 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  const handleRoleChange = (role: string) => {
-    setSelectedRole(role);
-    // Pre-fill phone number when role is selected
-    if (dummyCredentials[role as keyof typeof dummyCredentials]) {
-      setPhoneNumber(dummyCredentials[role as keyof typeof dummyCredentials].phone);
+  useEffect(() => {
+    // Only check if phone number is 10 digits
+    if (phoneNumber.length === 10) {
+      const fetchAccountType = async () => {
+        try {
+          setAccountType(null);
+          setAccountTypeError(null);
+          const res = await api.get(
+            `/api/auth/account-type/?phone=${phoneNumber}`
+          );
+          if (res.data && res.data.success && res.data.data && res.data.data.role) {
+            setAccountType(res.data.data.role);
+          } else {
+            setAccountType(null);
+          }
+        } catch (err: unknown) {
+          setAccountType(null);
+          // Type guard for axios error
+          if (
+            typeof err === 'object' &&
+            err !== null &&
+            'response' in err &&
+            typeof (err as { response?: { status?: number } }).response === 'object' &&
+            (err as { response?: { status?: number } }).response?.status === 404
+          ) {
+            setAccountTypeError('No account found for this mobile number.');
+          } else {
+            setAccountTypeError('Could not check account type.');
+          }
+        }
+      };
+      fetchAccountType();
+    } else {
+      setAccountType(null);
+      setAccountTypeError(null);
     }
-  };
+  }, [phoneNumber]);
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
+    setLoginError(null);
+    try {
+      await api.post('/api/auth/send-otp/', { phone: phoneNumber });
       setOtpSent(true);
       setStep('otp');
       setCountdown(30); // 30 seconds countdown
-      setIsLoading(false);
-    }, 1000);
+    } catch (err: unknown) {
+      setLoginError('Failed to send OTP. Please check your number and try again.');
+    }
+    setIsLoading(false);
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -72,29 +110,38 @@ const Login = () => {
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const otpString = otp.join('');
-    
     if (otpString.length !== 6) {
-      alert('Please enter a valid 6-digit OTP');
+      setLoginError('Please enter a valid 6-digit OTP');
       return;
     }
-
     setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      const roleCredentials = dummyCredentials[selectedRole as keyof typeof dummyCredentials];
-      
-      if (roleCredentials && phoneNumber === roleCredentials.phone && otpString === '123456') {
-        // Simulate setting authentication token/state
-        localStorage.setItem('userRole', selectedRole);
-        localStorage.setItem('phoneNumber', phoneNumber);
-        navigate(roleCredentials.redirect);
+    setLoginError(null);
+    try {
+      const res = await api.post('/api/auth/verify-otp/', { phone: phoneNumber, otp: otpString });
+      if (res.data && res.data.success && res.data.data && res.data.data.user) {
+        const user = res.data.data.user;
+        const access = res.data.data.access;
+        const refresh = res.data.data.refresh;
+        login(user, access, refresh);
+        // Redirect based on role
+        if (user.role === 'superadmin') {
+          navigate('/superadmin/dashboard');
+        } else if (user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (user.role === 'doctor') {
+          navigate('/doctor/dashboard');
+        } else {
+          navigate('/patient/dashboard');
+        }
       } else {
-        alert('Invalid OTP. Please try again.');
+        setLoginError('Invalid OTP or user.');
         setOtp(['', '', '', '', '', '']);
       }
-      setIsLoading(false);
-    }, 1000);
+    } catch (err: unknown) {
+      setLoginError('Invalid OTP. Please try again.');
+      setOtp(['', '', '', '', '', '']);
+    }
+    setIsLoading(false);
   };
 
   const handleResendOtp = () => {
@@ -167,24 +214,6 @@ const Login = () => {
             <CardContent>
               {step === 'phone' ? (
                 <form onSubmit={handlePhoneSubmit} className="space-y-4 sm:space-y-6">
-                  {/* Role Selection */}
-                  <div className="space-y-2">
-                    <Label htmlFor="role" className="text-sm font-medium text-gray-700">
-                      Role
-                    </Label>
-                    <Select value={selectedRole} onValueChange={handleRoleChange}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="doctor">Doctor</SelectItem>
-                        <SelectItem value="patient">Patient</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   {/* Phone Number */}
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
@@ -196,36 +225,44 @@ const Login = () => {
                         id="phone"
                         type="tel"
                         value={formatPhoneNumber(phoneNumber)}
-                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\s/g, ''))}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/\D/g, '');
+                          if (cleaned.length <= 10) {
+                            setPhoneNumber(cleaned);
+                          }
+                        }}
                         placeholder="Enter your mobile number"
                         required
                         className="w-full pl-10"
-                        maxLength={10}
+                        maxLength={12}
                       />
                     </div>
+                    {/* Account Type Message */}
+                    {accountType && (
+                      <div className="text-xs sm:text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 mt-1">
+                        This mobile number is registered as: <span className="font-semibold capitalize">{accountType.replace('_', ' ')}</span>
+                      </div>
+                    )}
+                    {accountTypeError && (
+                      <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-1">
+                        {accountTypeError}
+                      </div>
+                    )}
                   </div>
-
-                  {/* Test Credentials Info */}
-                  {selectedRole && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs sm:text-sm text-blue-800 font-medium">Demo Credentials:</p>
-                      <p className="text-xs sm:text-sm text-blue-700">
-                        Mobile: <span className="font-mono bg-white px-1 rounded">{dummyCredentials[selectedRole as keyof typeof dummyCredentials]?.phone}</span>
-                      </p>
-                      <p className="text-xs sm:text-sm text-blue-700 mt-1">
-                        Code: <span className="font-mono bg-white px-1 rounded">123456</span>
-                      </p>
-                    </div>
-                  )}
 
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={!selectedRole || phoneNumber.length !== 10 || isLoading}
+                    disabled={phoneNumber.length !== 10 || isLoading}
                     className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
                   >
                     {isLoading ? "Sending verification code..." : "Send Verification Code"}
                   </Button>
+                  {loginError && (
+                    <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">
+                      {loginError}
+                    </div>
+                  )}
                 </form>
               ) : (
                 <form onSubmit={handleOtpSubmit} className="space-y-6">
@@ -275,6 +312,11 @@ const Login = () => {
                   >
                     {isLoading ? "Verifying..." : "Sign In"}
                   </Button>
+                  {loginError && (
+                    <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">
+                      {loginError}
+                    </div>
+                  )}
 
                   {/* Back to Phone */}
                   <div className="text-center">

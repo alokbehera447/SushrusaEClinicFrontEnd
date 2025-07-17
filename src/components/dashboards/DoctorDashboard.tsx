@@ -25,12 +25,26 @@ import {
   Eye
 } from 'lucide-react';
 import DoctorAvailabilitySlots from '@/components/workflow/DoctorAvailabilitySlots';
+import PrescriptionWriter from '@/components/workflow/PrescriptionWriter';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+
+// Define Slot type
+interface Slot {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  maxPatients: number;
+  notes: string;
+}
 
 const DoctorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedConsultation, setExpandedConsultation] = useState<string | null>(null);
   const [showAddSlot, setShowAddSlot] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [selectedDate, setSelectedDate] = useState('2024-01-16');
   const [consultationFilter, setConsultationFilter] = useState('all');
   const [newSlot, setNewSlot] = useState({
@@ -41,6 +55,10 @@ const DoctorDashboard = () => {
     maxPatients: 1,
     notes: ''
   });
+  const [showPrescriptionDialog, setShowPrescriptionDialog] = useState(false);
+  const [selectedConsultationId, setSelectedConsultationId] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   // Mock data
   const todayStats = [
@@ -670,78 +688,17 @@ const DoctorDashboard = () => {
                             <h5 className="font-semibold text-midnight text-lg border-b pb-2">Prescription Management</h5>
                             
                             {consultation.prescription ? (
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                  <h6 className="font-medium text-midnight">Prescription {consultation.prescription.id}</h6>
-                                  <Badge className={`${
-                                    consultation.prescription.status === 'active' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {consultation.prescription.status}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                  <div className="space-y-3">
-                                    <div>
-                                      <p className="font-medium text-gray-700 mb-2">Medicines:</p>
-                                      <ul className="list-disc list-inside text-gray-600 space-y-1">
-                                        {consultation.prescription.medicines.map((medicine, idx) => (
-                                          <li key={idx}>{medicine}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-gray-700 mb-2">Instructions:</p>
-                                      <p className="text-gray-600">{consultation.prescription.instructions}</p>
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      Written on: {consultation.prescription.writtenDate}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                  <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit Prescription
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="border-aqua text-aqua hover:bg-aqua hover:text-white">
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    Download PDF
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Mark Complete
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white">
-                                    <AlertCircle className="w-4 h-4 mr-2" />
-                                    Discontinue
-                                  </Button>
-                                </div>
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                <div className="font-semibold text-blue-900 mb-2">Prescription ID: {consultation.prescription.id}</div>
+                                <div className="mb-2">Medicines: {consultation.prescription.medicines.join(', ')}</div>
+                                <div className="mb-2">Instructions: {consultation.prescription.instructions}</div>
+                                <div className="text-xs text-gray-500">Written on: {consultation.prescription.writtenDate}</div>
                               </div>
                             ) : (
-                              <div className="space-y-4">
-                                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                                  <div className="flex items-center mb-3">
-                                    <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
-                                    <span className="text-yellow-800 font-medium">No prescription written</span>
-                                  </div>
-                                  <p className="text-yellow-700 text-sm">Write a prescription for this consultation to provide medication and treatment instructions.</p>
-                                </div>
-                                
-                                <div className="flex flex-wrap gap-2">
-                                  <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Write New Prescription
-                                  </Button>
-                                  <Button variant="outline" className="border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white">
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    Use Template
-                                  </Button>
-                                </div>
-                              </div>
+                              <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white" onClick={() => navigate(`/prescriptions/new/${consultation.id}`)}>
+                                <FileText className="w-4 h-4 mr-2" />
+                                Add Prescription
+                              </Button>
                             )}
                           </div>
                         </div>

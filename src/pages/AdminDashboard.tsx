@@ -3,14 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart, LogOut, ArrowLeft } from 'lucide-react';
 import AdminDashboard from '@/components/dashboards/AdminDashboard';
+import { useAuth } from '@/context/AuthContext';
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
-  const username = localStorage.getItem('username') || 'Admin';
+  const { logout } = useAuth();
+  const username = 'Admin';
 
   const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('username');
+    logout();
     navigate('/');
   };
 
