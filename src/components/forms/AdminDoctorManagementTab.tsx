@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { 
   User, 
@@ -120,11 +121,15 @@ const AdminDoctorManagementTab = () => {
     license_number: '',
     qualification: '',
     specialization: '',
-    consultation_fee: '',
+    sub_specialization: '',
     experience_years: '',
+    consultation_fee: '',
+    online_consultation_fee: '',
+    consultation_duration: '30',
+    clinic_name: '',
+    clinic_address: '',
     bio: '',
     languages_spoken: '',
-    consultation_duration: '30',
     is_online_consultation_available: true,
     is_accepting_patients: true
   });
@@ -188,9 +193,10 @@ const AdminDoctorManagementTab = () => {
       const response = await post('/api/doctors/', {
         ...formData,
         consultation_fee: parseFloat(formData.consultation_fee),
+        online_consultation_fee: formData.online_consultation_fee ? parseFloat(formData.online_consultation_fee) : null,
         experience_years: parseInt(formData.experience_years),
         consultation_duration: parseInt(formData.consultation_duration),
-        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim())
+        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0)
       });
       
       toast({
@@ -223,9 +229,10 @@ const AdminDoctorManagementTab = () => {
       const response = await put(`/api/doctors/${selectedDoctor.id}/`, {
         ...formData,
         consultation_fee: parseFloat(formData.consultation_fee),
+        online_consultation_fee: formData.online_consultation_fee ? parseFloat(formData.online_consultation_fee) : null,
         experience_years: parseInt(formData.experience_years),
         consultation_duration: parseInt(formData.consultation_duration),
-        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim())
+        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0)
       });
       
       toast({
@@ -286,11 +293,15 @@ const AdminDoctorManagementTab = () => {
       license_number: '',
       qualification: '',
       specialization: '',
-      consultation_fee: '',
+      sub_specialization: '',
       experience_years: '',
+      consultation_fee: '',
+      online_consultation_fee: '',
+      consultation_duration: '30',
+      clinic_name: '',
+      clinic_address: '',
       bio: '',
       languages_spoken: '',
-      consultation_duration: '30',
       is_online_consultation_available: true,
       is_accepting_patients: true
     });
@@ -306,11 +317,15 @@ const AdminDoctorManagementTab = () => {
       license_number: doctor.license_number,
       qualification: doctor.qualification,
       specialization: doctor.specialization,
-      consultation_fee: doctor.consultation_fee,
+      sub_specialization: doctor.sub_specialization || '',
       experience_years: doctor.experience_years.toString(),
+      consultation_fee: doctor.consultation_fee,
+      online_consultation_fee: doctor.online_consultation_fee || '',
+      consultation_duration: doctor.consultation_duration.toString(),
+      clinic_name: doctor.clinic_name || '',
+      clinic_address: doctor.clinic_address || '',
       bio: doctor.bio || '',
       languages_spoken: doctor.languages_spoken.join(', '),
-      consultation_duration: doctor.consultation_duration.toString(),
       is_online_consultation_available: doctor.is_online_consultation_available,
       is_accepting_patients: doctor.is_accepting_patients
     });
@@ -491,23 +506,54 @@ const AdminDoctorManagementTab = () => {
                       <Phone className="w-3 h-3 mr-1" />
                       {doctor.user_phone}
                     </p>
+                    <p className="text-sm text-gray-600 flex items-center">
+                      <Mail className="w-3 h-3 mr-1" />
+                      {doctor.user_email}
+                    </p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge className={getSpecialtyColor(doctor.specialization)}>
                         {doctor.specialization}
                       </Badge>
+                      {doctor.sub_specialization && (
+                        <Badge variant="outline" className="text-xs">
+                          {doctor.sub_specialization}
+                        </Badge>
+                      )}
                       <Badge className={getStatusColor(doctor.is_verified, doctor.is_active)}>
                         {getStatusText(doctor.is_verified, doctor.is_active)}
                       </Badge>
                     </div>
+                    {doctor.clinic_name && (
+                      <p className="text-xs text-gray-500 mt-1 flex items-center">
+                        <Building2 className="w-3 h-3 mr-1" />
+                        {doctor.clinic_name}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
                     <div className="font-semibold text-midnight">₹{doctor.consultation_fee}</div>
+                    {doctor.online_consultation_fee && (
+                      <div className="text-xs text-gray-500">Online: ₹{doctor.online_consultation_fee}</div>
+                    )}
                     <div className="text-sm text-gray-600">{doctor.experience_years} years exp.</div>
+                    <div className="text-xs text-gray-500">{doctor.consultation_duration} min</div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Star className="w-3 h-3 mr-1 text-yellow-500" />
                       {parseFloat(doctor.rating).toFixed(1)} ({doctor.total_reviews})
+                    </div>
+                    <div className="flex items-center space-x-1 mt-1">
+                      {doctor.is_online_consultation_available && (
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                          Online
+                        </Badge>
+                      )}
+                      {doctor.is_accepting_patients && (
+                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                          Active
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="flex space-x-2">
@@ -545,7 +591,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* Create Doctor Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Doctor</DialogTitle>
             <DialogDescription>
@@ -553,23 +599,25 @@ const AdminDoctorManagementTab = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Full Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Dr. John Smith"
+                  placeholder="Dr. John Doe"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">Phone *</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91-9876543210"
+                  required
                 />
               </div>
             </div>
@@ -577,53 +625,56 @@ const AdminDoctorManagementTab = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="doctor@example.com"
+                placeholder="doctor@email.com"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="license">License Number</Label>
+                <Label htmlFor="license">License Number *</Label>
                 <Input
                   id="license"
                   value={formData.license_number}
                   onChange={(e) => setFormData({...formData, license_number: e.target.value})}
-                  placeholder="MED123456"
+                  placeholder="Medical license number"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="qualification">Qualification</Label>
+                <Label htmlFor="qualification">Qualification *</Label>
                 <Input
                   id="qualification"
                   value={formData.qualification}
                   onChange={(e) => setFormData({...formData, qualification: e.target.value})}
-                  placeholder="MBBS, MD"
+                  placeholder="MD, MS, etc."
+                  required
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="specialization">Specialization</Label>
+                <Label htmlFor="specialization">Specialization *</Label>
                 <Input
                   id="specialization"
                   value={formData.specialization}
                   onChange={(e) => setFormData({...formData, specialization: e.target.value})}
-                  placeholder="Cardiology"
+                  placeholder="Select Specialty"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="consultation_fee">Consultation Fee (₹)</Label>
+                <Label htmlFor="sub_specialization">Sub-Specialization</Label>
                 <Input
-                  id="consultation_fee"
-                  type="number"
-                  value={formData.consultation_fee}
-                  onChange={(e) => setFormData({...formData, consultation_fee: e.target.value})}
-                  placeholder="1500"
+                  id="sub_specialization"
+                  value={formData.sub_specialization}
+                  onChange={(e) => setFormData({...formData, sub_specialization: e.target.value})}
+                  placeholder="e.g., Interventional Cardiology"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="experience">Experience (Years)</Label>
                 <Input
@@ -631,16 +682,60 @@ const AdminDoctorManagementTab = () => {
                   type="number"
                   value={formData.experience_years}
                   onChange={(e) => setFormData({...formData, experience_years: e.target.value})}
-                  placeholder="8"
+                  placeholder="Years of experience"
                 />
               </div>
               <div>
-                <Label htmlFor="languages">Languages (comma separated)</Label>
+                <Label htmlFor="consultation_fee">Consultation Fee *</Label>
                 <Input
-                  id="languages"
-                  value={formData.languages_spoken}
-                  onChange={(e) => setFormData({...formData, languages_spoken: e.target.value})}
-                  placeholder="English, Hindi"
+                  id="consultation_fee"
+                  type="number"
+                  value={formData.consultation_fee}
+                  onChange={(e) => setFormData({...formData, consultation_fee: e.target.value})}
+                  placeholder="₹1500"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="online_consultation_fee">Online Consultation Fee</Label>
+                <Input
+                  id="online_consultation_fee"
+                  type="number"
+                  value={formData.online_consultation_fee}
+                  onChange={(e) => setFormData({...formData, online_consultation_fee: e.target.value})}
+                  placeholder="₹1200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="consultation_duration">Consultation Duration (minutes)</Label>
+                <Input
+                  id="consultation_duration"
+                  type="number"
+                  value={formData.consultation_duration}
+                  onChange={(e) => setFormData({...formData, consultation_duration: e.target.value})}
+                  placeholder="30"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="clinic_name">Clinic Name</Label>
+                <Input
+                  id="clinic_name"
+                  value={formData.clinic_name}
+                  onChange={(e) => setFormData({...formData, clinic_name: e.target.value})}
+                  placeholder="Heart Care Clinic"
+                />
+              </div>
+              <div>
+                <Label htmlFor="clinic_address">Clinic Address</Label>
+                <Input
+                  id="clinic_address"
+                  value={formData.clinic_address}
+                  onChange={(e) => setFormData({...formData, clinic_address: e.target.value})}
+                  placeholder="123 Medical Center, City, State"
                 />
               </div>
             </div>
@@ -652,6 +747,33 @@ const AdminDoctorManagementTab = () => {
                 onChange={(e) => setFormData({...formData, bio: e.target.value})}
                 placeholder="Brief description about the doctor..."
                 rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="online_consultation"
+                  checked={formData.is_online_consultation_available}
+                  onCheckedChange={(checked) => setFormData({...formData, is_online_consultation_available: checked as boolean})}
+                />
+                <Label htmlFor="online_consultation">Online Consultation Available</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="accepting_patients"
+                  checked={formData.is_accepting_patients}
+                  onCheckedChange={(checked) => setFormData({...formData, is_accepting_patients: checked as boolean})}
+                />
+                <Label htmlFor="accepting_patients">Active Status</Label>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="languages">Languages (comma separated)</Label>
+              <Input
+                id="languages"
+                value={formData.languages_spoken}
+                onChange={(e) => setFormData({...formData, languages_spoken: e.target.value})}
+                placeholder="English, Hindi"
               />
             </div>
           </div>
@@ -672,7 +794,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* Edit Doctor Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Doctor</DialogTitle>
             <DialogDescription>
@@ -680,23 +802,25 @@ const AdminDoctorManagementTab = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-name">Full Name</Label>
+                <Label htmlFor="edit-name">Full Name *</Label>
                 <Input
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Dr. John Smith"
+                  placeholder="Dr. John Doe"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Label htmlFor="edit-phone">Phone *</Label>
                 <Input
                   id="edit-phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91-9876543210"
+                  required
                 />
               </div>
             </div>
@@ -704,53 +828,56 @@ const AdminDoctorManagementTab = () => {
               <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
+                type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="doctor@example.com"
+                placeholder="doctor@email.com"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-license">License Number</Label>
+                <Label htmlFor="edit-license">License Number *</Label>
                 <Input
                   id="edit-license"
                   value={formData.license_number}
                   onChange={(e) => setFormData({...formData, license_number: e.target.value})}
-                  placeholder="MED123456"
+                  placeholder="Medical license number"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="edit-qualification">Qualification</Label>
+                <Label htmlFor="edit-qualification">Qualification *</Label>
                 <Input
                   id="edit-qualification"
                   value={formData.qualification}
                   onChange={(e) => setFormData({...formData, qualification: e.target.value})}
-                  placeholder="MBBS, MD"
+                  placeholder="MD, MS, etc."
+                  required
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-specialization">Specialization</Label>
+                <Label htmlFor="edit-specialization">Specialization *</Label>
                 <Input
                   id="edit-specialization"
                   value={formData.specialization}
                   onChange={(e) => setFormData({...formData, specialization: e.target.value})}
-                  placeholder="Cardiology"
+                  placeholder="Select Specialty"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="edit-consultation_fee">Consultation Fee (₹)</Label>
+                <Label htmlFor="edit-sub_specialization">Sub-Specialization</Label>
                 <Input
-                  id="edit-consultation_fee"
-                  type="number"
-                  value={formData.consultation_fee}
-                  onChange={(e) => setFormData({...formData, consultation_fee: e.target.value})}
-                  placeholder="1500"
+                  id="edit-sub_specialization"
+                  value={formData.sub_specialization}
+                  onChange={(e) => setFormData({...formData, sub_specialization: e.target.value})}
+                  placeholder="e.g., Interventional Cardiology"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-experience">Experience (Years)</Label>
                 <Input
@@ -758,16 +885,60 @@ const AdminDoctorManagementTab = () => {
                   type="number"
                   value={formData.experience_years}
                   onChange={(e) => setFormData({...formData, experience_years: e.target.value})}
-                  placeholder="8"
+                  placeholder="Years of experience"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-languages">Languages (comma separated)</Label>
+                <Label htmlFor="edit-consultation_fee">Consultation Fee *</Label>
                 <Input
-                  id="edit-languages"
-                  value={formData.languages_spoken}
-                  onChange={(e) => setFormData({...formData, languages_spoken: e.target.value})}
-                  placeholder="English, Hindi"
+                  id="edit-consultation_fee"
+                  type="number"
+                  value={formData.consultation_fee}
+                  onChange={(e) => setFormData({...formData, consultation_fee: e.target.value})}
+                  placeholder="₹1500"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-online_consultation_fee">Online Consultation Fee</Label>
+                <Input
+                  id="edit-online_consultation_fee"
+                  type="number"
+                  value={formData.online_consultation_fee}
+                  onChange={(e) => setFormData({...formData, online_consultation_fee: e.target.value})}
+                  placeholder="₹1200"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-consultation_duration">Consultation Duration (minutes)</Label>
+                <Input
+                  id="edit-consultation_duration"
+                  type="number"
+                  value={formData.consultation_duration}
+                  onChange={(e) => setFormData({...formData, consultation_duration: e.target.value})}
+                  placeholder="30"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-clinic_name">Clinic Name</Label>
+                <Input
+                  id="edit-clinic_name"
+                  value={formData.clinic_name}
+                  onChange={(e) => setFormData({...formData, clinic_name: e.target.value})}
+                  placeholder="Heart Care Clinic"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-clinic_address">Clinic Address</Label>
+                <Input
+                  id="edit-clinic_address"
+                  value={formData.clinic_address}
+                  onChange={(e) => setFormData({...formData, clinic_address: e.target.value})}
+                  placeholder="123 Medical Center, City, State"
                 />
               </div>
             </div>
@@ -779,6 +950,33 @@ const AdminDoctorManagementTab = () => {
                 onChange={(e) => setFormData({...formData, bio: e.target.value})}
                 placeholder="Brief description about the doctor..."
                 rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-online_consultation"
+                  checked={formData.is_online_consultation_available}
+                  onCheckedChange={(checked) => setFormData({...formData, is_online_consultation_available: checked as boolean})}
+                />
+                <Label htmlFor="edit-online_consultation">Online Consultation Available</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-accepting_patients"
+                  checked={formData.is_accepting_patients}
+                  onCheckedChange={(checked) => setFormData({...formData, is_accepting_patients: checked as boolean})}
+                />
+                <Label htmlFor="edit-accepting_patients">Active Status</Label>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-languages">Languages (comma separated)</Label>
+              <Input
+                id="edit-languages"
+                value={formData.languages_spoken}
+                onChange={(e) => setFormData({...formData, languages_spoken: e.target.value})}
+                placeholder="English, Hindi"
               />
             </div>
           </div>
@@ -799,7 +997,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* View Doctor Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Doctor Details</DialogTitle>
           </DialogHeader>
@@ -823,7 +1021,7 @@ const AdminDoctorManagementTab = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Phone</Label>
                   <p className="text-midnight">{selectedDoctor.user_phone}</p>
@@ -841,12 +1039,32 @@ const AdminDoctorManagementTab = () => {
                   <p className="text-midnight">{selectedDoctor.qualification}</p>
                 </div>
                 <div>
+                  <Label className="text-sm font-medium text-gray-600">Sub-Specialization</Label>
+                  <p className="text-midnight">{selectedDoctor.sub_specialization || 'N/A'}</p>
+                </div>
+                <div>
                   <Label className="text-sm font-medium text-gray-600">Experience</Label>
                   <p className="text-midnight">{selectedDoctor.experience_years} years</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Consultation Fee</Label>
                   <p className="text-midnight">₹{selectedDoctor.consultation_fee}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Online Consultation Fee</Label>
+                  <p className="text-midnight">₹{selectedDoctor.online_consultation_fee || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Consultation Duration</Label>
+                  <p className="text-midnight">{selectedDoctor.consultation_duration} minutes</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Clinic Name</Label>
+                  <p className="text-midnight">{selectedDoctor.clinic_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Clinic Address</Label>
+                  <p className="text-midnight">{selectedDoctor.clinic_address || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Languages</Label>
@@ -858,6 +1076,14 @@ const AdminDoctorManagementTab = () => {
                     <Star className="w-4 h-4 text-yellow-500 mr-1" />
                     {parseFloat(selectedDoctor.rating).toFixed(1)} ({selectedDoctor.total_reviews} reviews)
                   </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Online Consultation</Label>
+                  <p className="text-midnight">{selectedDoctor.is_online_consultation_available ? 'Available' : 'Not Available'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Accepting Patients</Label>
+                  <p className="text-midnight">{selectedDoctor.is_accepting_patients ? 'Yes' : 'No'}</p>
                 </div>
               </div>
               
