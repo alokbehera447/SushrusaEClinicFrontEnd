@@ -7,8 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const username = 'Admin';
+  const { logout, user } = useAuth();
+  const username = user?.name || 'Admin';
 
   const handleLogout = () => {
     logout();

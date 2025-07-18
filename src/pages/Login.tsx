@@ -287,6 +287,7 @@ const Login = () => {
                   >
                     {isSubmitting ? "Sending verification code..." : "Send Verification Code"}
                   </Button>
+                  
                   {loginError && (
                     <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">
                       {loginError}

@@ -39,19 +39,17 @@ import { useToast } from '@/hooks/use-toast';
 import { get, post, put, del } from '@/lib/api';
 
 interface Doctor {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    phone: string;
-    email: string;
-  };
+  id: number;
+  user: string;
+  user_name: string;
+  user_phone: string;
+  user_email: string;
   license_number: string;
   qualification: string;
   specialization: string;
   sub_specialization?: string;
-  consultation_fee: number;
-  online_consultation_fee?: number;
+  consultation_fee: string;
+  online_consultation_fee?: string | null;
   experience_years: number;
   clinic_name?: string;
   clinic_address?: string;
@@ -62,19 +60,27 @@ interface Doctor {
   is_verified: boolean;
   is_active: boolean;
   is_accepting_patients: boolean;
-  rating: number;
+  rating: string;
   total_reviews: number;
-  total_consultations: number;
   created_at: string;
+  updated_at: string;
 }
 
 interface DoctorStats {
   total_doctors: number;
   active_doctors: number;
+  new_this_month: number;
+  avg_rating: string;
   verified_doctors: number;
-  total_consultations: number;
-  average_rating: number;
-  total_revenue: number;
+  specialization_distribution: Record<string, number>;
+  experience_distribution: Record<string, number>;
+  average_consultation_fee: string;
+  top_rated_doctors: Doctor[];
+  consultation_stats: {
+    total_consultations: number;
+    avg_consultations_per_doctor: number;
+    consultation_completion_rate: number;
+  };
 }
 
 const AdminDoctorManagementTab = () => {
@@ -83,10 +89,18 @@ const AdminDoctorManagementTab = () => {
   const [stats, setStats] = useState<DoctorStats>({
     total_doctors: 0,
     active_doctors: 0,
+    new_this_month: 0,
+    avg_rating: "0.0",
     verified_doctors: 0,
-    total_consultations: 0,
-    average_rating: 0,
-    total_revenue: 0
+    specialization_distribution: {},
+    experience_distribution: {},
+    average_consultation_fee: "0.00",
+    top_rated_doctors: [],
+    consultation_stats: {
+      total_consultations: 0,
+      avg_consultations_per_doctor: 0,
+      consultation_completion_rate: 0
+    }
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,7 +134,9 @@ const AdminDoctorManagementTab = () => {
     try {
       setLoading(true);
       const response = await get('/api/doctors/');
-      setDoctors(response.results || []);
+      // Handle the nested response structure
+      const doctorsData = response.results?.data || response.results || [];
+      setDoctors(doctorsData);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       toast({
@@ -137,7 +153,9 @@ const AdminDoctorManagementTab = () => {
   const fetchStats = async () => {
     try {
       const response = await get('/api/doctors/stats/');
-      setStats(response);
+      // Handle the nested response structure
+      const statsData = response.data || response;
+      setStats(statsData);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
@@ -150,8 +168,8 @@ const AdminDoctorManagementTab = () => {
 
   // Filter doctors based on search and status
   const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = doctor.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.user.phone.includes(searchTerm) ||
+    const matchesSearch = doctor.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doctor.user_phone.includes(searchTerm) ||
                          doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' ||
@@ -282,13 +300,13 @@ const AdminDoctorManagementTab = () => {
   const openEditDialog = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
     setFormData({
-      name: doctor.user.name,
-      phone: doctor.user.phone,
-      email: doctor.user.email,
+      name: doctor.user_name,
+      phone: doctor.user_phone,
+      email: doctor.user_email,
       license_number: doctor.license_number,
       qualification: doctor.qualification,
       specialization: doctor.specialization,
-      consultation_fee: doctor.consultation_fee.toString(),
+      consultation_fee: doctor.consultation_fee,
       experience_years: doctor.experience_years.toString(),
       bio: doctor.bio || '',
       languages_spoken: doctor.languages_spoken.join(', '),
@@ -411,7 +429,7 @@ const AdminDoctorManagementTab = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-2">Total Revenue</p>
-                <p className="text-2xl font-bold text-midnight">₹{stats.total_revenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-midnight">₹{parseFloat(stats.average_consultation_fee).toLocaleString()}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-[#E17726]" />
@@ -468,10 +486,10 @@ const AdminDoctorManagementTab = () => {
                     <User className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-midnight">{doctor.user.name}</h4>
+                    <h4 className="font-semibold text-midnight">{doctor.user_name}</h4>
                     <p className="text-sm text-gray-600 flex items-center">
                       <Phone className="w-3 h-3 mr-1" />
-                      {doctor.user.phone}
+                      {doctor.user_phone}
                     </p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge className={getSpecialtyColor(doctor.specialization)}>
@@ -489,7 +507,7 @@ const AdminDoctorManagementTab = () => {
                     <div className="text-sm text-gray-600">{doctor.experience_years} years exp.</div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Star className="w-3 h-3 mr-1 text-yellow-500" />
-                      {doctor.rating.toFixed(1)} ({doctor.total_reviews})
+                      {parseFloat(doctor.rating).toFixed(1)} ({doctor.total_reviews})
                     </div>
                   </div>
                   <div className="flex space-x-2">
@@ -792,7 +810,7 @@ const AdminDoctorManagementTab = () => {
                   <User className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-midnight">{selectedDoctor.user.name}</h3>
+                  <h3 className="text-xl font-bold text-midnight">{selectedDoctor.user_name}</h3>
                   <p className="text-gray-600">{selectedDoctor.specialization}</p>
                   <div className="flex items-center space-x-2 mt-2">
                     <Badge className={getStatusColor(selectedDoctor.is_verified, selectedDoctor.is_active)}>
@@ -808,11 +826,11 @@ const AdminDoctorManagementTab = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Phone</Label>
-                  <p className="text-midnight">{selectedDoctor.user.phone}</p>
+                  <p className="text-midnight">{selectedDoctor.user_phone}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Email</Label>
-                  <p className="text-midnight">{selectedDoctor.user.email}</p>
+                  <p className="text-midnight">{selectedDoctor.user_email}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">License Number</Label>
@@ -838,7 +856,7 @@ const AdminDoctorManagementTab = () => {
                   <Label className="text-sm font-medium text-gray-600">Rating</Label>
                   <p className="text-midnight flex items-center">
                     <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                    {selectedDoctor.rating.toFixed(1)} ({selectedDoctor.total_reviews} reviews)
+                    {parseFloat(selectedDoctor.rating).toFixed(1)} ({selectedDoctor.total_reviews} reviews)
                   </p>
                 </div>
               </div>
@@ -865,7 +883,7 @@ const AdminDoctorManagementTab = () => {
           <DialogHeader>
             <DialogTitle>Delete Doctor</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedDoctor?.user.name}? This action cannot be undone.
+              Are you sure you want to delete {selectedDoctor?.user_name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
