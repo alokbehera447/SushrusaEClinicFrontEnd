@@ -312,6 +312,312 @@ export const patientApi = {
   }
 };
 
+// Admin Patient Management API functions
+export interface CreatePatientUserData {
+  phone: string;
+  name: string;
+  email?: string;
+  password?: string;
+  date_of_birth?: string;
+  gender?: string;
+  blood_group?: string;
+  allergies?: string;
+  medical_history?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relationship?: string;
+}
+
+export interface CreatePatientProfileData {
+  blood_group?: string;
+  allergies?: string;
+  chronic_conditions?: string[];
+  current_medications?: string[];
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_expiry?: string;
+  preferred_language?: string;
+}
+
+export interface PatientListResponse {
+  results: PatientProfile[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+
+export interface PatientStats {
+  total_patients: number;
+  new_patients_this_month: number;
+  active_patients: number;
+  gender_distribution: Record<string, number>;
+  age_distribution: Record<string, number>;
+  blood_group_distribution: Record<string, number>;
+  top_cities: Array<{ city: string; count: number }>;
+  consultation_stats: Record<string, number>;
+}
+
+export const adminPatientApi = {
+  // Create patient account and profile in one call (Admin only)
+  createPatient: async (data: CreatePatientUserData & CreatePatientProfileData): Promise<{
+    patient_profile: PatientProfile;
+    user_account: {
+      user_id: string;
+      phone: string;
+      name: string;
+      email: string;
+      role: string;
+      password: string;
+    };
+  }> => {
+    const response = await api.post<ApiResponse<{
+      patient_profile: PatientProfile;
+      user_account: {
+        user_id: string;
+        phone: string;
+        name: string;
+        email: string;
+        role: string;
+        password: string;
+      };
+    }>>('/api/auth/admin/users/', {
+      ...data,
+      role: 'patient',
+    });
+    return response.data.data;
+  },
+
+  // List all patients (Admin only)
+  getPatients: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    gender?: string;
+    blood_group?: string;
+    age_min?: number;
+    age_max?: number;
+    city?: string;
+    state?: string;
+    is_active?: boolean;
+    ordering?: string;
+  }): Promise<PatientListResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    // Return the response as { count, next, previous, results }
+    const response = await api.get(`/api/patients/?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  // Get patient details by ID (Admin only)
+  getPatient: async (patientId: string): Promise<PatientProfile> => {
+    const response = await api.get<ApiResponse<PatientProfile>>(`/api/patients/${patientId}/`);
+    return response.data.data;
+  },
+
+  // Update patient user account (Admin only)
+  updatePatientUser: async (patientId: string, userData: Partial<CreatePatientUserData>): Promise<UserProfile> => {
+    const response = await api.put<ApiResponse<UserProfile>>(`/api/auth/admin/users/${patientId}/`, userData);
+    return response.data.data;
+  },
+
+  // Update patient profile (Admin only)
+  updatePatientProfile: async (patientId: string, profileData: Partial<CreatePatientProfileData>): Promise<PatientProfile> => {
+    const response = await api.put<ApiResponse<PatientProfile>>(`/api/patients/${patientId}/`, profileData);
+    return response.data.data;
+  },
+
+  // Delete/deactivate patient (Admin only)
+  deletePatient: async (patientId: string): Promise<{
+    patient_id: string;
+    user_id: string;
+    status: string;
+  }> => {
+    const response = await api.delete<ApiResponse<{
+      patient_id: string;
+      user_id: string;
+      status: string;
+    }>>(`/api/auth/admin/users/${patientId}/`);
+    return response.data.data;
+  },
+
+  // Search patients with advanced filters (Admin only)
+  searchPatients: async (params: {
+    query?: string;
+    gender?: string;
+    blood_group?: string;
+    age_min?: number;
+    age_max?: number;
+    city?: string;
+    state?: string;
+  }): Promise<PatientProfile[]> => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    const response = await api.get<ApiResponse<PatientProfile[]>>(`/api/patients/search/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  // Get patient statistics (Admin only)
+  getPatientStats: async (): Promise<PatientStats> => {
+    const response = await api.get<ApiResponse<PatientStats>>('/api/patients/stats/');
+    return response.data.data;
+  },
+
+  // Create medical record for patient (Admin only)
+  createMedicalRecord: async (patientId: string, recordData: {
+    record_type: string;
+    title: string;
+    description: string;
+    date_recorded: string;
+    document?: File;
+  }): Promise<MedicalRecord> => {
+    const formData = new FormData();
+    Object.entries(recordData).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (key === 'document' && value instanceof File) {
+          formData.append(key, value);
+        } else {
+          formData.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.post<ApiResponse<MedicalRecord>>(
+      `/api/patients/${patientId}/medical-records/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  // Upload patient document (Admin only)
+  uploadPatientDocument: async (patientId: string, documentData: {
+    document_type: string;
+    title: string;
+    description?: string;
+    file: File;
+  }): Promise<PatientDocument> => {
+    const formData = new FormData();
+    Object.entries(documentData).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (key === 'file' && value instanceof File) {
+          formData.append(key, value);
+        } else {
+          formData.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.post<ApiResponse<PatientDocument>>(
+      `/api/patients/${patientId}/documents/`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  // Create patient note (Admin only)
+  createPatientNote: async (patientId: string, noteData: {
+    note: string;
+    is_private?: boolean;
+  }): Promise<PatientNote> => {
+    const response = await api.post<ApiResponse<PatientNote>>(
+      `/api/patients/${patientId}/notes/`,
+      noteData
+    );
+    return response.data.data;
+  },
+
+  // Get patient medical records (Admin only)
+  getPatientMedicalRecords: async (patientId: string, params?: {
+    page?: number;
+    page_size?: number;
+    record_type?: string;
+    search?: string;
+  }): Promise<{ results: MedicalRecord[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const response = await api.get<ApiResponse<{ results: MedicalRecord[]; count: number }>>(
+      `/api/patients/${patientId}/medical-records/?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get patient documents (Admin only)
+  getPatientDocuments: async (patientId: string, params?: {
+    page?: number;
+    page_size?: number;
+    document_type?: string;
+    is_verified?: boolean;
+  }): Promise<{ results: PatientDocument[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const response = await api.get<ApiResponse<{ results: PatientDocument[]; count: number }>>(
+      `/api/patients/${patientId}/documents/?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get patient notes (Admin only)
+  getPatientNotes: async (patientId: string, params?: {
+    page?: number;
+    page_size?: number;
+    is_private?: boolean;
+  }): Promise<{ results: PatientNote[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const response = await api.get<ApiResponse<{ results: PatientNote[]; count: number }>>(
+      `/api/patients/${patientId}/notes/?${queryParams.toString()}`
+    );
+    return response.data.data;
+  }
+};
+
 // User Session interface
 export interface UserSession {
   id: string;
@@ -436,6 +742,35 @@ export const superAdminApi = {
     const response = await api.get('/api/analytics/superadmin/overview/');
     return response.data.data;
   }
+};
+
+// Admin Analytics API
+export interface AdminDashboardStats {
+  consultations_today: number;
+  total_consultations: number;
+  revenue_today: number;
+  total_revenue: number;
+  patients_today: number;
+  total_patients: number;
+  doctors_online: number;
+  active_doctors: number;
+  [key: string]: number;
+}
+
+export const adminAnalyticsApi = {
+  getDashboardStats: async (): Promise<AdminDashboardStats> => {
+    const response = await api.get('/api/analytics/dashboard/');
+    return response.data.data;
+  }
+};
+
+// Admin Consultation API
+export const adminConsultationApi = {
+  getTodaysConsultations: async (): Promise<Consultation[]> => {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(`/api/consultations/?scheduled_date=${today}`);
+    return response.data.data.results;
+  },
 };
 
 // Doctor API service functions

@@ -49,8 +49,6 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
     // Financial
     consultationFee: '',
     paymentMethod: 'cash',
-    insuranceProvider: '',
-    insuranceNumber: '',
     
     // Additional Info
     notes: '',

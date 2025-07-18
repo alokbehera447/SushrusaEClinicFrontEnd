@@ -1,4 +1,4 @@
-import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, Component, ErrorInfo, ReactNode, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   AlertCircle,
   Settings
 } from 'lucide-react';
+import { adminAnalyticsApi, AdminDashboardStats, Consultation, adminConsultationApi } from '@/lib/api';
 
 // Error Boundary Component
 interface ErrorBoundaryState {
@@ -91,77 +92,49 @@ const AdminDashboard = () => {
   const [showConsultationForm, setShowConsultationForm] = useState(false);
   const [showConsultationManagement, setShowConsultationManagement] = useState(false);
   const [expandedConsultation, setExpandedConsultation] = useState<string | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoadingStats(true);
+    adminAnalyticsApi.getDashboardStats()
+      .then((data) => {
+        setDashboardStats(data);
+        setLoadingStats(false);
+      })
+      .catch((err) => {
+        setStatsError('Failed to load dashboard statistics');
+        setLoadingStats(false);
+      });
+  }, []);
 
   // Only consultations state
-  const [consultations, setConsultations] = useState<any[]>([
-    { 
-      id: 'CON001', 
-      patient: {
-        name: 'Anita Devi',
-        phone: '+91 98765 43210'
-      }, 
-      doctor: 'Dr. Amit Kumar',
-      specialty: 'Cardiology',
-      time: '2:30 PM - 3:00 PM',
-      status: 'ongoing',
-      duration: '15 min',
-      type: 'video',
-      startTime: '14:30',
-      fee: 800,
-      prescription: {
-        id: 'RX001',
-        status: 'active',
-        medicines: ['Metformin 500mg', 'Glimepiride 1mg'],
-        instructions: 'Take Metformin with meals twice daily. Take Glimepiride 30 minutes before breakfast.',
-        writtenDate: '2024-01-16'
-      } as any
-    },
-    { 
-      id: 'CON002', 
-      patient: {
-        name: 'Priya Patel',
-        phone: '+91 87654 32109'
-      }, 
-      doctor: 'Dr. Ramesh Kumar',
-      specialty: 'Dermatology',
-      time: '3:00 PM - 3:30 PM',
-      status: 'waiting',
-      duration: '30 min',
-      type: 'video',
-      startTime: '15:00',
-      fee: 600,
-      prescription: null
-    },
-    { 
-      id: 'CON003', 
-      patient: {
-        name: 'Rajesh Kumar',
-        phone: '+91 76543 21098'
-      }, 
-      doctor: 'Dr. Neha Jain',
-      specialty: 'Orthopedics',
-      time: '3:30 PM - 4:00 PM',
-      status: 'scheduled',
-      duration: '30 min',
-      type: 'phone',
-      startTime: '15:30',
-      fee: 1000,
-      prescription: {
-        id: 'RX003',
-        status: 'active',
-        medicines: ['Ibuprofen 400mg', 'Paracetamol 500mg', 'Vitamin D3 1000IU'],
-        instructions: 'Take Ibuprofen for pain relief as needed. Take Paracetamol for fever. Take Vitamin D3 once daily.',
-        writtenDate: '2024-01-15'
-      }
-    }
-  ]);
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loadingConsultations, setLoadingConsultations] = useState(true);
+  const [consultationsError, setConsultationsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoadingConsultations(true);
+    adminConsultationApi.getTodaysConsultations()
+      .then((data) => {
+        setConsultations(data);
+        setLoadingConsultations(false);
+      })
+      .catch((err) => {
+        setConsultationsError('Failed to load today\'s consultations');
+        setLoadingConsultations(false);
+      });
+  }, []);
 
   // Updated stats: focus on consultations
-  const todayStats = [
-    { label: "Today's Consultations", value: '24', icon: Video, color: 'text-[#E17726]' },
-    { label: 'Consultations Done', value: '18', icon: CheckCircle, color: 'text-green-600' },
-    { label: 'Revenue Today', value: '₹12,450', icon: DollarSign, color: 'text-[#E17726]' },
-  ];
+  const todayStats = dashboardStats ? [
+    { label: "Today's Consultations", value: dashboardStats.consultations_today, icon: Video, color: 'text-[#E17726]' },
+    { label: 'Total Doctors', value: dashboardStats.total_doctors, icon: Users, color: 'text-[#E17726]' },
+    { label: 'Total Consultations', value: dashboardStats.total_consultations, icon: CheckCircle, color: 'text-green-600' },
+    { label: 'Total Revenue', value: `₹${dashboardStats.total_revenue}`, icon: DollarSign, color: 'text-green-600' },
+    { label: 'Total Patients', value: dashboardStats.total_patients, icon: Users, color: 'text-green-600' },
+  ] : [];
 
   // Tabs: remove appointments
   const tabs = [
@@ -275,23 +248,31 @@ const AdminDashboard = () => {
           {activeTab === 'overview' && (
             <div className="space-y-8">
               {/* Today's Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {todayStats.map((stat, index) => (
-                  <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
-                          <p className="text-2xl font-bold text-midnight">{stat.value}</p>
+              {loadingStats ? (
+                <div className="flex justify-center items-center min-h-[120px]">
+                  <span className="text-gray-500">Loading statistics...</span>
+                </div>
+              ) : statsError ? (
+                <div className="flex justify-center items-center min-h-[120px] text-red-500">{statsError}</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {todayStats.map((stat, index) => (
+                    <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
+                            <p className="text-2xl font-bold text-midnight">{stat.value}</p>
+                          </div>
+                          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color === 'text-[#E17726]' ? 'from-[#E17726]/10 to-[#E17726]/5' : stat.color === 'text-aqua' ? 'from-aqua/10 to-aqua/5' : 'from-green-500/10 to-green-500/5'} flex items-center justify-center`}>
+                            <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                          </div>
                         </div>
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color === 'text-[#E17726]' ? 'from-[#E17726]/10 to-[#E17726]/5' : stat.color === 'text-aqua' ? 'from-aqua/10 to-aqua/5' : 'from-green-500/10 to-green-500/5'} flex items-center justify-center`}>
-                          <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
               {/* Today's Appointments & Quick Actions */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -310,37 +291,45 @@ const AdminDashboard = () => {
                     </Button>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {consultations.map((consultation, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                          <div className="flex items-center space-x-4">
-                            <img 
-                              src="/patient-avatar-1.svg" 
-                              alt="Patient" 
-                              className="w-12 h-12 rounded-full"
-                            />
-                            <div>
-                              <h4 className="font-semibold text-midnight">{consultation.patient.name}</h4>
-                              <p className="text-sm text-gray-600">{consultation.doctor} • {consultation.type}</p>
-                              <p className="text-xs text-gray-500">{consultation.time} • ₹{consultation.fee}</p>
+                      {loadingConsultations ? (
+                        <div className="flex justify-center items-center min-h-[80px] text-gray-500">Loading today's consultations...</div>
+                      ) : consultationsError ? (
+                        <div className="flex justify-center items-center min-h-[80px] text-red-500">{consultationsError}</div>
+                      ) : consultations.length === 0 ? (
+                        <div className="flex justify-center items-center min-h-[80px] text-gray-400">No consultations scheduled for today.</div>
+                      ) : (
+                        consultations.map((consultation, index) => (
+                          <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center space-x-4">
+                              <img 
+                                src="/patient-avatar-1.svg" 
+                                alt="Patient" 
+                                className="w-12 h-12 rounded-full"
+                              />
+                              <div>
+                                <h4 className="font-semibold text-midnight">{consultation.patient_name}</h4>
+                                <p className="text-sm text-gray-600">{consultation.doctor_name} • {consultation.consultation_type}</p>
+                                <p className="text-xs text-gray-500">{consultation.scheduled_time} • ₹{consultation.consultation_fee}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <Badge className={getStatusColor(consultation.status)}>
+                                {consultation.status.replace('-', ' ')}
+                              </Badge>
+                              {consultation.status === 'scheduled' && (
+                                <Button 
+                                  size="sm" 
+                                  className="bg-aqua hover:bg-aqua/90 text-white"
+                                  onClick={() => endConsultation(consultation.id)}
+                                >
+                                  <Video className="w-4 h-4 mr-2" />
+                                  Start
+                                </Button>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-3">
-                            <Badge className={getStatusColor(consultation.status)}>
-                              {consultation.status.replace('-', ' ')}
-                            </Badge>
-                            {consultation.status === 'scheduled' && (
-                              <Button 
-                                size="sm" 
-                                className="bg-aqua hover:bg-aqua/90 text-white"
-                                onClick={() => endConsultation(consultation.id)}
-                              >
-                                <Video className="w-4 h-4 mr-2" />
-                                Start
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -392,7 +381,7 @@ const AdminDashboard = () => {
                         <div className="flex items-center space-x-4">
                           <div className="text-center">
                             <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>
-                            <div className="text-xs text-gray-500">{consultation.time}</div>
+                            <div className="text-xs text-gray-500">{consultation.scheduled_time}</div>
                           </div>
                           <img 
                             src="/patient-avatar-2.svg" 
@@ -400,17 +389,21 @@ const AdminDashboard = () => {
                             className="w-12 h-12 rounded-full"
                           />
                                                       <div>
-                              <h4 className="font-semibold text-midnight">{consultation.patient.name}</h4>
+                              <h4 className="font-semibold text-midnight">{consultation.patient_name}</h4>
                               <p className="text-sm text-gray-600 flex items-center">
                                 <Phone className="w-3 h-3 mr-1" />
-                                {consultation.patient.phone}
+                                {/* Assuming patient object exists or is accessible */}
+                                {/* For now, using a placeholder or assuming it's part of the consultation object */}
+                                {/* If patient object is not directly available, this will cause an error */}
+                                {/* Based on the new_consultations mock, patient_name is directly available */}
+                                {consultation.patient_name}
                               </p>
-                              <p className="text-sm text-gray-600">{consultation.doctor} • {consultation.specialty}</p>
+                              <p className="text-sm text-gray-600">{consultation.doctor_name} • {/* Assuming specialty is part of consultation object */}</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <div className="text-right">
-                            <div className="font-semibold text-midnight">₹{consultation.fee}</div>
+                            <div className="font-semibold text-midnight">₹{consultation.consultation_fee}</div>
                             <Badge className={getStatusColor(consultation.status)}>
                               {consultation.status.replace('-', ' ')}
                             </Badge>

@@ -44,11 +44,6 @@ const PatientRegistrationForm = () => {
     medicalHistory: '',
     familyHistory: '',
     
-    // Insurance & Payment
-    insuranceProvider: '',
-    insuranceNumber: '',
-    paymentMethod: 'cash',
-    
     // Additional Information
     referredBy: '',
     preferredLanguage: '',
@@ -422,38 +417,15 @@ const PatientRegistrationForm = () => {
           </CardContent>
         </Card>
 
-        {/* Insurance & Additional Information */}
+        {/* Additional Information */}
         <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-green-500/10 to-transparent">
+          <CardHeader className="bg-gradient-to-r from-purple-500/10 to-transparent">
             <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <FileText className="w-5 h-5 mr-2 text-green-600" />
-              Insurance & Additional Information
+              <FileText className="w-5 h-5 mr-2 text-purple-600" />
+              Additional Information
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="insuranceProvider" className="text-sm font-medium">Insurance Provider</Label>
-                <Input
-                  id="insuranceProvider"
-                  value={formData.insuranceProvider}
-                  onChange={(e) => handleInputChange('insuranceProvider', e.target.value)}
-                  placeholder="Insurance company name"
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="insuranceNumber" className="text-sm font-medium">Insurance Policy Number</Label>
-                <Input
-                  id="insuranceNumber"
-                  value={formData.insuranceNumber}
-                  onChange={(e) => handleInputChange('insuranceNumber', e.target.value)}
-                  placeholder="Policy number"
-                  className="h-11"
-                />
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="referredBy" className="text-sm font-medium">Referred By</Label>
