@@ -1,0 +1,889 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Star,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Filter,
+  Stethoscope,
+  Award,
+  Briefcase,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  GraduationCap,
+  FileText,
+  Shield,
+  Eye,
+  UserPlus,
+  Settings,
+  Activity,
+  Building2,
+  Users,
+  DollarSign
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { get, post, put, del } from '@/lib/api';
+
+interface Doctor {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+  };
+  license_number: string;
+  qualification: string;
+  specialization: string;
+  sub_specialization?: string;
+  consultation_fee: number;
+  online_consultation_fee?: number;
+  experience_years: number;
+  clinic_name?: string;
+  clinic_address?: string;
+  bio?: string;
+  languages_spoken: string[];
+  consultation_duration: number;
+  is_online_consultation_available: boolean;
+  is_verified: boolean;
+  is_active: boolean;
+  is_accepting_patients: boolean;
+  rating: number;
+  total_reviews: number;
+  total_consultations: number;
+  created_at: string;
+}
+
+interface DoctorStats {
+  total_doctors: number;
+  active_doctors: number;
+  verified_doctors: number;
+  total_consultations: number;
+  average_rating: number;
+  total_revenue: number;
+}
+
+const AdminDoctorManagementTab = () => {
+  const { toast } = useToast();
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [stats, setStats] = useState<DoctorStats>({
+    total_doctors: 0,
+    active_doctors: 0,
+    verified_doctors: 0,
+    total_consultations: 0,
+    average_rating: 0,
+    total_revenue: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state for create/edit
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    license_number: '',
+    qualification: '',
+    specialization: '',
+    consultation_fee: '',
+    experience_years: '',
+    bio: '',
+    languages_spoken: '',
+    consultation_duration: '30',
+    is_online_consultation_available: true,
+    is_accepting_patients: true
+  });
+
+  // Fetch doctors data
+  const fetchDoctors = async () => {
+    try {
+      setLoading(true);
+      const response = await get('/api/doctors/');
+      setDoctors(response.results || []);
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load doctors',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch stats
+  const fetchStats = async () => {
+    try {
+      const response = await get('/api/doctors/stats/');
+      setStats(response);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctors();
+    fetchStats();
+  }, []);
+
+  // Filter doctors based on search and status
+  const filteredDoctors = doctors.filter(doctor => {
+    const matchesSearch = doctor.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doctor.user.phone.includes(searchTerm) ||
+                         doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' ||
+                         (filterStatus === 'active' && doctor.is_active) ||
+                         (filterStatus === 'inactive' && !doctor.is_active) ||
+                         (filterStatus === 'verified' && doctor.is_verified) ||
+                         (filterStatus === 'unverified' && !doctor.is_verified);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Handle create doctor
+  const handleCreateDoctor = async () => {
+    try {
+      setIsSubmitting(true);
+      const response = await post('/api/doctors/', {
+        ...formData,
+        consultation_fee: parseFloat(formData.consultation_fee),
+        experience_years: parseInt(formData.experience_years),
+        consultation_duration: parseInt(formData.consultation_duration),
+        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim())
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Doctor created successfully',
+      });
+      
+      setShowCreateDialog(false);
+      resetForm();
+      fetchDoctors();
+      fetchStats();
+    } catch (error) {
+      console.error('Error creating doctor:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create doctor',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle edit doctor
+  const handleEditDoctor = async () => {
+    if (!selectedDoctor) return;
+    
+    try {
+      setIsSubmitting(true);
+      const response = await put(`/api/doctors/${selectedDoctor.id}/`, {
+        ...formData,
+        consultation_fee: parseFloat(formData.consultation_fee),
+        experience_years: parseInt(formData.experience_years),
+        consultation_duration: parseInt(formData.consultation_duration),
+        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim())
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Doctor updated successfully',
+      });
+      
+      setShowEditDialog(false);
+      resetForm();
+      fetchDoctors();
+      fetchStats();
+    } catch (error) {
+      console.error('Error updating doctor:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update doctor',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle delete doctor
+  const handleDeleteDoctor = async () => {
+    if (!selectedDoctor) return;
+    
+    try {
+      setIsSubmitting(true);
+      await del(`/api/doctors/${selectedDoctor.id}/`);
+      
+      toast({
+        title: 'Success',
+        description: 'Doctor deleted successfully',
+      });
+      
+      setShowDeleteDialog(false);
+      fetchDoctors();
+      fetchStats();
+    } catch (error) {
+      console.error('Error deleting doctor:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete doctor',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      license_number: '',
+      qualification: '',
+      specialization: '',
+      consultation_fee: '',
+      experience_years: '',
+      bio: '',
+      languages_spoken: '',
+      consultation_duration: '30',
+      is_online_consultation_available: true,
+      is_accepting_patients: true
+    });
+  };
+
+  // Open edit dialog
+  const openEditDialog = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setFormData({
+      name: doctor.user.name,
+      phone: doctor.user.phone,
+      email: doctor.user.email,
+      license_number: doctor.license_number,
+      qualification: doctor.qualification,
+      specialization: doctor.specialization,
+      consultation_fee: doctor.consultation_fee.toString(),
+      experience_years: doctor.experience_years.toString(),
+      bio: doctor.bio || '',
+      languages_spoken: doctor.languages_spoken.join(', '),
+      consultation_duration: doctor.consultation_duration.toString(),
+      is_online_consultation_available: doctor.is_online_consultation_available,
+      is_accepting_patients: doctor.is_accepting_patients
+    });
+    setShowEditDialog(true);
+  };
+
+  // Open view dialog
+  const openViewDialog = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setShowViewDialog(true);
+  };
+
+  // Open delete dialog
+  const openDeleteDialog = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setShowDeleteDialog(true);
+  };
+
+  const getStatusColor = (isVerified: boolean, isActive: boolean) => {
+    if (!isVerified) return 'bg-yellow-100 text-yellow-800';
+    if (isActive) return 'bg-green-100 text-green-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  const getStatusText = (isVerified: boolean, isActive: boolean) => {
+    if (!isVerified) return 'Pending Verification';
+    if (isActive) return 'Active';
+    return 'Inactive';
+  };
+
+  const getSpecialtyColor = (specialty: string) => {
+    const colors: { [key: string]: string } = {
+      'Cardiology': 'bg-red-100 text-red-800',
+      'Dermatology': 'bg-purple-100 text-purple-800',
+      'Orthopedics': 'bg-blue-100 text-blue-800',
+      'Pediatrics': 'bg-pink-100 text-pink-800',
+      'Neurology': 'bg-indigo-100 text-indigo-800',
+      'General Medicine': 'bg-green-100 text-green-800',
+      'Psychiatry': 'bg-orange-100 text-orange-800',
+      'Gynecology': 'bg-rose-100 text-rose-800'
+    };
+    return colors[specialty] || 'bg-gray-100 text-gray-800';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-midnight">Doctor Management</h2>
+          <p className="text-gray-600">Manage doctors in your clinic</p>
+        </div>
+        <Button 
+          onClick={() => setShowCreateDialog(true)}
+          className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Add Doctor
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Doctors</p>
+                <p className="text-2xl font-bold text-midnight">{stats.total_doctors}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Active Doctors</p>
+                <p className="text-2xl font-bold text-midnight">{stats.active_doctors}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Verified Doctors</p>
+                <p className="text-2xl font-bold text-midnight">{stats.verified_doctors}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Revenue</p>
+                <p className="text-2xl font-bold text-midnight">₹{stats.total_revenue.toLocaleString()}</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-[#E17726]" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filter */}
+      <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input 
+                placeholder="Search doctors by name, phone, or specialization..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-11 rounded-xl border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+              />
+            </div>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="h-11 px-4 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+            >
+              <option value="all">All Doctors</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="verified">Verified</option>
+              <option value="unverified">Unverified</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Doctors List */}
+      <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-midnight">Doctors ({filteredDoctors.length})</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {filteredDoctors.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No doctors found</p>
+            </div>
+          ) : (
+            filteredDoctors.map((doctor) => (
+              <div key={doctor.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-[#E17726] rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight">{doctor.user.name}</h4>
+                    <p className="text-sm text-gray-600 flex items-center">
+                      <Phone className="w-3 h-3 mr-1" />
+                      {doctor.user.phone}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge className={getSpecialtyColor(doctor.specialization)}>
+                        {doctor.specialization}
+                      </Badge>
+                      <Badge className={getStatusColor(doctor.is_verified, doctor.is_active)}>
+                        {getStatusText(doctor.is_verified, doctor.is_active)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <div className="font-semibold text-midnight">₹{doctor.consultation_fee}</div>
+                    <div className="text-sm text-gray-600">{doctor.experience_years} years exp.</div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Star className="w-3 h-3 mr-1 text-yellow-500" />
+                      {doctor.rating.toFixed(1)} ({doctor.total_reviews})
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => openViewDialog(doctor)}
+                      className="rounded-lg"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => openEditDialog(doctor)}
+                      className="rounded-lg"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => openDeleteDialog(doctor)}
+                      className="rounded-lg border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Doctor Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Doctor</DialogTitle>
+            <DialogDescription>
+              Register a new doctor to your clinic
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Dr. John Smith"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="doctor@example.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="license">License Number</Label>
+                <Input
+                  id="license"
+                  value={formData.license_number}
+                  onChange={(e) => setFormData({...formData, license_number: e.target.value})}
+                  placeholder="MED123456"
+                />
+              </div>
+              <div>
+                <Label htmlFor="qualification">Qualification</Label>
+                <Input
+                  id="qualification"
+                  value={formData.qualification}
+                  onChange={(e) => setFormData({...formData, qualification: e.target.value})}
+                  placeholder="MBBS, MD"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="specialization">Specialization</Label>
+                <Input
+                  id="specialization"
+                  value={formData.specialization}
+                  onChange={(e) => setFormData({...formData, specialization: e.target.value})}
+                  placeholder="Cardiology"
+                />
+              </div>
+              <div>
+                <Label htmlFor="consultation_fee">Consultation Fee (₹)</Label>
+                <Input
+                  id="consultation_fee"
+                  type="number"
+                  value={formData.consultation_fee}
+                  onChange={(e) => setFormData({...formData, consultation_fee: e.target.value})}
+                  placeholder="1500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="experience">Experience (Years)</Label>
+                <Input
+                  id="experience"
+                  type="number"
+                  value={formData.experience_years}
+                  onChange={(e) => setFormData({...formData, experience_years: e.target.value})}
+                  placeholder="8"
+                />
+              </div>
+              <div>
+                <Label htmlFor="languages">Languages (comma separated)</Label>
+                <Input
+                  id="languages"
+                  value={formData.languages_spoken}
+                  onChange={(e) => setFormData({...formData, languages_spoken: e.target.value})}
+                  placeholder="English, Hindi"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                placeholder="Brief description about the doctor..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateDoctor}
+              disabled={isSubmitting}
+              className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Doctor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Doctor Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Doctor</DialogTitle>
+            <DialogDescription>
+              Update doctor information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Dr. John Smith"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Input
+                  id="edit-phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="doctor@example.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-license">License Number</Label>
+                <Input
+                  id="edit-license"
+                  value={formData.license_number}
+                  onChange={(e) => setFormData({...formData, license_number: e.target.value})}
+                  placeholder="MED123456"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-qualification">Qualification</Label>
+                <Input
+                  id="edit-qualification"
+                  value={formData.qualification}
+                  onChange={(e) => setFormData({...formData, qualification: e.target.value})}
+                  placeholder="MBBS, MD"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-specialization">Specialization</Label>
+                <Input
+                  id="edit-specialization"
+                  value={formData.specialization}
+                  onChange={(e) => setFormData({...formData, specialization: e.target.value})}
+                  placeholder="Cardiology"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-consultation_fee">Consultation Fee (₹)</Label>
+                <Input
+                  id="edit-consultation_fee"
+                  type="number"
+                  value={formData.consultation_fee}
+                  onChange={(e) => setFormData({...formData, consultation_fee: e.target.value})}
+                  placeholder="1500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-experience">Experience (Years)</Label>
+                <Input
+                  id="edit-experience"
+                  type="number"
+                  value={formData.experience_years}
+                  onChange={(e) => setFormData({...formData, experience_years: e.target.value})}
+                  placeholder="8"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-languages">Languages (comma separated)</Label>
+                <Input
+                  id="edit-languages"
+                  value={formData.languages_spoken}
+                  onChange={(e) => setFormData({...formData, languages_spoken: e.target.value})}
+                  placeholder="English, Hindi"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-bio">Bio</Label>
+              <Textarea
+                id="edit-bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                placeholder="Brief description about the doctor..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEditDoctor}
+              disabled={isSubmitting}
+              className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+            >
+              {isSubmitting ? 'Updating...' : 'Update Doctor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Doctor Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Doctor Details</DialogTitle>
+          </DialogHeader>
+          {selectedDoctor && (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-[#E17726] rounded-full flex items-center justify-center">
+                  <User className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-midnight">{selectedDoctor.user.name}</h3>
+                  <p className="text-gray-600">{selectedDoctor.specialization}</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Badge className={getStatusColor(selectedDoctor.is_verified, selectedDoctor.is_active)}>
+                      {getStatusText(selectedDoctor.is_verified, selectedDoctor.is_active)}
+                    </Badge>
+                    <Badge className={getSpecialtyColor(selectedDoctor.specialization)}>
+                      {selectedDoctor.specialization}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Phone</Label>
+                  <p className="text-midnight">{selectedDoctor.user.phone}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Email</Label>
+                  <p className="text-midnight">{selectedDoctor.user.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">License Number</Label>
+                  <p className="text-midnight">{selectedDoctor.license_number}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Qualification</Label>
+                  <p className="text-midnight">{selectedDoctor.qualification}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Experience</Label>
+                  <p className="text-midnight">{selectedDoctor.experience_years} years</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Consultation Fee</Label>
+                  <p className="text-midnight">₹{selectedDoctor.consultation_fee}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Languages</Label>
+                  <p className="text-midnight">{selectedDoctor.languages_spoken.join(', ')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Rating</Label>
+                  <p className="text-midnight flex items-center">
+                    <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                    {selectedDoctor.rating.toFixed(1)} ({selectedDoctor.total_reviews} reviews)
+                  </p>
+                </div>
+              </div>
+              
+              {selectedDoctor.bio && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Bio</Label>
+                  <p className="text-midnight">{selectedDoctor.bio}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowViewDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Doctor</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedDoctor?.user.name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteDoctor}
+              disabled={isSubmitting}
+              variant="destructive"
+            >
+              {isSubmitting ? 'Deleting...' : 'Delete Doctor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminDoctorManagementTab; 

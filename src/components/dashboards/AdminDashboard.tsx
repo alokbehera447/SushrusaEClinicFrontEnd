@@ -10,6 +10,7 @@ import PrescriptionWriterForm from '@/components/forms/PrescriptionWriterForm';
 import ConsultationCreationForm from '@/components/forms/ConsultationCreationForm';
 import ConsultationManagementFlow from '@/components/forms/ConsultationManagementFlow';
 import DoctorManagementTab from '@/components/forms/DoctorManagementTab';
+import AdminDoctorManagementTab from '@/components/forms/AdminDoctorManagementTab';
 import PatientManagementTab from '@/components/forms/PatientManagementTab';
 import { 
   Users, 
@@ -891,7 +892,7 @@ const AdminDashboard = () => {
                     {/* Doctors Tab */}
           {activeTab === 'doctors' && (
             <div className="space-y-6">
-              <DoctorManagementTab />
+              <AdminDoctorManagementTab />
             </div>
           )}
 
