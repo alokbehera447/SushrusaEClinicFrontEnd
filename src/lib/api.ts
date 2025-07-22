@@ -1019,6 +1019,26 @@ export const doctorApi = {
     }
     return [];
   },
+
+  // Get all consultations for the logged-in doctor (with optional filters)
+  getAllConsultations: async (params?: { page?: number; page_size?: number; status?: string; ordering?: string; search?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get(`/api/consultations/?${queryParams.toString()}`);
+    // Handle paginated response
+    if (response.data && response.data.data && response.data.data.results) {
+      return response.data.data.results;
+    } else if (response.data && response.data.results) {
+      return response.data.results;
+    }
+    return [];
+  },
 };
 
 // Create a new consultation
@@ -1187,4 +1207,19 @@ export const getStatusColor = (status: string): string => {
     default:
       return 'bg-gray-100 text-gray-800';
   }
+}; 
+
+export const paymentApi = {
+  // Initiate a payment for a consultation
+  initiatePayment: async ({ consultation_id, amount }: { consultation_id: string; amount: number | string }) => {
+    // Placeholder endpoint, update as per backend
+    const response = await api.post('/api/payments/initiate/', { consultation_id, amount });
+    return response.data;
+  },
+  // Get payment status for a consultation
+  getPaymentStatus: async ({ consultation_id }: { consultation_id: string }) => {
+    // Placeholder endpoint, update as per backend
+    const response = await api.get(`/api/payments/status/?consultation_id=${consultation_id}`);
+    return response.data;
+  },
 }; 
