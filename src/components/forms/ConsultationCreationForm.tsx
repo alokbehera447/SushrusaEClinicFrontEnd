@@ -27,6 +27,8 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { adminPatientApi, doctorApi, doctorSlotApi, DoctorSlotFrontend, PatientProfile, DoctorProfile } from '@/lib/api';
+import { debounce } from 'lodash';
 
 const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   const [formData, setFormData] = useState({
@@ -64,31 +66,78 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
+  const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
+  const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
+  const [patientSearch, setPatientSearch] = useState('');
+  const [doctorSearch, setDoctorSearch] = useState('');
+  const [patientOptions, setPatientOptions] = useState<PatientProfile[]>([]);
+  const [doctorOptions, setDoctorOptions] = useState<DoctorProfile[]>([]);
+  const [slotMonth, setSlotMonth] = useState<number | null>(null);
+  const [slotYear, setSlotYear] = useState<number | null>(null);
+  const [doctorSlots, setDoctorSlots] = useState<Record<string, DoctorSlotFrontend[]>>({});
+  const [slotLoading, setSlotLoading] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<DoctorSlotFrontend | null>(null);
 
-  // Mock data - in real app, this would come from API
-  const patients = [
-    { id: 'PAT001', name: 'Rahul Sharma', phone: '+91 98765 43210', age: 34, gender: 'Male' },
-    { id: 'PAT002', name: 'Anita Devi', phone: '+91 87654 32109', age: 28, gender: 'Female' },
-    { id: 'PAT003', name: 'Suresh Gupta', phone: '+91 76543 21098', age: 45, gender: 'Male' },
-    { id: 'PAT004', name: 'Priya Patel', phone: '+91 65432 10987', age: 31, gender: 'Female' }
-  ];
+  // Debounced patient search
+  const debouncedPatientSearch = React.useMemo(() => debounce(async (query: string) => {
+    if (!query) {
+      // Fetch default patient list
+      try {
+        const res = await adminPatientApi.getPatients({ page: 1, page_size: 8 });
+        setPatientOptions(Array.isArray(res?.results) ? res.results : []);
+      } catch {
+        setPatientOptions([]);
+      }
+      return;
+    }
+    try {
+      const results = await adminPatientApi.searchPatients({ query });
+      setPatientOptions(Array.isArray(results) ? results : []);
+    } catch (e) {
+      setPatientOptions([]);
+    }
+  }, 400), []);
+  React.useEffect(() => {
+    debouncedPatientSearch(patientSearch);
+  }, [patientSearch]);
 
-  const doctors = [
-    { id: 'DOC001', name: 'Dr. Amit Kumar', specialty: 'Cardiology', available: true },
-    { id: 'DOC002', name: 'Dr. Priya Singh', specialty: 'Dermatology', available: true },
-    { id: 'DOC003', name: 'Dr. Ramesh Kumar', specialty: 'Orthopedics', available: true },
-    { id: 'DOC004', name: 'Dr. Neha Jain', specialty: 'Pediatrics', available: false }
-  ];
+  // Debounced doctor search
+  const debouncedDoctorSearch = React.useMemo(() => debounce(async (query: string) => {
+    if (!query) {
+      // Fetch default doctor list
+      try {
+        const res = await doctorApi.getDoctors({ is_active: true, is_verified: true });
+        setDoctorOptions(Array.isArray(res) ? res.slice(0, 8) : []);
+      } catch {
+        setDoctorOptions([]);
+      }
+      return;
+    }
+    const results = await doctorApi.getDoctors({ search: query });
+    setDoctorOptions(Array.isArray(results) ? results : []);
+  }, 400), []);
+  React.useEffect(() => {
+    debouncedDoctorSearch(doctorSearch);
+  }, [doctorSearch]);
+  // Fetch slots after doctor selection
+  React.useEffect(() => {
+    if (!selectedDoctor) return;
+    const today = new Date();
+    const month = slotMonth ?? today.getMonth();
+    const year = slotYear ?? today.getFullYear();
+    setSlotLoading(true);
+    // Use doctor user code (selectedDoctor.user) for slot API calls
+    doctorSlotApi.getSlots(selectedDoctor.user, month, year).then(slots => {
+      const grouped: Record<string, DoctorSlotFrontend[]> = {};
+      slots.forEach(slot => {
+        if (!grouped[slot.date]) grouped[slot.date] = [];
+        grouped[slot.date].push(slot);
+      });
+      setDoctorSlots(grouped);
+    }).finally(() => setSlotLoading(false));
+  }, [selectedDoctor, slotMonth, slotYear]);
 
-  const timeSlots = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '12:00', '12:30', '14:00', '14:30', '15:00', '15:30',
-    '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
-  ];
-
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean | Date | undefined) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -155,8 +204,14 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
             {/* Patient Selection */}
             <div className="space-y-4">
               <Label className="text-sm font-medium">Select Patient *</Label>
+              <Input
+                placeholder="Search patient by name, phone, or email"
+                value={patientSearch}
+                onChange={e => setPatientSearch(e.target.value)}
+                className="mb-2"
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {patients.map((patient) => (
+                {(patientOptions || []).map((patient) => (
                   <div
                     key={patient.id}
                     onClick={() => {
@@ -175,9 +230,9 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
                         <User className="w-5 h-5 text-[#E17726]" />
                       </div>
                       <div>
-                        <p className="font-medium text-midnight">{patient.name}</p>
-                        <p className="text-sm text-gray-600">{patient.phone}</p>
-                        <p className="text-xs text-gray-500">{patient.age} years, {patient.gender}</p>
+                        <p className="font-medium text-midnight">{patient.user_name}</p>
+                        <p className="text-sm text-gray-600">{patient.user_phone}</p>
+                        <p className="text-xs text-gray-500">{patient.age ? `${patient.age} years, ` : ''}{patient.gender}</p>
                       </div>
                     </div>
                   </div>
@@ -194,8 +249,14 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
             {/* Doctor Selection */}
             <div className="space-y-4">
               <Label className="text-sm font-medium">Select Doctor *</Label>
+              <Input
+                placeholder="Search doctor by name, specialization, etc."
+                value={doctorSearch}
+                onChange={e => setDoctorSearch(e.target.value)}
+                className="mb-2"
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {doctors.map((doctor) => (
+                {doctorOptions.map((doctor) => (
                   <div
                     key={doctor.id}
                     onClick={() => {
@@ -206,23 +267,21 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
                       "p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md",
                       selectedDoctor?.id === doctor.id
                         ? "border-aqua bg-aqua/5"
-                        : "border-gray-200 hover:border-aqua/50",
-                      !doctor.available && "opacity-50 cursor-not-allowed"
+                        : "border-gray-200 hover:border-aqua/50"
                     )}
-                    style={{ pointerEvents: doctor.available ? 'auto' : 'none' }}
                   >
                     <div className="flex items-center space-x-3">
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center",
-                        doctor.available ? "bg-aqua/10" : "bg-gray-100"
+                        "bg-aqua/10"
                       )}>
-                        <User className={cn("w-5 h-5", doctor.available ? "text-aqua" : "text-gray-400")} />
+                        <User className={cn("w-5 h-5", "text-aqua")} />
                       </div>
                       <div>
-                        <p className="font-medium text-midnight">{doctor.name}</p>
-                        <p className="text-sm text-gray-600">{doctor.specialty}</p>
-                        <Badge className={doctor.available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                          {doctor.available ? "Available" : "Unavailable"}
+                        <p className="font-medium text-midnight">{doctor.user_name}</p>
+                        <p className="text-sm text-gray-600">{doctor.specialization}</p>
+                        <Badge className={doctor.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                          {doctor.is_active ? "Available" : "Unavailable"}
                         </Badge>
                       </div>
                     </div>
@@ -303,19 +362,112 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
                 </Popover>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Time *</Label>
-                <Select value={formData.consultationTime} onValueChange={(value) => handleInputChange('consultationTime', value)}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>{time}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Slot Picker: Show after doctor is selected */}
+              {selectedDoctor && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Select Slot *</Label>
+                  {/* Calendar and slot picker UI */}
+                  <div className="flex flex-col gap-4">
+                    {/* Month navigation */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => {
+                        if (slotMonth === null || slotYear === null) {
+                          const today = new Date();
+                          setSlotMonth(today.getMonth() - 1 < 0 ? 11 : today.getMonth() - 1);
+                          setSlotYear(today.getMonth() - 1 < 0 ? today.getFullYear() - 1 : today.getFullYear());
+                        } else {
+                          setSlotMonth(slotMonth - 1 < 0 ? 11 : slotMonth - 1);
+                          setSlotYear(slotMonth - 1 < 0 ? slotYear - 1 : slotYear);
+                        }
+                      }}>Prev</Button>
+                      <span className="font-semibold">
+                        {(() => {
+                          const m = slotMonth !== null ? slotMonth : new Date().getMonth();
+                          const y = slotYear !== null ? slotYear : new Date().getFullYear();
+                          return `${new Date(y, m, 1).toLocaleString('default', { month: 'long' })} ${y}`;
+                        })()}
+                      </span>
+                      <Button type="button" size="sm" variant="outline" onClick={() => {
+                        if (slotMonth === null || slotYear === null) {
+                          const today = new Date();
+                          setSlotMonth(today.getMonth() + 1 > 11 ? 0 : today.getMonth() + 1);
+                          setSlotYear(today.getMonth() + 1 > 11 ? today.getFullYear() + 1 : today.getFullYear());
+                        } else {
+                          setSlotMonth(slotMonth + 1 > 11 ? 0 : slotMonth + 1);
+                          setSlotYear(slotMonth + 1 > 11 ? slotYear + 1 : slotYear);
+                        }
+                      }}>Next</Button>
+                    </div>
+                    {/* Calendar grid */}
+                    <div className="grid grid-cols-7 gap-1 bg-gray-50 rounded-xl p-2 border border-gray-200">
+                      {[ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ].map(d => (
+                        <div key={d} className="font-semibold text-gray-600 py-1 text-xs">{d}</div>
+                      ))}
+                      {/* Empty cells for first week */}
+                      {(() => {
+                        const m = slotMonth !== null ? slotMonth : new Date().getMonth();
+                        const y = slotYear !== null ? slotYear : new Date().getFullYear();
+                        const firstDay = new Date(y, m, 1).getDay();
+                        return Array(firstDay).fill(null).map((_, i) => <div key={'empty-'+i}></div>);
+                      })()}
+                      {/* Days */}
+                      {(() => {
+                        const m = slotMonth !== null ? slotMonth : new Date().getMonth();
+                        const y = slotYear !== null ? slotYear : new Date().getFullYear();
+                        const daysInMonth = new Date(y, m + 1, 0).getDate();
+                        return Array(daysInMonth).fill(null).map((_, i) => {
+                          const day = i + 1;
+                          const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                          const slots = doctorSlots[dateKey] || [];
+                          const hasSlots = slots.length > 0;
+                          return (
+                            <button
+                              key={day}
+                              className={`rounded-lg py-2 w-full border font-semibold transition-all relative text-xs
+                                ${hasSlots ? 'bg-blue-300 border-blue-400 text-blue-900' : 'bg-white border-gray-200 text-gray-900'}
+                                hover:bg-[#E17726]/20
+                              `}
+                              onClick={() => setFormData(prev => ({ ...prev, consultationDate: new Date(y, m, day) }))}
+                              type="button"
+                            >
+                              {day}
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                    {/* Slot buttons for selected date */}
+                    {formData.consultationDate && (() => {
+                      const y = formData.consultationDate.getFullYear();
+                      const m = formData.consultationDate.getMonth();
+                      const d = formData.consultationDate.getDate();
+                      const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                      const slots = doctorSlots[dateKey] || [];
+                      if (slotLoading) return <div>Loading slots...</div>;
+                      if (!slots.length) return <div className="text-gray-500 text-xs">No available slots for this date.</div>;
+                      return (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {slots.map(slot => (
+                            <Button
+                              key={slot.id}
+                              type="button"
+                              size="sm"
+                              variant={selectedSlot?.id === slot.id ? 'default' : 'outline'}
+                              className={selectedSlot?.id === slot.id ? 'bg-[#E17726] text-white' : ''}
+                              onClick={() => {
+                                setSelectedSlot(slot);
+                                handleInputChange('consultationTime', slot.startTime);
+                              }}
+                            >
+                              {slot.startTime} - {slot.endTime}
+                            </Button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Duration</Label>
