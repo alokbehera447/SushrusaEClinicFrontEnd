@@ -1,10 +1,10 @@
 import { api } from './utils';
 
 // HTTP method helpers
-export const get = (url: string, config?: any) => api.get(url, config).then(res => res.data);
-export const post = (url: string, data?: any, config?: any) => api.post(url, data, config).then(res => res.data);
-export const put = (url: string, data?: any, config?: any) => api.put(url, data, config).then(res => res.data);
-export const del = (url: string, config?: any) => api.delete(url, config).then(res => res.data);
+export const get = <T = unknown>(url: string, config?: Record<string, unknown>) => api.get<T>(url, config).then(res => res.data);
+export const post = <T = unknown>(url: string, data?: unknown, config?: Record<string, unknown>) => api.post<T>(url, data, config).then(res => res.data);
+export const put = <T = unknown>(url: string, data?: unknown, config?: Record<string, unknown>) => api.put<T>(url, data, config).then(res => res.data);
+export const del = <T = unknown>(url: string, config?: Record<string, unknown>) => api.delete<T>(url, config).then(res => res.data);
 
 // Types for patient data
 export interface PatientProfile {
@@ -969,8 +969,8 @@ export const doctorApi = {
     specialization_distribution: Record<string, number>;
     experience_distribution: Record<string, number>;
     average_consultation_fee: string;
-    top_rated_doctors: any[];
-    consultation_stats: Record<string, any>;
+    top_rated_doctors: unknown[];
+    consultation_stats: Record<string, unknown>;
   }> => {
     const response = await api.get<ApiResponse<{
       total_doctors: number;
@@ -981,8 +981,8 @@ export const doctorApi = {
       specialization_distribution: Record<string, number>;
       experience_distribution: Record<string, number>;
       average_consultation_fee: string;
-      top_rated_doctors: any[];
-      consultation_stats: Record<string, any>;
+      top_rated_doctors: unknown[];
+      consultation_stats: Record<string, unknown>;
     }>>('/api/doctors/stats/');
     return response.data.data;
   },
@@ -997,6 +997,73 @@ export const doctorApi = {
     }
     return [];
   },
+};
+
+// Doctor Slot & Schedule API
+export interface DoctorSlot {
+  id: number;
+  doctor: number;
+  date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DoctorSchedule {
+  id: number;
+  doctor: number;
+  day_of_week: string; // e.g., 'Monday'
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const doctorSlotApi = {
+  // Fetch slots for a doctor for a given month/year
+  getSlots: async (doctorId: string | number, month: number, year: number): Promise<DoctorSlot[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<DoctorSlot>>>(
+      `/api/doctors/${doctorId}/slots/?month=${month+1}&year=${year}`
+    );
+    return response.data.data.results;
+  },
+  // Create a new slot
+  createSlot: async (doctorId: string | number, slotData: Partial<DoctorSlot>): Promise<DoctorSlot> => {
+    const response = await api.post<ApiResponse<DoctorSlot>>(
+      `/api/doctors/${doctorId}/slots/`,
+      slotData
+    );
+    return response.data.data;
+  },
+  // Delete a slot
+  deleteSlot: async (doctorId: string | number, slotId: number): Promise<void> => {
+    await api.delete<ApiResponse<null>>(`/api/doctors/${doctorId}/slots/${slotId}/`);
+  }
+};
+
+export const doctorScheduleApi = {
+  // Fetch weekly schedule for a doctor
+  getSchedule: async (doctorId: string | number): Promise<DoctorSchedule[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<DoctorSchedule>>>(
+      `/api/doctors/${doctorId}/schedule/`
+    );
+    return response.data.data.results;
+  },
+  // Create a new weekly schedule entry
+  createSchedule: async (doctorId: string | number, scheduleData: Partial<DoctorSchedule>): Promise<DoctorSchedule> => {
+    const response = await api.post<ApiResponse<DoctorSchedule>>(
+      `/api/doctors/${doctorId}/schedule/`,
+      scheduleData
+    );
+    return response.data.data;
+  },
+  // Delete a schedule entry
+  deleteSchedule: async (doctorId: string | number, scheduleId: number): Promise<void> => {
+    await api.delete<ApiResponse<null>>(`/api/doctors/${doctorId}/schedule/${scheduleId}/`);
+  }
 };
 
 // Utility functions

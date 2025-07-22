@@ -19,11 +19,17 @@ import {
   MapPin,
   Phone
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { doctorScheduleApi } from '@/lib/api';
+import type { DoctorSchedule } from '@/lib/api';
 
 const DoctorSchedule = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { user } = useAuth();
+  const doctorId = user?.id;
   const [viewMode, setViewMode] = useState('week'); // week, month
-  const [editingSlot, setEditingSlot] = useState<any>(null);
+  const [editingSlot, setEditingSlot] = useState<DoctorSchedule | null>(null);
+  const [schedule, setSchedule] = useState<DoctorSchedule[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Mock data
   const doctorInfo = {
@@ -34,77 +40,46 @@ const DoctorSchedule = () => {
     consultationFee: 500
   };
 
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const timeSlots = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
     '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
   ];
 
-  const scheduleData = {
-    'Mon': {
-      available: true,
-      slots: [
-        { time: '09:00', status: 'available', duration: 30 },
-        { time: '09:30', status: 'booked', patient: 'Rajesh Kumar', duration: 30 },
-        { time: '10:00', status: 'available', duration: 30 },
-        { time: '10:30', status: 'booked', patient: 'Anita Devi', duration: 30 },
-        { time: '14:00', status: 'available', duration: 30 },
-        { time: '14:30', status: 'blocked', reason: 'Break', duration: 60 },
-        { time: '15:30', status: 'available', duration: 30 },
-        { time: '16:00', status: 'available', duration: 30 }
-      ]
-    },
-    'Tue': {
-      available: true,
-      slots: [
-        { time: '09:00', status: 'available', duration: 30 },
-        { time: '09:30', status: 'available', duration: 30 },
-        { time: '10:00', status: 'booked', patient: 'Suresh Gupta', duration: 30 },
-        { time: '14:00', status: 'available', duration: 30 },
-        { time: '14:30', status: 'available', duration: 30 },
-        { time: '15:00', status: 'available', duration: 30 }
-      ]
-    },
-    'Wed': {
-      available: true,
-      slots: [
-        { time: '09:00', status: 'available', duration: 30 },
-        { time: '09:30', status: 'available', duration: 30 },
-        { time: '10:00', status: 'available', duration: 30 },
-        { time: '14:00', status: 'blocked', reason: 'Surgery', duration: 120 }
-      ]
-    },
-    'Thu': {
-      available: true,
-      slots: [
-        { time: '09:00', status: 'booked', patient: 'Priya Sharma', duration: 30 },
-        { time: '09:30', status: 'available', duration: 30 },
-        { time: '10:00', status: 'available', duration: 30 },
-        { time: '14:00', status: 'available', duration: 30 },
-        { time: '14:30', status: 'available', duration: 30 }
-      ]
-    },
-    'Fri': {
-      available: true,
-      slots: [
-        { time: '09:00', status: 'available', duration: 30 },
-        { time: '09:30', status: 'available', duration: 30 },
-        { time: '10:00', status: 'booked', patient: 'Amit Singh', duration: 30 },
-        { time: '14:00', status: 'available', duration: 30 }
-      ]
-    },
-    'Sat': {
-      available: true,
-      slots: [
-        { time: '09:00', status: 'available', duration: 30 },
-        { time: '09:30', status: 'available', duration: 30 },
-        { time: '10:00', status: 'available', duration: 30 }
-      ]
-    },
-    'Sun': {
-      available: false,
-      slots: []
-    }
+  // Fetch schedule on mount
+  React.useEffect(() => {
+    if (!doctorId) return;
+    setLoading(true);
+    doctorScheduleApi.getSchedule(doctorId)
+      .then(setSchedule)
+      .finally(() => setLoading(false));
+  }, [doctorId]);
+
+  // Add a new slot
+  const addTimeSlot = async (day: string, time: string) => {
+    if (!doctorId) return;
+    setLoading(true);
+    await doctorScheduleApi.createSchedule(doctorId, {
+      day_of_week: day,
+      start_time: time,
+      end_time: timeSlots[timeSlots.indexOf(time)+1] || '23:59',
+      is_available: true
+    });
+    const updated = await doctorScheduleApi.getSchedule(doctorId);
+    setSchedule(updated);
+    setLoading(false);
+  };
+
+  // Delete a slot
+  const deleteTimeSlot = async (day: string, time: string) => {
+    if (!doctorId) return;
+    const slot = schedule.find(s => s.day_of_week === day && s.start_time === time);
+    if (!slot) return;
+    setLoading(true);
+    await doctorScheduleApi.deleteSchedule(doctorId, slot.id);
+    const updated = await doctorScheduleApi.getSchedule(doctorId);
+    setSchedule(updated);
+    setLoading(false);
   };
 
   const getSlotColor = (status: string) => {
@@ -116,18 +91,8 @@ const DoctorSchedule = () => {
     }
   };
 
-  const addTimeSlot = (day: string, time: string) => {
-    // Logic to add a new time slot
-    console.log('Adding slot:', day, time);
-  };
-
-  const editTimeSlot = (day: string, slot: any) => {
-    setEditingSlot({ day, ...slot });
-  };
-
-  const deleteTimeSlot = (day: string, time: string) => {
-    // Logic to delete time slot
-    console.log('Deleting slot:', day, time);
+  const editTimeSlot = (day: string, slot: DoctorSchedule) => {
+    setEditingSlot({ ...slot });
   };
 
   return (
@@ -213,7 +178,7 @@ const DoctorSchedule = () => {
                       <div className="font-medium text-gray-900">{day}</div>
                       <div className="text-xs text-gray-500">Jan {15 + weekDays.indexOf(day)}</div>
                       <div className="mt-2">
-                        {scheduleData[day as keyof typeof scheduleData]?.available ? (
+                        {schedule.some(s => s.day_of_week === day) ? (
                           <Badge className="bg-green-100 text-green-800 text-xs">Available</Badge>
                         ) : (
                           <Badge className="bg-red-100 text-red-800 text-xs">Off</Badge>
@@ -232,26 +197,19 @@ const DoctorSchedule = () => {
                       
                       {/* Day slots */}
                       {weekDays.map((day) => {
-                        const dayData = scheduleData[day as keyof typeof scheduleData];
-                        const slot = dayData?.slots?.find(s => s.time === time);
+                        const slot = schedule.find(s => s.day_of_week === day && s.start_time === time);
                         
                         return (
                           <div key={`${day}-${time}`} className="border-t border-gray-100 p-1">
                             {slot ? (
                               <div
-                                className={`p-2 rounded-lg text-xs cursor-pointer hover:opacity-80 transition-opacity ${getSlotColor(slot.status)}`}
+                                className={`p-2 rounded-lg text-xs cursor-pointer hover:opacity-80 transition-opacity ${getSlotColor(slot.is_available ? 'available' : 'blocked')}`}
                                 onClick={() => editTimeSlot(day, slot)}
                               >
-                                <div className="font-medium">{slot.status}</div>
-                                {slot.patient && (
-                                  <div className="truncate">{slot.patient}</div>
-                                )}
-                                {slot.reason && (
-                                  <div className="truncate">{slot.reason}</div>
-                                )}
-                                <div className="text-xs opacity-75">{slot.duration}m</div>
+                                <div className="font-medium">{slot.is_available ? 'Available' : 'Blocked'}</div>
+                                <div className="text-xs opacity-75">{slot.start_time} - {slot.end_time}</div>
                               </div>
-                            ) : dayData?.available ? (
+                            ) : (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -260,10 +218,6 @@ const DoctorSchedule = () => {
                               >
                                 <Plus className="w-4 h-4" />
                               </Button>
-                            ) : (
-                              <div className="h-16 bg-gray-50 rounded-lg flex items-center justify-center">
-                                <span className="text-xs text-gray-400">Off</span>
-                              </div>
                             )}
                           </div>
                         );
@@ -401,7 +355,7 @@ const DoctorSchedule = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
                   <Input 
-                    value={editingSlot.time}
+                    value={editingSlot.start_time}
                     className="h-12 rounded-xl border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
                   />
                 </div>
@@ -415,15 +369,14 @@ const DoctorSchedule = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   <select 
-                    value={editingSlot.status}
+                    value={editingSlot.is_available ? 'available' : 'blocked'}
                     className="w-full h-12 rounded-xl border border-gray-300 px-3 focus:border-[#E17726] focus:ring-[#E17726] focus:outline-none"
                   >
                     <option value="available">Available</option>
                     <option value="blocked">Blocked</option>
-                    <option value="booked">Booked</option>
                   </select>
                 </div>
-                {editingSlot.status === 'blocked' && (
+                {editingSlot.is_available === false && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
                     <Input 

@@ -3,6 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { doctorSlotApi, DoctorSlot } from '@/lib/api';
 
 // Helper to get days in month
 function getDaysInMonth(year: number, month: number) {
@@ -29,12 +31,15 @@ const SLOT_GROUPS = [
 ];
 
 const DoctorAvailabilitySlots: React.FC = () => {
+  const { user } = useAuth();
+  const doctorId = user?.id;
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  // { 'YYYY-MM-DD': Set of slot indices }
-  const [availableSlots, setAvailableSlots] = useState<Record<string, Set<number>>>({});
+  // { 'YYYY-MM-DD': DoctorSlot[] }
+  const [slotsByDate, setSlotsByDate] = useState<Record<string, DoctorSlot[]>>({});
+  const [loading, setLoading] = useState(false);
 
   // Calendar helpers
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
@@ -42,6 +47,22 @@ const DoctorAvailabilitySlots: React.FC = () => {
 
   // Format date as YYYY-MM-DD
   const formatDate = (y: number, m: number, d: number) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+  // Fetch slots for the month
+  React.useEffect(() => {
+    if (!doctorId) return;
+    setLoading(true);
+    doctorSlotApi.getSlots(doctorId, currentMonth, currentYear)
+      .then(slots => {
+        const grouped: Record<string, DoctorSlot[]> = {};
+        slots.forEach(slot => {
+          if (!grouped[slot.date]) grouped[slot.date] = [];
+          grouped[slot.date].push(slot);
+        });
+        setSlotsByDate(grouped);
+      })
+      .finally(() => setLoading(false));
+  }, [doctorId, currentMonth, currentYear]);
 
   // Handlers
   const handlePrevMonth = () => {
@@ -65,29 +86,57 @@ const DoctorAvailabilitySlots: React.FC = () => {
   const handleDateClick = (day: number) => {
     setSelectedDate(new Date(currentYear, currentMonth, day));
   };
-  const handleSlotToggle = (slotIdx: number) => {
-    if (!selectedDate) return;
+  const handleSlotToggle = async (slotIdx: number) => {
+    if (!selectedDate || !doctorId) return;
     const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-    setAvailableSlots(prev => {
-      const prevSet = prev[key] ? new Set<number>(prev[key]) : new Set<number>();
-      if (prevSet.has(slotIdx)) {
-        prevSet.delete(slotIdx);
-      } else {
-        prevSet.add(slotIdx);
-      }
-      return { ...prev, [key]: prevSet };
+    const slotStart = SLOT_TIMES[slotIdx];
+    const slotEnd = SLOT_TIMES[slotIdx+1] || '23:59';
+    const slots = slotsByDate[key] || [];
+    const existing = slots.find(s => s.start_time === slotStart && s.end_time === slotEnd);
+    setLoading(true);
+    if (existing) {
+      // Delete slot
+      await doctorSlotApi.deleteSlot(doctorId, existing.id);
+    } else {
+      // Create slot
+      await doctorSlotApi.createSlot(doctorId, {
+        date: key,
+        start_time: slotStart,
+        end_time: slotEnd,
+        is_available: true
+      });
+    }
+    // Refetch slots
+    const updated = await doctorSlotApi.getSlots(doctorId, currentMonth, currentYear);
+    const grouped: Record<string, DoctorSlot[]> = {};
+    updated.forEach(slot => {
+      if (!grouped[slot.date]) grouped[slot.date] = [];
+      grouped[slot.date].push(slot);
     });
+    setSlotsByDate(grouped);
+    setLoading(false);
   };
-  const handleClearAll = () => {
-    if (!selectedDate) return;
+  const handleClearAll = async () => {
+    if (!selectedDate || !doctorId) return;
     const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-    setAvailableSlots(prev => ({ ...prev, [key]: new Set() }));
+    const slots = slotsByDate[key] || [];
+    setLoading(true);
+    await Promise.all(slots.map(slot => doctorSlotApi.deleteSlot(doctorId, slot.id)));
+    // Refetch slots
+    const updated = await doctorSlotApi.getSlots(doctorId, currentMonth, currentYear);
+    const grouped: Record<string, DoctorSlot[]> = {};
+    updated.forEach(slot => {
+      if (!grouped[slot.date]) grouped[slot.date] = [];
+      grouped[slot.date].push(slot);
+    });
+    setSlotsByDate(grouped);
+    setLoading(false);
   };
 
   // Highlighted dates
   const isDateHighlighted = (day: number) => {
     const key = formatDate(currentYear, currentMonth, day);
-    return availableSlots[key] && availableSlots[key].size > 0;
+    return slotsByDate[key] && slotsByDate[key].length > 0;
   };
   const isToday = (day: number) => {
     return (
@@ -166,7 +215,7 @@ const DoctorAvailabilitySlots: React.FC = () => {
               </div>
               <Button variant="outline" size="sm" onClick={handleClearAll} className="border-red-300 text-red-500 hover:bg-red-50">Clear All</Button>
             </div>
-            <div className="mb-2 text-sm text-gray-500">Selected slots: <span className="font-bold text-[#E17726]">{availableSlots[formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())]?.size || 0}</span></div>
+            <div className="mb-2 text-sm text-gray-500">Selected slots: <span className="font-bold text-[#E17726]">{slotsByDate[formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())]?.length || 0}</span></div>
             <div className="space-y-6">
               {SLOT_GROUPS.map(group => (
                 <div key={group.label}>
@@ -177,7 +226,8 @@ const DoctorAvailabilitySlots: React.FC = () => {
                     {SLOT_TIMES.slice(group.range[0], group.range[1]+1).map((slot, idx) => {
                       const globalIdx = group.range[0] + idx;
                       const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-                      const isSelected = availableSlots[key]?.has(globalIdx);
+                      const slots = slotsByDate[key] || [];
+                      const isSelected = slots.some(s => s.start_time === SLOT_TIMES[globalIdx] && s.end_time === (SLOT_TIMES[globalIdx+1] || '23:59'));
                       // Disable if today and slot end time is in the past
                       let isPastSlot = false;
                       if (selectedDate) {
@@ -204,7 +254,7 @@ const DoctorAvailabilitySlots: React.FC = () => {
                             ${isPastSlot ? 'opacity-40 cursor-not-allowed line-through' : ''}
                           `}
                           onClick={() => !isPastSlot && handleSlotToggle(globalIdx)}
-                          disabled={isPastSlot}
+                          disabled={isPastSlot || loading}
                         >
                           <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: isSelected ? '#fff' : '#E17726', border: isSelected ? '2px solid #fff' : '2px solid #E17726' }}></span>
                           {slot} - {SLOT_TIMES[globalIdx+1] || 'End'}
