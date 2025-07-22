@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,8 @@ import DoctorAvailabilitySlots from '@/components/workflow/DoctorAvailabilitySlo
 import PrescriptionWriter from '@/components/workflow/PrescriptionWriter';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation } from '@/lib/api';
 
 // Define Slot type
 interface Slot {
@@ -38,6 +40,7 @@ interface Slot {
   type: string;
   maxPatients: number;
   notes: string;
+  patientName?: string;
 }
 
 const DoctorDashboard = () => {
@@ -57,70 +60,60 @@ const DoctorDashboard = () => {
   });
   const [showPrescriptionDialog, setShowPrescriptionDialog] = useState(false);
   const [selectedConsultationId, setSelectedConsultationId] = useState<string | null>(null);
+  const [stats, setStats] = useState<DoctorPerformanceStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loadingConsultations, setLoadingConsultations] = useState(true);
 
   const navigate = useNavigate();
-
-  // Mock data
-  const todayStats = [
-    { label: 'Today\'s Consultations', value: '12', icon: Video, color: 'text-[#E17726]' },
-    { label: 'Scheduled Appointments', value: '6', icon: Calendar, color: 'text-aqua' },
-    { label: 'Completed Today', value: '8', icon: CheckCircle, color: 'text-green-600' },
-    { label: 'Today\'s Earnings', value: '₹4,800', icon: DollarSign, color: 'text-[#E17726]' },
-  ];
-
-  const consultations = [
-    { 
-      id: 'CON001', 
-      patient: { name: 'Rajesh Kumar', age: 42, gender: 'Male' },
-      time: '10:30 AM',
-      date: '2024-01-15',
-      status: 'completed',
-      type: 'Follow-up',
-      symptoms: 'Chest pain, shortness of breath',
-      prescription: {
-        id: 'RX001',
-        medicines: ['Atorvastatin 20mg', 'Metoprolol 50mg', 'Aspirin 75mg'],
-        instructions: 'Take once daily after breakfast',
-        status: 'active',
-        writtenDate: '2024-01-15'
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  useEffect(() => {
+    async function fetchProfile() {
+      if (user && user.role === 'doctor') {
+        const data = await patientApi.getCurrentUserProfile();
+        setProfile(data);
       }
-    },
-    { 
-      id: 'CON002', 
-      patient: { name: 'Priya Sharma', age: 28, gender: 'Female' },
-      time: '11:15 AM',
-      date: '2024-01-12',
-      status: 'completed',
-      type: 'New Patient',
-      symptoms: 'Fever, headache, body ache',
-      prescription: {
-        id: 'RX002',
-        medicines: ['Paracetamol 500mg', 'Vitamin D3'],
-        instructions: 'Take as needed for fever, Vitamin D3 once daily',
-        status: 'completed',
-        writtenDate: '2024-01-12'
-      }
-    },
-    { 
-      id: 'CON003', 
-      patient: { name: 'Amit Singh', age: 35, gender: 'Male' },
-      time: '12:00 PM',
-      date: '2024-01-10',
-      status: 'completed',
-      type: 'Routine Check',
-      symptoms: 'Regular health checkup',
-      prescription: null // No prescription for this consultation
-    },
-    { 
-      id: 'CON004', 
-      patient: { name: 'Neha Patel', age: 31, gender: 'Female' },
-      time: '2:30 PM',
-      date: '2024-01-16',
-      status: 'scheduled',
-      type: 'Follow-up',
-      symptoms: 'Diabetes management',
-      prescription: null // Consultation not completed yet
     }
+    fetchProfile();
+  }, [user]);
+  useEffect(() => {
+    // Also call on mount to ensure profile is fetched after login/navigation
+    if (!profile) {
+      if (user && user.role === 'doctor') {
+        patientApi.getCurrentUserProfile().then((data) => {
+          setProfile(data);
+        });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    async function fetchStats() {
+      setLoadingStats(true);
+      const data = await doctorAnalyticsApi.getPerformanceStats();
+      setStats(data);
+      setLoadingStats(false);
+    }
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    async function fetchConsultations() {
+      setLoadingConsultations(true);
+      const data = await doctorApi.getUpcomingConsultations();
+      setConsultations(data);
+      setLoadingConsultations(false);
+    }
+    fetchConsultations();
+  }, []);
+
+  // Dynamic stats for today
+  const todayStats = [
+    { label: "Today's Consultations", value: loadingStats ? '...' : stats?.total_consultations ?? 0, icon: Video, color: 'text-[#E17726]' },
+    { label: 'Scheduled Appointments', value: '-', icon: Calendar, color: 'text-aqua' }, // Not available in API yet
+    { label: 'Completed Today', value: loadingStats ? '...' : stats?.completed_consultations ?? 0, icon: CheckCircle, color: 'text-green-600' },
+    { label: "Today's Earnings", value: loadingStats ? '...' : (stats ? `₹${stats.total_revenue}` : '₹0'), icon: DollarSign, color: 'text-[#E17726]' },
   ];
 
   const scheduleSlots = [
@@ -266,7 +259,7 @@ const DoctorDashboard = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'consultations', label: 'Consultations', icon: Video },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    // { id: 'schedule', label: 'Schedule', icon: Calendar }, // Schedule tab commented out
     { id: 'slot-booking', label: 'Slot Booking', icon: Clock },
     { id: 'earnings', label: 'Earnings', icon: DollarSign }
   ];
@@ -294,8 +287,12 @@ const DoctorDashboard = () => {
                 className="w-10 h-10 rounded-full"
               />
               <div>
-                <h1 className="text-xl font-bold text-midnight">Dr. Rajesh Verma</h1>
-                <p className="text-sm text-gray-600">Cardiologist • Sushrusa Clinic</p>
+                <h1 className="text-xl font-bold text-midnight">
+                  {profile ? `${profile.name.startsWith('Dr.') ? profile.name : `Dr. ${profile.name}`}` : 'Doctor'}
+                </h1>
+                <p className="text-sm text-gray-600">
+                  {profile ? `${profile.medical_history || ''}${profile.street ? ' • ' + profile.street : ''}` : ''}
+                </p>
               </div>
               <Badge className="bg-green-100 text-green-800">
                 Available

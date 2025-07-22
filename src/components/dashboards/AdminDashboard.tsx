@@ -30,9 +30,13 @@ import {
   DollarSign,
   CheckCircle,
   AlertCircle,
-  Settings
+  Settings,
+  Building2
 } from 'lucide-react';
-import { adminAnalyticsApi, AdminDashboardStats, Consultation, adminConsultationApi } from '@/lib/api';
+import { adminAnalyticsApi, AdminDashboardStats, Consultation, adminConsultationApi, EClinic } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { superAdminApi } from '@/lib/api';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // Error Boundary Component
 interface ErrorBoundaryState {
@@ -183,6 +187,27 @@ const AdminDashboard = () => {
   // Helper function to calculate end time
   // Removed as per edit hint
 
+  const { user } = useAuth();
+  const [assignedClinics, setAssignedClinics] = useState<EClinic[]>([]);
+  const [loadingClinics, setLoadingClinics] = useState(true);
+  const [clinicsError, setClinicsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      setLoadingClinics(true);
+      superAdminApi.getEClinics({ page: 1, page_size: 10 })
+        .then((data) => {
+          // Filter clinics where admin matches current user
+          setAssignedClinics(data.results.filter((clinic) => clinic.admin === user.id));
+          setLoadingClinics(false);
+        })
+        .catch(() => {
+          setClinicsError('Failed to load assigned clinics');
+          setLoadingClinics(false);
+        });
+    }
+  }, [user]);
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -192,9 +217,11 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-4">
                 <h1 className="text-2xl font-bold text-midnight">Admin Dashboard</h1>
-                <Badge className="bg-aqua/10 text-aqua border-aqua/20">
-                  Sushrusa Clinic - Delhi
-                </Badge>
+                {user && user.role === 'admin' && assignedClinics.length > 0 && (
+                  <Badge className="bg-aqua/10 text-aqua border-aqua/20">
+                    {assignedClinics[0].name}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center space-x-4">
                 <Button 
@@ -224,7 +251,30 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-
+        {/* Assigned E-Clinic Banner */}
+        {user && user.role === 'admin' && assignedClinics.length > 0 && (
+          <div className="w-full bg-blue-50 border-b border-blue-200 py-2 px-4 flex items-center justify-center text-sm text-blue-900 font-medium">
+            <Building2 className="w-4 h-4 mr-2 text-[#E17726]" />
+            Assigned E-Clinic:
+            <Popover>
+              <PopoverTrigger asChild>
+                <span className="ml-2 underline cursor-pointer hover:text-[#E17726] font-semibold">
+                  {assignedClinics[0].name} ({assignedClinics[0].city}, {assignedClinics[0].state})
+                </span>
+              </PopoverTrigger>
+              <PopoverContent className="w-72">
+                <div className="font-bold text-base mb-1">{assignedClinics[0].name}</div>
+                <div className="text-xs text-gray-600 mb-1">{assignedClinics[0].city}, {assignedClinics[0].state}</div>
+                <div className="text-xs text-gray-500 mb-1">Reg#: {assignedClinics[0].registration_number}</div>
+                <div className="text-xs text-gray-500 mb-1">Phone: {assignedClinics[0].phone}</div>
+                <div className="text-xs text-gray-500 mb-1">Email: {assignedClinics[0].email}</div>
+                <Badge className={assignedClinics[0].is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}>
+                  {assignedClinics[0].is_verified ? 'Verified' : 'Not Verified'}
+                </Badge>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Tab Navigation */}
           <div className="flex space-x-1 mb-8 bg-white rounded-xl p-2 shadow-sm border border-gray-200">

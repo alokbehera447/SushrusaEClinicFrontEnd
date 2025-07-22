@@ -178,14 +178,33 @@ const DoctorAvailabilitySlots: React.FC = () => {
                       const globalIdx = group.range[0] + idx;
                       const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
                       const isSelected = availableSlots[key]?.has(globalIdx);
+                      // Disable if today and slot end time is in the past
+                      let isPastSlot = false;
+                      if (selectedDate) {
+                        const now = new Date();
+                        const slotDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                        if (
+                          slotDate.toDateString() === now.toDateString() &&
+                          SLOT_TIMES[globalIdx+1] // Only check if there is an end time
+                        ) {
+                          const [endHour, endMin] = SLOT_TIMES[globalIdx+1].split(':').map(Number);
+                          const slotEnd = new Date(slotDate);
+                          slotEnd.setHours(endHour, endMin, 0, 0);
+                          if (now > slotEnd) {
+                            isPastSlot = true;
+                          }
+                        }
+                      }
                       return (
                         <button
                           key={slot}
                           className={`rounded-lg px-3 py-2 border text-sm font-medium transition-all flex items-center gap-2
                             ${isSelected ? 'bg-[#E17726] text-white border-[#E17726] shadow' : 'bg-white border-gray-200 text-gray-900'}
                             hover:bg-[#E17726]/20
+                            ${isPastSlot ? 'opacity-40 cursor-not-allowed line-through' : ''}
                           `}
-                          onClick={() => handleSlotToggle(globalIdx)}
+                          onClick={() => !isPastSlot && handleSlotToggle(globalIdx)}
+                          disabled={isPastSlot}
                         >
                           <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: isSelected ? '#fff' : '#E17726', border: isSelected ? '2px solid #fff' : '2px solid #E17726' }}></span>
                           {slot} - {SLOT_TIMES[globalIdx+1] || 'End'}

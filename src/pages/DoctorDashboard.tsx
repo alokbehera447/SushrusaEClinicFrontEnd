@@ -7,8 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 
 const DoctorDashboardPage = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const username = 'Doctor';
+  const { logout, user } = useAuth();
+  const username = user && user.name ? (user.name.startsWith('Dr.') ? user.name : `Dr. ${user.name}`) : 'Doctor';
 
   const handleLogout = () => {
     logout();
@@ -34,7 +34,7 @@ const DoctorDashboardPage = () => {
               <div className="h-6 w-px bg-gray-300"></div>
               <div>
                 <h1 className="text-lg font-semibold text-midnight">Doctor Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back, Dr. {username}</p>
+                <p className="text-sm text-gray-500">Welcome back, {username}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">

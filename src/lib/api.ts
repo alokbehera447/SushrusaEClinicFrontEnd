@@ -773,6 +773,39 @@ export const adminConsultationApi = {
   },
 };
 
+// Doctor Analytics API
+export interface DoctorPerformanceStats {
+  id: number;
+  doctor: number;
+  doctor_name: string;
+  date: string;
+  total_consultations: number;
+  completed_consultations: number;
+  cancelled_consultations: number;
+  no_show_consultations: number;
+  total_revenue: string;
+  avg_consultation_fee: string;
+  avg_rating: string;
+  total_reviews: number;
+  avg_consultation_duration: string | null;
+  on_time_percentage: string;
+  new_patients: number;
+  returning_patients: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const doctorAnalyticsApi = {
+  getPerformanceStats: async (): Promise<DoctorPerformanceStats | null> => {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const response = await api.get<{ data: { results: DoctorPerformanceStats[] } }>(`/api/analytics/doctor-performance/?date=${today}`);
+    if (response.data && response.data.data && response.data.data.results && response.data.data.results.length > 0) {
+      return response.data.data.results[0];
+    }
+    return null;
+  }
+};
+
 // Doctor API service functions
 export interface CreateDoctorUserData {
   phone: string;
@@ -952,6 +985,17 @@ export const doctorApi = {
       consultation_stats: Record<string, any>;
     }>>('/api/doctors/stats/');
     return response.data.data;
+  },
+
+  // Get upcoming/scheduled consultations for the logged-in doctor
+  getUpcomingConsultations: async (): Promise<Consultation[]> => {
+    const response = await api.get<{ data: { results: Consultation[] } }>(
+      '/api/consultations/?status=scheduled&ordering=scheduled_date'
+    );
+    if (response.data && response.data.data && response.data.data.results) {
+      return response.data.data.results;
+    }
+    return [];
   },
 };
 
