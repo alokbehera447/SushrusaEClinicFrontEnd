@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { adminPatientApi, doctorApi, doctorSlotApi, DoctorSlotFrontend, PatientProfile, DoctorProfile } from '@/lib/api';
+import { adminPatientApi, doctorApi, doctorSlotApi, DoctorSlotFrontend, PatientProfile, DoctorProfile, createConsultation } from '@/lib/api';
 import { debounce } from 'lodash';
 
 const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
@@ -72,11 +72,12 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   const [doctorSearch, setDoctorSearch] = useState('');
   const [patientOptions, setPatientOptions] = useState<PatientProfile[]>([]);
   const [doctorOptions, setDoctorOptions] = useState<DoctorProfile[]>([]);
-  const [slotMonth, setSlotMonth] = useState<number | null>(null);
-  const [slotYear, setSlotYear] = useState<number | null>(null);
-  const [doctorSlots, setDoctorSlots] = useState<Record<string, DoctorSlotFrontend[]>>({});
+  const [doctorSlots, setDoctorSlots] = useState<DoctorSlotFrontend[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<DoctorSlotFrontend | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedClinic, setSelectedClinic] = useState<string | null>(null);
+  const [clinicOptions, setClinicOptions] = useState<{ id: string; name: string }[]>([]);
 
   // Debounced patient search
   const debouncedPatientSearch = React.useMemo(() => debounce(async (query: string) => {
@@ -119,23 +120,32 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   React.useEffect(() => {
     debouncedDoctorSearch(doctorSearch);
   }, [doctorSearch]);
-  // Fetch slots after doctor selection
+  // Fetch slots for selected doctor and date
   React.useEffect(() => {
-    if (!selectedDoctor) return;
-    const today = new Date();
-    const month = slotMonth ?? today.getMonth();
-    const year = slotYear ?? today.getFullYear();
+    if (!selectedDoctor || !selectedDate) return;
     setSlotLoading(true);
-    // Use doctor user code (selectedDoctor.user) for slot API calls
-    doctorSlotApi.getSlots(selectedDoctor.user, month, year).then(slots => {
-      const grouped: Record<string, DoctorSlotFrontend[]> = {};
-      slots.forEach(slot => {
-        if (!grouped[slot.date]) grouped[slot.date] = [];
-        grouped[slot.date].push(slot);
-      });
-      setDoctorSlots(grouped);
+    const y = selectedDate.getFullYear();
+    const m = selectedDate.getMonth();
+    const d = selectedDate.getDate();
+    // Fetch all slots for the month, then filter for the selected date
+    doctorSlotApi.getSlots(selectedDoctor.user, m, y).then(slots => {
+      const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      setDoctorSlots(slots.filter(slot => slot.date === dateKey));
     }).finally(() => setSlotLoading(false));
-  }, [selectedDoctor, slotMonth, slotYear]);
+  }, [selectedDoctor, selectedDate]);
+
+  // Fetch clinics for dropdown (you can filter by admin, etc. as needed)
+  React.useEffect(() => {
+    async function fetchClinics() {
+      try {
+        const res = await import('@/lib/api').then(m => m.superAdminApi.getEClinics());
+        setClinicOptions(Array.isArray(res.results) ? res.results.map((c: any) => ({ id: c.id, name: c.name })) : []);
+      } catch {
+        setClinicOptions([]);
+      }
+    }
+    fetchClinics();
+  }, []);
 
   const handleInputChange = (field: string, value: string | number | boolean | Date | undefined) => {
     setFormData(prev => ({
@@ -147,21 +157,30 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
     try {
-      // API call to create consultation
-      const consultationData = {
-        ...formData,
-        patient: selectedPatient,
-        doctor: selectedDoctor,
-        status: 'scheduled'
+      if (!selectedPatient || !selectedDoctor || !selectedSlot) {
+        alert('Please select patient, doctor, and slot.');
+        setIsSubmitting(false);
+        return;
+      }
+      if (!selectedClinic) {
+        alert('Please select a clinic.');
+        setIsSubmitting(false);
+        return;
+      }
+      const payload = {
+        patient: selectedPatient.user, // user code (e.g., PAT001)
+        doctor: selectedDoctor.user,   // user code (e.g., DOC001)
+        clinic: selectedClinic,        // clinic code (e.g., CLI001)
+        consultation_type: 'video_call',
+        scheduled_date: selectedSlot.date,
+        scheduled_time: selectedSlot.startTime,
+        duration: Number(formData.duration),
+        chief_complaint: formData.chiefComplaint,
+        symptoms: formData.symptoms,
+        consultation_fee: Number(getConsultationFee()),
       };
-      
-      console.log('Creating consultation:', consultationData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const result = await createConsultation(payload);
       alert('Consultation created successfully!');
       onClose();
     } catch (error) {
@@ -301,225 +320,82 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Consultation Type */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Consultation Type *</Label>
-                <RadioGroup 
-                  value={formData.consultationType} 
-                  onValueChange={(value) => handleInputChange('consultationType', value)}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value="video" id="video" />
-                    <Label htmlFor="video" className="flex items-center cursor-pointer">
-                      <Video className="w-4 h-4 mr-2 text-blue-600" />
-                      Video Call
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value="phone" id="phone" />
-                    <Label htmlFor="phone" className="flex items-center cursor-pointer">
-                      <Phone className="w-4 h-4 mr-2 text-green-600" />
-                      Phone Call
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value="in-person" id="in-person" />
-                    <Label htmlFor="in-person" className="flex items-center cursor-pointer">
-                      <User className="w-4 h-4 mr-2 text-purple-600" />
-                      In-Person
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
+            {/* Consultation Type: Only Video Call (hidden, default) */}
+            <input type="hidden" value="video" />
 
-              {/* Date & Time */}
+            {/* Redesigned slot picker: show date picker, then slot list for that date */}
+            {selectedDoctor && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Date *</Label>
+                <Label className="text-sm font-medium">Select Date *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "w-full h-11 justify-start text-left font-normal",
-                        !formData.consultationDate && "text-muted-foreground"
+                        !selectedDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.consultationDate ? format(formData.consultationDate, "PPP") : "Pick a date"}
+                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={formData.consultationDate}
-                      onSelect={(date) => handleInputChange('consultationDate', date)}
-                      disabled={(date) => date < new Date()}
+                      selected={selectedDate ?? undefined}
+                      onSelect={date => setSelectedDate(date)}
+                      disabled={date => date < new Date()}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-
-              {/* Slot Picker: Show after doctor is selected */}
-              {selectedDoctor && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Select Slot *</Label>
-                  {/* Calendar and slot picker UI */}
-                  <div className="flex flex-col gap-4">
-                    {/* Month navigation */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => {
-                        if (slotMonth === null || slotYear === null) {
-                          const today = new Date();
-                          setSlotMonth(today.getMonth() - 1 < 0 ? 11 : today.getMonth() - 1);
-                          setSlotYear(today.getMonth() - 1 < 0 ? today.getFullYear() - 1 : today.getFullYear());
-                        } else {
-                          setSlotMonth(slotMonth - 1 < 0 ? 11 : slotMonth - 1);
-                          setSlotYear(slotMonth - 1 < 0 ? slotYear - 1 : slotYear);
-                        }
-                      }}>Prev</Button>
-                      <span className="font-semibold">
-                        {(() => {
-                          const m = slotMonth !== null ? slotMonth : new Date().getMonth();
-                          const y = slotYear !== null ? slotYear : new Date().getFullYear();
-                          return `${new Date(y, m, 1).toLocaleString('default', { month: 'long' })} ${y}`;
-                        })()}
-                      </span>
-                      <Button type="button" size="sm" variant="outline" onClick={() => {
-                        if (slotMonth === null || slotYear === null) {
-                          const today = new Date();
-                          setSlotMonth(today.getMonth() + 1 > 11 ? 0 : today.getMonth() + 1);
-                          setSlotYear(today.getMonth() + 1 > 11 ? today.getFullYear() + 1 : today.getFullYear());
-                        } else {
-                          setSlotMonth(slotMonth + 1 > 11 ? 0 : slotMonth + 1);
-                          setSlotYear(slotMonth + 1 > 11 ? slotYear + 1 : slotYear);
-                        }
-                      }}>Next</Button>
-                    </div>
-                    {/* Calendar grid */}
-                    <div className="grid grid-cols-7 gap-1 bg-gray-50 rounded-xl p-2 border border-gray-200">
-                      {[ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ].map(d => (
-                        <div key={d} className="font-semibold text-gray-600 py-1 text-xs">{d}</div>
-                      ))}
-                      {/* Empty cells for first week */}
-                      {(() => {
-                        const m = slotMonth !== null ? slotMonth : new Date().getMonth();
-                        const y = slotYear !== null ? slotYear : new Date().getFullYear();
-                        const firstDay = new Date(y, m, 1).getDay();
-                        return Array(firstDay).fill(null).map((_, i) => <div key={'empty-'+i}></div>);
-                      })()}
-                      {/* Days */}
-                      {(() => {
-                        const m = slotMonth !== null ? slotMonth : new Date().getMonth();
-                        const y = slotYear !== null ? slotYear : new Date().getFullYear();
-                        const daysInMonth = new Date(y, m + 1, 0).getDate();
-                        return Array(daysInMonth).fill(null).map((_, i) => {
-                          const day = i + 1;
-                          const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                          const slots = doctorSlots[dateKey] || [];
-                          const hasSlots = slots.length > 0;
-                          return (
-                            <button
-                              key={day}
-                              className={`rounded-lg py-2 w-full border font-semibold transition-all relative text-xs
-                                ${hasSlots ? 'bg-blue-300 border-blue-400 text-blue-900' : 'bg-white border-gray-200 text-gray-900'}
-                                hover:bg-[#E17726]/20
-                              `}
-                              onClick={() => setFormData(prev => ({ ...prev, consultationDate: new Date(y, m, day) }))}
-                              type="button"
-                            >
-                              {day}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                    {/* Slot buttons for selected date */}
-                    {formData.consultationDate && (() => {
-                      const y = formData.consultationDate.getFullYear();
-                      const m = formData.consultationDate.getMonth();
-                      const d = formData.consultationDate.getDate();
-                      const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                      const slots = doctorSlots[dateKey] || [];
-                      if (slotLoading) return <div>Loading slots...</div>;
-                      if (!slots.length) return <div className="text-gray-500 text-xs">No available slots for this date.</div>;
-                      return (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {slots.map(slot => (
-                            <Button
-                              key={slot.id}
-                              type="button"
-                              size="sm"
-                              variant={selectedSlot?.id === slot.id ? 'default' : 'outline'}
-                              className={selectedSlot?.id === slot.id ? 'bg-[#E17726] text-white' : ''}
-                              onClick={() => {
-                                setSelectedSlot(slot);
-                                handleInputChange('consultationTime', slot.startTime);
-                              }}
-                            >
-                              {slot.startTime} - {slot.endTime}
-                            </Button>
-                          ))}
-                        </div>
-                      );
-                    })()}
+                {selectedDate && (
+                  <div className="mt-4">
+                    <Label className="text-sm font-medium">Select Slot *</Label>
+                    {slotLoading ? (
+                      <div className="text-gray-500 text-xs py-4">Loading slots...</div>
+                    ) : doctorSlots.length === 0 ? (
+                      <div className="text-gray-500 text-xs py-4">No available slots for this date.</div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
+                        {doctorSlots.map(slot => (
+                          <Button
+                            key={slot.id}
+                            type="button"
+                            size="sm"
+                            variant={selectedSlot?.id === slot.id ? 'default' : 'outline'}
+                            className={selectedSlot?.id === slot.id ? 'bg-[#E17726] text-white border-[#E17726] shadow-lg' : 'border-gray-300 bg-white hover:bg-[#E17726]/10'}
+                            style={{ minWidth: 0, fontWeight: 500, fontSize: 16, padding: '18px 0' }}
+                            onClick={() => {
+                              setSelectedSlot(slot);
+                              handleInputChange('consultationTime', slot.startTime);
+                              handleInputChange('consultationDate', selectedDate);
+                            }}
+                          >
+                            {slot.startTime} - {slot.endTime}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Duration</Label>
-                <Select value={formData.duration} onValueChange={(value) => handleInputChange('duration', value)}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">1 hour</SelectItem>
-                  </SelectContent>
-                </Select>
+                )}
               </div>
-            </div>
+            )}
 
-            {/* Priority */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Priority Level</Label>
-              <RadioGroup 
-                value={formData.priority} 
-                onValueChange={(value) => handleInputChange('priority', value)}
-                className="flex space-x-6"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="low" id="low" />
-                  <Label htmlFor="low" className="text-green-600">Low</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="normal" id="normal" />
-                  <Label htmlFor="normal" className="text-blue-600">Normal</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="high" id="high" />
-                  <Label htmlFor="high" className="text-orange-600">High</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="emergency" id="emergency" />
-                  <Label htmlFor="emergency" className="text-red-600">Emergency</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {/* Emergency Checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isEmergency" 
-                checked={formData.isEmergency}
-                onCheckedChange={(checked) => handleInputChange('isEmergency', checked)}
-              />
-              <Label htmlFor="isEmergency" className="text-red-600 font-medium">Mark as Emergency Consultation</Label>
+              <Label className="text-sm font-medium">Duration</Label>
+              <Select value={formData.duration} onValueChange={(value) => handleInputChange('duration', value)}>
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="45">45 minutes</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -721,6 +597,31 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
             </CardContent>
           </Card>
         )}
+
+        {/* Clinic Selection */}
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-indigo-500/10 to-transparent">
+            <CardTitle className="flex items-center text-xl font-bold text-midnight">
+              <Search className="w-5 h-5 mr-2 text-indigo-600" />
+              Clinic Selection
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">Select Clinic *</Label>
+              <Select value={selectedClinic || ''} onValueChange={setSelectedClinic} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a clinic" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clinicOptions.map(clinic => (
+                    <SelectItem key={clinic.id} value={clinic.id}>{clinic.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Submit Button */}
         <div className="flex justify-end space-x-4 pt-6 border-t">

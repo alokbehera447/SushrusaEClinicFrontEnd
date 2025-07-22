@@ -61,6 +61,7 @@ interface ConsultationDetails {
   paymentMethod: string;
   paymentStatus: 'pending' | 'completed' | 'refunded';
   meetingLink?: string;
+  doctor_meeting_link?: string; // Added for the new button
   prescription?: {
     id: string;
     status: 'pending' | 'active' | 'completed';
@@ -486,15 +487,16 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {consultation.consultationType === 'video' && consultation.meetingLink && (
-                    <Button 
-                      variant="outline" 
-                      className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
-                      onClick={() => window.open('https://meet.diracai.com/office', '_blank')}
-                    >
-                      <Video className="w-4 h-4 mr-2" />
-                      Join Meeting
-                    </Button>
+                  {consultation.consultationType === 'video' && consultation.doctor_meeting_link && (
+                    <a href={consultation.doctor_meeting_link} target="_blank" rel="noopener noreferrer">
+                      <Button 
+                        variant="outline" 
+                        className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        Join Doctor’s Room
+                      </Button>
+                    </a>
                   )}
                   <Button variant="outline">
                     <FileText className="w-4 h-4 mr-2" />

@@ -297,6 +297,14 @@ const DoctorDashboard = () => {
               <Badge className="bg-green-100 text-green-800">
                 Available
               </Badge>
+              {profile && profile.meeting_link && (
+                <a href={profile.meeting_link} target="_blank" rel="noopener noreferrer">
+                  <Button className="ml-4 bg-blue-600 hover:bg-blue-700 text-white" size="sm">
+                    <Video className="w-4 h-4 mr-2" />
+                    Join My Room
+                  </Button>
+                </a>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="outline" className="border-aqua text-aqua hover:bg-aqua hover:text-white">
@@ -1237,17 +1245,6 @@ const DoctorDashboard = () => {
         )}
 
         {/* Other tabs placeholder */}
-        {!['overview', 'consultations', 'schedule', 'earnings'].includes(activeTab) && (
-          <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-            <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">🚧</div>
-              <h3 className="text-2xl font-bold text-midnight mb-2">
-                {tabs.find(t => t.id === activeTab)?.label} Section
-              </h3>
-              <p className="text-gray-600">This section is under development and will be available soon.</p>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );

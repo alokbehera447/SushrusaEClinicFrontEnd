@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { doctorSlotApi, DoctorSlot } from '@/lib/api';
+import { doctorSlotApi, DoctorSlotFrontend } from '@/lib/api';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AxiosError } from 'axios';
 
 // Helper to get days in month
 function getDaysInMonth(year: number, month: number) {
@@ -15,6 +17,9 @@ function getDaysInMonth(year: number, month: number) {
 function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
+
+// Helper to normalize time to HH:MM
+const normalizeTime = (t: string) => t.slice(0, 5);
 
 const SLOT_TIMES = [
   '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
@@ -38,8 +43,11 @@ const DoctorAvailabilitySlots: React.FC = () => {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   // { 'YYYY-MM-DD': DoctorSlot[] }
-  const [slotsByDate, setSlotsByDate] = useState<Record<string, DoctorSlot[]>>({});
+  const [slotsByDate, setSlotsByDate] = useState<Record<string, DoctorSlotFrontend[]>>({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [undoSlots, setUndoSlots] = useState<DoctorSlotFrontend[] | null>(null);
+  const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Calendar helpers
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
@@ -54,7 +62,7 @@ const DoctorAvailabilitySlots: React.FC = () => {
     setLoading(true);
     doctorSlotApi.getSlots(doctorId, currentMonth, currentYear)
       .then(slots => {
-        const grouped: Record<string, DoctorSlot[]> = {};
+        const grouped: Record<string, DoctorSlotFrontend[]> = {};
         slots.forEach(slot => {
           if (!grouped[slot.date]) grouped[slot.date] = [];
           grouped[slot.date].push(slot);
@@ -63,6 +71,24 @@ const DoctorAvailabilitySlots: React.FC = () => {
       })
       .finally(() => setLoading(false));
   }, [doctorId, currentMonth, currentYear]);
+
+  // Add useEffect to refetch slots when selectedDate changes (for robustness)
+  React.useEffect(() => {
+    if (!doctorId || !selectedDate) return;
+    setLoading(true);
+    doctorSlotApi.getSlots(doctorId, currentMonth, currentYear)
+      .then(slots => {
+        setSlotsByDate(prev => {
+          const grouped: Record<string, DoctorSlotFrontend[]> = { ...prev };
+          slots.forEach(slot => {
+            if (!grouped[slot.date]) grouped[slot.date] = [];
+            grouped[slot.date].push(slot);
+          });
+          return grouped;
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [doctorId, currentMonth, currentYear, selectedDate]);
 
   // Handlers
   const handlePrevMonth = () => {
@@ -92,26 +118,79 @@ const DoctorAvailabilitySlots: React.FC = () => {
     const slotStart = SLOT_TIMES[slotIdx];
     const slotEnd = SLOT_TIMES[slotIdx+1] || '23:59';
     const slots = slotsByDate[key] || [];
-    const existing = slots.find(s => s.start_time === slotStart && s.end_time === slotEnd);
+    const existing = slots.find(s => normalizeTime(s.startTime) === slotStart && normalizeTime(s.endTime) === slotEnd);
     setLoading(true);
     if (existing) {
-      // Delete slot
-      await doctorSlotApi.deleteSlot(doctorId, existing.id);
-    } else {
-      // Create slot
-      await doctorSlotApi.createSlot(doctorId, {
-        date: key,
-        start_time: slotStart,
-        end_time: slotEnd,
-        is_available: true
+      // Optimistically remove slot
+      setSlotsByDate(prev => {
+        const updated = { ...prev };
+        updated[key] = (updated[key] || []).filter(s => !(normalizeTime(s.startTime) === slotStart && normalizeTime(s.endTime) === slotEnd));
+        return updated;
       });
+      try {
+        await doctorSlotApi.deleteSlot(doctorId, existing.id);
+      } catch (err) {
+        // Revert on error
+        setSlotsByDate(prev => {
+          const updated = { ...prev };
+          updated[key] = [...(updated[key] || []), existing];
+          return updated;
+        });
+        setError('Failed to deselect slot. Please try again.');
+        setTimeout(() => setError(null), 4000);
+      }
+    } else {
+      // Create a fake slot for optimistic update
+      const fakeSlot: DoctorSlotFrontend = {
+        id: -Math.floor(Math.random() * 1000000), // temp negative id
+        doctor: Number(doctorId),
+        date: key,
+        startTime: slotStart,
+        endTime: slotEnd,
+        isAvailable: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        type: 'available',
+      };
+      setSlotsByDate(prev => {
+        const updated = { ...prev };
+        updated[key] = [...(updated[key] || []), fakeSlot];
+        return updated;
+      });
+      try {
+        await doctorSlotApi.createSlot(doctorId, {
+          date: key,
+          start_time: slotStart,
+          end_time: slotEnd,
+          is_available: true
+        });
+      } catch (err: unknown) {
+        // Revert on error
+        setSlotsByDate(prev => {
+          const updated = { ...prev };
+          updated[key] = (updated[key] || []).filter(s => !(normalizeTime(s.startTime) === slotStart && normalizeTime(s.endTime) === slotEnd));
+          return updated;
+        });
+        if (
+          err instanceof AxiosError &&
+          err.response?.data?.error?.code === 'DUPLICATE_SLOT'
+        ) {
+          setError(err.response.data.error.message || 'Duplicate slot.');
+        } else {
+          setError('Failed to create slot. Please try again.');
+        }
+        setTimeout(() => setError(null), 4000);
+      }
     }
-    // Refetch slots
+    // Always refetch for consistency
     const updated = await doctorSlotApi.getSlots(doctorId, currentMonth, currentYear);
-    const grouped: Record<string, DoctorSlot[]> = {};
+    const grouped: Record<string, DoctorSlotFrontend[]> = {};
     updated.forEach(slot => {
       if (!grouped[slot.date]) grouped[slot.date] = [];
-      grouped[slot.date].push(slot);
+      // Avoid duplicates
+      if (!grouped[slot.date].some(s => normalizeTime(s.startTime) === normalizeTime(slot.startTime) && normalizeTime(s.endTime) === normalizeTime(slot.endTime))) {
+        grouped[slot.date].push(slot);
+      }
     });
     setSlotsByDate(grouped);
     setLoading(false);
@@ -120,14 +199,49 @@ const DoctorAvailabilitySlots: React.FC = () => {
     if (!selectedDate || !doctorId) return;
     const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     const slots = slotsByDate[key] || [];
+    if (slots.length === 0) return;
     setLoading(true);
-    await Promise.all(slots.map(slot => doctorSlotApi.deleteSlot(doctorId, slot.id)));
-    // Refetch slots
+    setUndoSlots(slots); // Store for undo
+    setSlotsByDate(prev => ({ ...prev, [key]: [] })); // Optimistically clear
+    // Start undo timer
+    if (undoTimeout) clearTimeout(undoTimeout);
+    const timeout = setTimeout(async () => {
+      // After 5s, actually delete from backend
+      await Promise.all(slots.map(slot => doctorSlotApi.deleteSlot(doctorId, slot.id)));
+      setUndoSlots(null);
+      setLoading(false);
+    }, 5000);
+    setUndoTimeout(timeout);
+    setLoading(false);
+  };
+
+  const handleUndoClear = async () => {
+    if (!selectedDate || !doctorId || !undoSlots) return;
+    const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    setLoading(true);
+    // Restore slots in UI
+    setSlotsByDate(prev => ({ ...prev, [key]: undoSlots }));
+    // Re-create slots in backend (ignore errors for existing)
+    await Promise.all(
+      undoSlots.map(slot =>
+        doctorSlotApi.createSlot(doctorId, {
+          date: slot.date,
+          start_time: slot.startTime,
+          end_time: slot.endTime,
+          is_available: true
+        }).catch(() => {})
+      )
+    );
+    setUndoSlots(null);
+    if (undoTimeout) clearTimeout(undoTimeout);
+    // Refetch for consistency
     const updated = await doctorSlotApi.getSlots(doctorId, currentMonth, currentYear);
-    const grouped: Record<string, DoctorSlot[]> = {};
+    const grouped: Record<string, DoctorSlotFrontend[]> = {};
     updated.forEach(slot => {
       if (!grouped[slot.date]) grouped[slot.date] = [];
-      grouped[slot.date].push(slot);
+      if (!grouped[slot.date].some(s => normalizeTime(s.startTime) === normalizeTime(slot.startTime) && normalizeTime(s.endTime) === normalizeTime(slot.endTime))) {
+        grouped[slot.date].push(slot);
+      }
     });
     setSlotsByDate(grouped);
     setLoading(false);
@@ -153,10 +267,23 @@ const DoctorAvailabilitySlots: React.FC = () => {
   // Render
   const monthName = new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long' });
 
+  // Debug: log slots for selected date and all slotsByDate
+  if (selectedDate) {
+    const debugKey = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    // eslint-disable-next-line no-console
+    console.log('DEBUG selectedDate:', selectedDate, 'key:', debugKey, 'slots:', slotsByDate[debugKey], 'ALL slotsByDate:', slotsByDate);
+  }
+
   return (
-    <div className="max-w-3xl mx-auto py-8">
+    <div className="max-w-5xl mx-auto py-8 px-2 sm:px-6 lg:px-8">
       <Card className="mb-8 shadow-xl border-2 border-[#E17726]/10">
         <CardContent className="p-6">
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <div className="flex items-center justify-between mb-4">
             <Button variant="outline" size="sm" onClick={handlePrevMonth}><ChevronLeft /></Button>
             <div className="flex flex-col items-center">
@@ -213,9 +340,22 @@ const DoctorAvailabilitySlots: React.FC = () => {
               <div className="text-lg font-semibold text-midnight">
                 Mark your available slots for <span className="font-bold text-[#E17726]">{selectedDate.toLocaleDateString()}</span>
               </div>
-              <Button variant="outline" size="sm" onClick={handleClearAll} className="border-red-300 text-red-500 hover:bg-red-50">Clear All</Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleClearAll} className="border-red-300 text-red-500 hover:bg-red-50">Clear All</Button>
+                {undoSlots && (
+                  <Button variant="outline" size="sm" onClick={handleUndoClear} className="border-green-300 text-green-600 hover:bg-green-50">Undo</Button>
+                )}
+              </div>
             </div>
-            <div className="mb-2 text-sm text-gray-500">Selected slots: <span className="font-bold text-[#E17726]">{slotsByDate[formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())]?.length || 0}</span></div>
+            <div className="mb-2 text-sm text-gray-500">Selected slots: <span className="font-bold text-[#E17726]">{
+              (() => {
+                const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                const slots = slotsByDate[key] || [];
+                // Count unique slots by startTime and endTime
+                const unique = new Set(slots.map(s => `${normalizeTime(s.startTime)}-${normalizeTime(s.endTime)}`));
+                return unique.size;
+              })()
+            }</span></div>
             <div className="space-y-6">
               {SLOT_GROUPS.map(group => (
                 <div key={group.label}>
@@ -227,7 +367,10 @@ const DoctorAvailabilitySlots: React.FC = () => {
                       const globalIdx = group.range[0] + idx;
                       const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
                       const slots = slotsByDate[key] || [];
-                      const isSelected = slots.some(s => s.start_time === SLOT_TIMES[globalIdx] && s.end_time === (SLOT_TIMES[globalIdx+1] || '23:59'));
+                      const isSelected = slots.some(s =>
+                        normalizeTime(s.startTime) === normalizeTime(SLOT_TIMES[globalIdx]) &&
+                        normalizeTime(s.endTime) === normalizeTime(SLOT_TIMES[globalIdx+1] || '23:59')
+                      );
                       // Disable if today and slot end time is in the past
                       let isPastSlot = false;
                       if (selectedDate) {

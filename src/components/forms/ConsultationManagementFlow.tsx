@@ -25,6 +25,8 @@ import {
   Square,
   RotateCcw
 } from 'lucide-react';
+import { adminConsultationApi, superAdminApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface Consultation {
   id: string;
@@ -64,98 +66,86 @@ interface Consultation {
 }
 
 const ConsultationManagementFlow = () => {
-  const [consultations, setConsultations] = useState<Consultation[]>([
-    {
-      id: 'CON001',
-      patient: {
-        id: 'PAT001',
-        name: 'Rahul Sharma',
-        phone: '+91 98765 43210',
-        email: 'rahul@example.com'
-      },
-      doctor: {
-        id: 'DOC001',
-        name: 'Dr. Amit Kumar',
-        specialty: 'Cardiology',
-        phone: '+91 87654 32109'
-      },
-      consultationType: 'video',
-      consultationDate: '2024-01-20',
-      consultationTime: '14:30',
-      duration: 30,
-      status: 'scheduled',
-      chiefComplaint: 'Chest pain and shortness of breath',
-      symptoms: 'Pain in left chest, difficulty breathing',
-      consultationFee: 800,
-      paymentMethod: 'card',
-      paymentStatus: 'pending',
-      meetingLink: 'https://meet.google.com/abc-defg-hij',
-      createdAt: '2024-01-19T10:00:00Z',
-      updatedAt: '2024-01-19T10:00:00Z'
-    },
-    {
-      id: 'CON002',
-      patient: {
-        id: 'PAT002',
-        name: 'Anita Devi',
-        phone: '+91 87654 32109',
-        email: 'anita@example.com'
-      },
-      doctor: {
-        id: 'DOC002',
-        name: 'Dr. Priya Singh',
-        specialty: 'Dermatology',
-        phone: '+91 76543 21098'
-      },
-      consultationType: 'phone',
-      consultationDate: '2024-01-20',
-      consultationTime: '15:00',
-      duration: 20,
-      status: 'ongoing',
-      chiefComplaint: 'Skin rash and itching',
-      symptoms: 'Red patches on arms and legs',
-      consultationFee: 600,
-      paymentMethod: 'upi',
-      paymentStatus: 'completed',
-      createdAt: '2024-01-19T11:00:00Z',
-      updatedAt: '2024-01-20T15:00:00Z'
-    },
-    {
-      id: 'CON003',
-      patient: {
-        id: 'PAT003',
-        name: 'Suresh Gupta',
-        phone: '+91 76543 21098',
-        email: 'suresh@example.com'
-      },
-      doctor: {
-        id: 'DOC003',
-        name: 'Dr. Ramesh Kumar',
-        specialty: 'Orthopedics',
-        phone: '+91 65432 10987'
-      },
-      consultationType: 'in-person',
-      consultationDate: '2024-01-19',
-      consultationTime: '16:00',
-      duration: 45,
-      status: 'completed',
-      chiefComplaint: 'Knee pain and swelling',
-      symptoms: 'Pain in right knee, difficulty walking',
-      consultationFee: 1000,
-      paymentMethod: 'cash',
-      paymentStatus: 'completed',
-      prescription: {
-        id: 'RX001',
-        status: 'active',
-        medicines: ['Ibuprofen 400mg', 'Paracetamol 500mg', 'Vitamin D3 1000IU'],
-        instructions: 'Take Ibuprofen for pain relief as needed. Take Paracetamol for fever. Take Vitamin D3 once daily.',
-        writtenDate: '2024-01-19'
-      },
-      notes: 'Patient advised to rest and avoid strenuous activities. Follow-up in 2 weeks.',
-      createdAt: '2024-01-18T14:00:00Z',
-      updatedAt: '2024-01-19T16:45:00Z'
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [assignedClinics, setAssignedClinics] = useState<{ id: string; name: string }[]>([]);
+  const [loadingClinics, setLoadingClinics] = useState<boolean>(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    setLoadingClinics(true);
+    superAdminApi.getEClinics({ page: 1, page_size: 10 })
+      .then((data) => {
+        const clinics = (data.results || []).filter((clinic: any) => clinic.admin === user.id);
+        setAssignedClinics(clinics.map((c: any) => ({ id: c.id, name: c.name })));
+        setLoadingClinics(false);
+      })
+      .catch(() => {
+        setAssignedClinics([]);
+        setLoadingClinics(false);
+      });
+  }, [user]);
+
+  useEffect(() => {
+    if (loadingClinics) return;
+    if (!assignedClinics || assignedClinics.length === 0) {
+      setConsultations([]);
+      setLoading(false);
+      setError('No clinic assigned to this admin.');
+      return;
     }
-  ]);
+    const clinicId = assignedClinics[0].id;
+    setLoading(true);
+    setError(null);
+    adminConsultationApi.getAllConsultations({ page: 1, page_size: 20, clinic: clinicId })
+      .then((res) => {
+        let arr = [];
+        if (res.results && Array.isArray(res.results.data)) {
+          arr = res.results.data;
+        } else if (Array.isArray(res.results)) {
+          arr = res.results;
+        } else if (res.data && Array.isArray(res.data.results)) {
+          arr = res.data.results;
+        }
+        if (!Array.isArray(arr)) {
+          arr = [];
+        }
+        const mapped = arr.map((c: any) => ({
+          id: c.id,
+          patient: {
+            id: c.patient,
+            name: c.patient_name,
+            phone: '',
+          },
+          doctor: {
+            id: c.doctor,
+            name: c.doctor_name,
+            specialty: '',
+            phone: '',
+          },
+          consultationType: c.consultation_type === 'video_call' ? 'video' : c.consultation_type,
+          consultationDate: c.scheduled_date,
+          consultationTime: c.scheduled_time,
+          duration: c.duration,
+          status: c.status,
+          chiefComplaint: c.chief_complaint || '',
+          symptoms: c.symptoms || '',
+          consultationFee: c.consultation_fee,
+          paymentMethod: '',
+          paymentStatus: c.payment_status,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at,
+        }));
+        setConsultations(mapped);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Failed to load consultations');
+        setLoading(false);
+      });
+  }, [assignedClinics, loadingClinics]);
 
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
@@ -319,7 +309,12 @@ const ConsultationManagementFlow = () => {
           <CardTitle className="text-xl font-bold text-midnight">All Consultations</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {consultations.map((consultation) => (
+          {loading && <p className="text-center py-8">Loading consultations...</p>}
+          {error && <p className="text-center py-8 text-red-500">{error}</p>}
+          {!loading && !error && consultations.length === 0 && (
+            <p className="text-center py-8 text-gray-500">No consultations found.</p>
+          )}
+          {!loading && !error && consultations.length > 0 && consultations.map((consultation) => (
             <div key={consultation.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-4">

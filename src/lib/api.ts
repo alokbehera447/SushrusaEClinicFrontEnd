@@ -771,6 +771,28 @@ export const adminConsultationApi = {
     const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(`/api/consultations/?scheduled_date=${today}`);
     return response.data.data.results;
   },
+  // Fetch all consultations (paginated)
+  getAllConsultations: async (params?: { page?: number; page_size?: number; search?: string; status?: string; ordering?: string }): Promise<PaginatedResponse<Consultation>> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get(`/api/consultations/?${queryParams.toString()}`);
+    // Handle both wrapped and unwrapped paginated responses
+    let paginated;
+    if (response.data && response.data.data && typeof response.data.data === 'object' && 'results' in response.data.data) {
+      paginated = response.data.data;
+    } else if (response.data && 'results' in response.data) {
+      paginated = response.data;
+    } else {
+      throw new Error('Unexpected consultations API response structure');
+    }
+    return paginated;
+  },
 };
 
 // Doctor Analytics API
@@ -912,8 +934,8 @@ export const doctorApi = {
     const queryParams = new URLSearchParams();
     if (params) {
       if (params.search) queryParams.append('search', params.search);
-      if (params.is_active !== undefined) queryParams.append('is_active', params.is_active ? 'true' : 'false');
-      if (params.is_verified !== undefined) queryParams.append('is_verified', params.is_verified ? 'true' : 'false');
+      if (typeof params.is_active === 'boolean' || typeof params.is_active === 'number') queryParams.append('is_active', params.is_active ? 'true' : 'false');
+      if (typeof params.is_verified === 'boolean' || typeof params.is_verified === 'number') queryParams.append('is_verified', params.is_verified ? 'true' : 'false');
       if (params.specialization) queryParams.append('specialization', params.specialization);
     }
     const response = await api.get(`/api/doctors/superadmin/?${queryParams.toString()}`);
@@ -999,6 +1021,22 @@ export const doctorApi = {
   },
 };
 
+// Create a new consultation
+export const createConsultation = async (data: {
+  patient: string | number;
+  doctor: string | number;
+  consultation_type: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  duration: number | string;
+  chief_complaint: string;
+  symptoms?: string;
+  consultation_fee?: number | string;
+}): Promise<any> => {
+  const response = await api.post('/api/consultations/', data);
+  return response.data;
+};
+
 // Doctor Slot & Schedule API
 export interface DoctorSlot {
   id: number;
@@ -1022,21 +1060,72 @@ export interface DoctorSchedule {
   updated_at: string;
 }
 
+// Add a type for frontend slot objects
+export interface DoctorSlotFrontend {
+  id: number;
+  doctor: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  created_at: string;
+  updated_at: string;
+  type: string;
+}
+
 export const doctorSlotApi = {
   // Fetch slots for a doctor for a given month/year
-  getSlots: async (doctorId: string | number, month: number, year: number): Promise<DoctorSlot[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<DoctorSlot>>>(
-      `/api/doctors/${doctorId}/slots/?month=${month+1}&year=${year}`
-    );
-    return response.data.data.results;
+  getSlots: async (doctorId: string | number, month: number, year: number): Promise<DoctorSlotFrontend[]> => {
+    let url = `/api/doctors/${doctorId}/slots/?month=${month+1}&year=${year}`;
+    let allSlots: DoctorSlot[] = [];
+    while (url) {
+      const response = await api.get(url);
+      // Debug: print raw data from slots API
+      // eslint-disable-next-line no-console
+      console.log('RAW slots API data:', response.data);
+      let slotList: DoctorSlot[] = [];
+      const data = response.data;
+      if (Array.isArray(data)) {
+        slotList = data;
+        url = null;
+      } else if (data && Array.isArray(data.results)) {
+        slotList = data.results;
+        url = data.next;
+      } else {
+        url = null;
+      }
+      allSlots = allSlots.concat(slotList);
+    }
+    return allSlots.map((slot) => ({
+      id: slot.id,
+      doctor: slot.doctor,
+      date: slot.date,
+      startTime: slot.start_time.slice(0, 5),
+      endTime: slot.end_time.slice(0, 5),
+      isAvailable: slot.is_available,
+      created_at: slot.created_at,
+      updated_at: slot.updated_at,
+      type: slot.is_available ? 'available' : 'booked',
+    }));
   },
   // Create a new slot
-  createSlot: async (doctorId: string | number, slotData: Partial<DoctorSlot>): Promise<DoctorSlot> => {
+  createSlot: async (doctorId: string | number, slotData: Partial<DoctorSlot>): Promise<DoctorSlotFrontend> => {
     const response = await api.post<ApiResponse<DoctorSlot>>(
       `/api/doctors/${doctorId}/slots/`,
       slotData
     );
-    return response.data.data;
+    const slot = response.data.data;
+    return {
+      id: slot.id,
+      doctor: slot.doctor,
+      date: slot.date,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+      isAvailable: slot.is_available,
+      created_at: slot.created_at,
+      updated_at: slot.updated_at,
+      type: slot.is_available ? 'available' : 'booked',
+    };
   },
   // Delete a slot
   deleteSlot: async (doctorId: string | number, slotId: number): Promise<void> => {

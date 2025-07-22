@@ -197,6 +197,13 @@ const AdminDashboard = () => {
       setLoadingClinics(true);
       superAdminApi.getEClinics({ page: 1, page_size: 10 })
         .then((data) => {
+          console.log('EClinics API data:', data);
+          console.log('Current user:', user);
+          if (data && Array.isArray(data.results)) {
+            data.results.forEach((clinic) => {
+              console.log('Clinic:', clinic.name, 'admin:', clinic.admin, 'user.id:', user.id);
+            });
+          }
           // Filter clinics where admin matches current user
           setAssignedClinics(data.results.filter((clinic) => clinic.admin === user.id));
           setLoadingClinics(false);
@@ -725,7 +732,13 @@ const AdminDashboard = () => {
                       Back to Dashboard
                     </Button>
                   </div>
-                  <ConsultationManagementFlow />
+                  {loadingClinics ? (
+                    <div>Loading assigned clinics...</div>
+                  ) : assignedClinics.length === 0 ? (
+                    <div>No clinic assigned to this admin.</div>
+                  ) : (
+                    <ConsultationManagementFlow assignedClinics={assignedClinics} />
+                  )}
                 </div>
               )}
             </div>

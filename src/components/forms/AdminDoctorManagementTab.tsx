@@ -34,7 +34,8 @@ import {
   Activity,
   Building2,
   Users,
-  DollarSign
+  DollarSign,
+  Video
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { get, post, put, del } from '@/lib/api';
@@ -65,6 +66,7 @@ interface Doctor {
   total_reviews: number;
   created_at: string;
   updated_at: string;
+  meeting_link?: string;
 }
 
 interface DoctorStats {
@@ -1091,6 +1093,16 @@ const AdminDoctorManagementTab = () => {
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Bio</Label>
                   <p className="text-midnight">{selectedDoctor.bio}</p>
+                </div>
+              )}
+              {selectedDoctor.meeting_link && (
+                <div className="mt-4">
+                  <a href={selectedDoctor.meeting_link} target="_blank" rel="noopener noreferrer">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
+                      <Video className="w-4 h-4 mr-2" />
+                      Join Doctor’s Room
+                    </Button>
+                  </a>
                 </div>
               )}
             </div>
