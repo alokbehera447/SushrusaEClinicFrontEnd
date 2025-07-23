@@ -38,6 +38,7 @@ import { adminAnalyticsApi, AdminDashboardStats, Consultation, adminConsultation
 import { useAuth } from '@/context/AuthContext';
 import { superAdminApi } from '@/lib/api';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useNavigate } from 'react-router-dom';
 
 // Error Boundary Component
 interface ErrorBoundaryState {
@@ -216,6 +217,8 @@ const AdminDashboard = () => {
     }
   }, [user]);
 
+  const navigate = useNavigate();
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -357,7 +360,7 @@ const AdminDashboard = () => {
                         <div className="flex justify-center items-center min-h-[80px] text-gray-400">No consultations scheduled for today.</div>
                       ) : (
                         consultations.map((consultation, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                          <div key={consultation.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                             <div className="flex items-center space-x-4">
                               <img 
                                 src="/patient-avatar-1.svg" 
@@ -385,6 +388,16 @@ const AdminDashboard = () => {
                                 </Button>
                               )}
                             </div>
+                            {(consultation.meeting_link || consultation.meetingLink) && (
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                                onClick={() => navigate(`/consultation-meeting?meeting=${encodeURIComponent(consultation.meeting_link || consultation.meetingLink || 'https://meet.jit.si/YourMeetingRoom')}`)}
+                              >
+                                <Video className="w-4 h-4 mr-2" />
+                                Join Meeting
+                              </Button>
+                            )}
                           </div>
                         ))
                       )}
@@ -435,7 +448,7 @@ const AdminDashboard = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {consultations.map((consultation, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                      <div key={consultation.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-4">
                           <div className="text-center">
                             <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>

@@ -168,7 +168,7 @@ const PrescriptionWriterForm = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-8">
+    <div className="w-full p-4 md:p-6 space-y-8">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-midnight mb-2">Digital Prescription</h2>
         <p className="text-gray-600">Create and manage patient prescriptions</p>
@@ -475,99 +475,6 @@ const PrescriptionWriterForm = () => {
 
         {/* Right Column - Preview */}
         <div className="space-y-6">
-          {/* Follow-up */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg font-bold text-midnight">
-                <Clock className="w-5 h-5 mr-2 text-[#E17726]" />
-                Follow-up
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Follow-up Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full h-10 justify-start text-left font-normal",
-                        !prescriptionData.followUpDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {prescriptionData.followUpDate ? format(prescriptionData.followUpDate, "PPP") : "Select date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={prescriptionData.followUpDate}
-                      onSelect={(date) => handleInputChange('followUpDate', date)}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="followUpInstructions" className="text-sm font-medium">Follow-up Instructions</Label>
-                <Textarea
-                  id="followUpInstructions"
-                  value={prescriptionData.followUpInstructions}
-                  onChange={(e) => handleInputChange('followUpInstructions', e.target.value)}
-                  placeholder="Instructions for next visit"
-                  className="min-h-[80px]"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* General Instructions */}
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold text-midnight">General Instructions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="generalInstructions" className="text-sm font-medium">Patient Instructions</Label>
-                <Textarea
-                  id="generalInstructions"
-                  value={prescriptionData.generalInstructions}
-                  onChange={(e) => handleInputChange('generalInstructions', e.target.value)}
-                  placeholder="General care instructions for patient"
-                  className="min-h-[100px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="doctorNotes" className="text-sm font-medium">Doctor's Notes</Label>
-                <Textarea
-                  id="doctorNotes"
-                  value={prescriptionData.doctorNotes}
-                  onChange={(e) => handleInputChange('doctorNotes', e.target.value)}
-                  placeholder="Private notes for future reference"
-                  className="min-h-[80px]"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="urgentMedication"
-                  checked={prescriptionData.urgentMedication}
-                  onChange={(e) => handleInputChange('urgentMedication', e.target.checked)}
-                  className="w-4 h-4 text-red-600 focus:ring-red-600"
-                />
-                <Label htmlFor="urgentMedication" className="text-sm flex items-center text-red-600">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
-                  Mark as urgent
-                </Label>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Actions */}
           <Card className="border-0 shadow-lg">
             <CardHeader>
@@ -689,8 +596,6 @@ const PrescriptionWriterForm = () => {
                     </li>
                   ))}
                 </ul>
-                <div><b>General Instructions:</b> {prescriptionData.generalInstructions}</div>
-                <div><b>Follow-up:</b> {prescriptionData.followUpDate ? `Yes, on ${format(prescriptionData.followUpDate, "PPP")}` : 'No'}</div>
               </div>
               {/* Footer */}
               <div className="text-center border-t pt-2 whitespace-pre-line text-sm text-gray-700">

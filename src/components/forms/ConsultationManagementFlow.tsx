@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { adminConsultationApi, superAdminApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Consultation {
   id: string;
@@ -72,6 +73,7 @@ const ConsultationManagementFlow = () => {
   const [assignedClinics, setAssignedClinics] = useState<{ id: string; name: string }[]>([]);
   const [loadingClinics, setLoadingClinics] = useState<boolean>(true);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -393,11 +395,10 @@ const ConsultationManagementFlow = () => {
                       End Consultation
                     </Button>
                     {consultation.consultationType === 'video' && consultation.meetingLink && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="border-blue-600 text-blue-600"
-                        onClick={() => window.open('https://meet.diracai.com/office', '_blank')}
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => navigate(`/consultation-meeting?meeting=${encodeURIComponent(consultation.meetingLink)}`)}
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Join Meeting
