@@ -41,7 +41,10 @@ import {
   AlertCircle,
   Info,
   X,
-  Globe
+  Globe,
+  ClipboardList,
+  Image,
+  AlignLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { superAdminApi, UserProfile, EClinic, CreateEClinicData } from '@/lib/api';
@@ -737,18 +740,6 @@ const DoctorsManagement = () => {
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     View
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="rounded-lg"
-                    onClick={() => {
-                      loadDoctorForEdit(doctor);
-                      setShowAddForm(true);
-                    }}
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
                   </Button>
                   <Button 
                     size="sm" 
@@ -1718,7 +1709,8 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
         specialties: formData.specialties,
         services: formData.services,
         facilities: formData.facilities,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        admin: selectedAdminId // <-- Ensure admin is sent to backend
       };
 
       await superAdminApi.createEClinic(clinicData);
@@ -1733,13 +1725,23 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
       fetchClinics(); // Refresh the list
       fetchClinicStats(); // Refresh clinic stats
       onClinicChange?.(); // Refresh overview stats
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating clinic:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create e-clinic',
-        variant: 'destructive'
-      });
+      // Check for admin assignment error from backend
+      const backendMsg = error?.response?.data?.admin?.[0] || error?.response?.data?.message || error?.message;
+      if (backendMsg && backendMsg.includes('already assigned to another clinic')) {
+        toast({
+          title: 'Admin Assignment Error',
+          description: backendMsg,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to create e-clinic',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1810,6 +1812,107 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
       color: 'text-yellow-600' 
     }
   ];
+
+  // 1. Add state for editing
+  const [editingClinic, setEditingClinic] = useState<EClinic | null>(null);
+
+  // 2. Add function to handle edit submit (in-page)
+  const handleEditSubmit = async () => {
+    if (!editingClinic) return;
+    try {
+      setIsSubmitting(true);
+      const updateData = {
+        ...formData,
+        operating_hours: formData.operating_hours,
+        specialties: formData.specialties,
+        services: formData.services,
+        facilities: formData.facilities,
+        is_active: formData.is_active,
+        accepts_online_consultations: formData.accepts_online_consultations,
+        admin: selectedAdminId // <-- Ensure admin is sent to backend
+      };
+      await superAdminApi.updateEClinic(editingClinic.id, updateData);
+      toast({ title: 'Success', description: 'E-Clinic updated successfully' });
+      setEditingClinic(null);
+      fetchClinics();
+      fetchClinicStats();
+      onClinicChange?.();
+    } catch (error) {
+      console.error('Error updating clinic:', error);
+      let message = 'Failed to update e-clinic';
+      if (error && error.response && error.response.data) {
+        if (error.response.data.admin && Array.isArray(error.response.data.admin)) {
+          message = error.response.data.admin[0];
+        } else if (typeof error.response.data.detail === 'string') {
+          message = error.response.data.detail;
+        } else if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        }
+      }
+      toast({ title: 'Error', description: message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add function to start editing in-page
+  const startEditClinic = (clinic: EClinic) => {
+    setEditingClinic(clinic);
+    setFormData({
+      name: clinic.name || '',
+      clinic_type: clinic.clinic_type || 'virtual_clinic',
+      description: clinic.description || '',
+      phone: clinic.phone || '',
+      email: clinic.email || '',
+      website: clinic.website || '',
+      street: clinic.street || '',
+      city: clinic.city || '',
+      state: clinic.state || '',
+      pincode: clinic.pincode || '',
+      country: clinic.country || 'India',
+      registration_number: clinic.registration_number || '',
+      license_number: clinic.license_number || '',
+      accreditation: clinic.accreditation || '',
+      operating_hours: clinic.operating_hours || {},
+      specialties: clinic.specialties || [],
+      services: clinic.services || [],
+      facilities: clinic.facilities || [],
+      is_active: clinic.is_active ?? true,
+      accepts_online_consultations: clinic.accepts_online_consultations ?? true
+    });
+  };
+
+  // Days of the week for operating hours
+  const daysOfWeek = [
+    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+  ];
+
+  // Ensure operating_hours is always an object with correct structure
+  const getOperatingHours = () => {
+    const base: Record<string, { open: string; close: string }> = {};
+    daysOfWeek.forEach(day => {
+      const val = formData.operating_hours?.[day];
+      if (val && typeof val === 'object' && 'open' in val && 'close' in val) {
+        base[day] = { open: val.open || '', close: val.close || '' };
+      } else {
+        base[day] = { open: '', close: '' };
+      }
+    });
+    return base;
+  };
+
+  // In EClinicsManagement:
+  // 1. Fetch available admins when entering edit mode
+  useEffect(() => {
+    if (editingClinic) {
+      fetchAvailableAdmins().then(() => {
+        // Set the current admin as selected
+        if (editingClinic.admin) {
+          setSelectedAdminId(editingClinic.admin.toString());
+        }
+      });
+    }
+  }, [editingClinic]);
 
   return (
     <div className="space-y-6">
@@ -2017,7 +2120,7 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
       )}
 
       {/* Add E-Clinic Form */}
-      {showAddForm && (
+      {showAddForm && !editingClinic && (
         <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-midnight flex items-center">
@@ -2260,43 +2363,51 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                     <Clock className="w-5 h-5 mr-2 text-blue-600" />
                     Operating Details
                   </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Operating Hours (JSON format)
-                      </label>
-                      <Textarea 
-                        placeholder='{"monday": "9:00 AM - 6:00 PM", "tuesday": "9:00 AM - 6:00 PM", ...}' 
-                        className="rounded-xl min-h-[80px]"
-                        value={JSON.stringify(formData.operating_hours, null, 2)}
-                        onChange={(e) => {
-                          try {
-                            const parsed = JSON.parse(e.target.value);
-                            handleInputChange('operating_hours', parsed);
-                          } catch (error) {
-                            // Invalid JSON, keep as string for now
-                          }
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Specialties</label>
-                      <Input 
-                        placeholder="Cardiology, Neurology, Pediatrics (comma separated)" 
-                        className="rounded-xl"
-                        value={formData.specialties.join(', ')}
-                        onChange={(e) => handleInputChange('specialties', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Services</label>
-                      <Input 
-                        placeholder="Consultation, X-Ray, Lab Tests (comma separated)" 
-                        className="rounded-xl"
-                        value={formData.services.join(', ')}
-                        onChange={(e) => handleInputChange('services', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    {daysOfWeek.map(day => (
+                      <div key={day} className="flex items-center gap-2 mb-1">
+                        <span className="w-24 capitalize">{day}:</span>
+                        <input
+                          type="time"
+                          value={getOperatingHours()[day].open}
+                          onChange={e => {
+                            const newHours = getOperatingHours();
+                            newHours[day] = { ...newHours[day], open: e.target.value };
+                            handleInputChange('operating_hours', { ...newHours });
+                          }}
+                          className="border rounded px-2"
+                        />
+                        <span>to</span>
+                        <input
+                          type="time"
+                          value={getOperatingHours()[day].close}
+                          onChange={e => {
+                            const newHours = getOperatingHours();
+                            newHours[day] = { ...newHours[day], close: e.target.value };
+                            handleInputChange('operating_hours', { ...newHours });
+                          }}
+                          className="border rounded px-2"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialties</label>
+                    <Input 
+                      placeholder="Cardiology, Neurology, Pediatrics (comma separated)" 
+                      className="rounded-xl"
+                      value={formData.specialties.join(', ')}
+                      onChange={(e) => handleInputChange('specialties', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Services</label>
+                    <Input 
+                      placeholder="Consultation, X-Ray, Lab Tests (comma separated)" 
+                      className="rounded-xl"
+                      value={formData.services.join(', ')}
+                      onChange={(e) => handleInputChange('services', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                    />
                   </div>
                 </div>
               </div>
@@ -2359,6 +2470,363 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                 variant="outline" 
                 onClick={() => {
                   setShowAddForm(false);
+                  resetForm();
+                }}
+                disabled={isSubmitting}
+                className="border-gray-300 px-8 rounded-xl"
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit E-Clinic Form */}
+      {editingClinic && (
+        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-midnight flex items-center">
+              <Settings className="w-5 h-5 mr-2 text-[#E17726]" />
+              Edit E-Clinic
+            </CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              Update the details for this e-clinic. Changes will be saved immediately.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Basic Information */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-midnight mb-4 flex items-center">
+                    <Building2 className="w-5 h-5 mr-2 text-[#E17726]" />
+                    Basic Information
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Clinic Name <span className="text-red-500">*</span>
+                      </label>
+                      <Input 
+                        placeholder="Sushrusa Clinic - City Name" 
+                        className="rounded-xl"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <Textarea 
+                        placeholder="Enter clinic description"
+                        className="rounded-xl min-h-[80px]"
+                        value={formData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Website
+                      </label>
+                      <Input 
+                        placeholder="https://clinic-website.com" 
+                        className="rounded-xl"
+                        value={formData.website}
+                        onChange={(e) => handleInputChange('website', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Street Address <span className="text-red-500">*</span>
+                      </label>
+                      <Input 
+                        placeholder="Enter street address"
+                        className="rounded-xl"
+                        value={formData.street}
+                        onChange={(e) => handleInputChange('street', e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          placeholder="Enter city name" 
+                          className="rounded-xl"
+                          value={formData.city}
+                          onChange={(e) => handleInputChange('city', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          State <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          placeholder="Enter state name" 
+                          className="rounded-xl"
+                          value={formData.state}
+                          onChange={(e) => handleInputChange('state', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Pincode <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          placeholder="Enter pincode" 
+                          className="rounded-xl"
+                          value={formData.pincode}
+                          onChange={(e) => handleInputChange('pincode', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Country
+                        </label>
+                        <Input 
+                          placeholder="India" 
+                          className="rounded-xl"
+                          value={formData.country}
+                          onChange={(e) => handleInputChange('country', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Registration Number <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          placeholder="Enter registration number" 
+                          className="rounded-xl"
+                          value={formData.registration_number}
+                          onChange={(e) => handleInputChange('registration_number', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          License Number
+                        </label>
+                        <Input 
+                          placeholder="Enter license number" 
+                          className="rounded-xl"
+                          value={formData.license_number}
+                          onChange={(e) => handleInputChange('license_number', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Accreditation
+                      </label>
+                      <Input 
+                        placeholder="Enter accreditation details" 
+                        className="rounded-xl"
+                        value={formData.accreditation}
+                        onChange={(e) => handleInputChange('accreditation', e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phone Number <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          placeholder="+91-XX-XXXX-XXXX" 
+                          className="rounded-xl"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <Input 
+                          type="email" 
+                          placeholder="clinic@sushrusa.com" 
+                          className="rounded-xl"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    {/* Status Settings */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="flex items-center space-x-2">
+                          <input 
+                            type="checkbox" 
+                            checked={formData.is_active}
+                            onChange={(e) => handleInputChange('is_active', e.target.checked)}
+                            className="rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Active Status</span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Only active clinics will be visible to patients
+                        </p>
+                      </div>
+                      <div>
+                        <label className="flex items-center space-x-2">
+                          <input 
+                            type="checkbox" 
+                            checked={formData.accepts_online_consultations}
+                            onChange={(e) => handleInputChange('accepts_online_consultations', e.target.checked)}
+                            className="rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Accepts Online Consultations</span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Allow patients to book online consultations
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Operating Details */}
+                <div>
+                  <h3 className="text-lg font-semibold text-midnight mb-4 flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-blue-600" />
+                    Operating Details
+                  </h3>
+                  <div className="space-y-2">
+                    {daysOfWeek.map(day => (
+                      <div key={day} className="flex items-center gap-2 mb-1">
+                        <span className="w-24 capitalize">{day}:</span>
+                        <input
+                          type="time"
+                          value={getOperatingHours()[day].open}
+                          onChange={e => {
+                            const newHours = getOperatingHours();
+                            newHours[day] = { ...newHours[day], open: e.target.value };
+                            handleInputChange('operating_hours', { ...newHours });
+                          }}
+                          className="border rounded px-2"
+                        />
+                        <span>to</span>
+                        <input
+                          type="time"
+                          value={getOperatingHours()[day].close}
+                          onChange={e => {
+                            const newHours = getOperatingHours();
+                            newHours[day] = { ...newHours[day], close: e.target.value };
+                            handleInputChange('operating_hours', { ...newHours });
+                          }}
+                          className="border rounded px-2"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialties</label>
+                    <Input 
+                      placeholder="Cardiology, Neurology, Pediatrics (comma separated)" 
+                      className="rounded-xl"
+                      value={formData.specialties.join(', ')}
+                      onChange={(e) => handleInputChange('specialties', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Services</label>
+                    <Input 
+                      placeholder="Consultation, X-Ray, Lab Tests (comma separated)" 
+                      className="rounded-xl"
+                      value={formData.services.join(', ')}
+                      onChange={(e) => handleInputChange('services', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Facilities */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-midnight mb-4 flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-green-600" />
+                    Facilities & Equipment
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Available Facilities</label>
+                      <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                        {availableFacilities.map((facility) => (
+                          <label 
+                            key={facility} 
+                            className={`flex items-center space-x-2 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors ${
+                              formData.facilities.includes(facility) 
+                                ? 'bg-[#E17726]/10 border border-[#E17726]/20' 
+                                : 'bg-gray-50'
+                            }`}
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={formData.facilities.includes(facility)}
+                              onChange={() => handleFacilityToggle(facility)}
+                              className="rounded" 
+                            />
+                            <span className="text-sm">{facility}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Assign Admin <span className="text-red-500">*</span>
+  </label>
+  {loadingAdmins ? (
+    <div className="flex items-center space-x-2 p-3 border border-gray-300 rounded-xl">
+      <Loader2 className="w-4 h-4 animate-spin text-[#E17726]" />
+      <span className="text-sm text-gray-600">Loading admins...</span>
+    </div>
+  ) : (
+    <select 
+      value={selectedAdminId}
+      onChange={(e) => setSelectedAdminId(e.target.value)}
+      className="w-full p-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+    >
+      <option value="">Select an Admin</option>
+      {availableAdmins.map((admin) => (
+        <option key={admin.id} value={admin.id}>
+          {admin.name} - {admin.city}, {admin.state}
+        </option>
+      ))}
+    </select>
+  )}
+  <p className="text-xs text-gray-500 mt-1">
+    The selected admin will manage this e-clinic
+  </p>
+</div>
+            <div className="flex gap-4 pt-6 border-t border-gray-200">
+              <Button 
+                onClick={handleEditSubmit}
+                disabled={isSubmitting}
+                className="bg-[#E17726] hover:bg-[#c9651e] text-white px-8 rounded-xl"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setEditingClinic(null);
                   resetForm();
                 }}
                 disabled={isSubmitting}
@@ -2504,8 +2972,8 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                         <Eye className="w-4 h-4 mr-1" />
                         View Details
                       </Button>
-                      <Button size="sm" className="flex-1 bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg">
-                        <Edit className="w-4 h-4 mr-1" />
+                      <Button size="sm" className="flex-1 bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg" onClick={() => startEditClinic(clinic)}>
+                        <Settings className="w-4 h-4 mr-1" />
                         Manage
                       </Button>
                       <Button 
@@ -2613,8 +3081,8 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                     <Eye className="w-4 h-4 mr-1" />
                     View Details
                   </Button>
-                  <Button size="sm" className="flex-1 bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg">
-                    <Edit className="w-4 h-4 mr-1" />
+                  <Button size="sm" className="flex-1 bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg" onClick={() => startEditClinic(clinic)}>
+                    <Settings className="w-4 h-4 mr-1" />
                     Manage
                   </Button>
                   <Button 
@@ -2691,149 +3159,129 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
 
       {/* Clinic Details Modal */}
       {selectedClinic && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ margin: 0, padding: '1rem' }}>
-          <div className="relative w-full max-w-4xl max-h-[95vh] bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <CardHeader className="sticky top-0 bg-white border-b border-gray-200 z-10 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-2xl font-bold text-midnight flex items-center">
-                  <Building2 className="w-6 h-6 mr-3 text-[#E17726]" />
+        <Dialog open={!!selectedClinic} onOpenChange={() => setSelectedClinic(null)}>
+          <DialogContent className="max-w-3xl w-full p-0 overflow-hidden max-h-[80vh] flex flex-col">
+            <div className="bg-gradient-to-r from-[#E17726]/10 to-blue-100/10 p-4 sm:p-6 pb-0 rounded-t-2xl flex flex-col md:flex-row md:items-center gap-4 shrink-0">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-midnight mb-1 flex items-center gap-2">
+                  <Building2 className="w-6 h-6 text-[#E17726]" />
                   {selectedClinic.name}
-                </CardTitle>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedClinic(null)}
-                  className="rounded-lg hover:bg-gray-100"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                </h2>
+                <div className="flex flex-wrap gap-2 items-center mb-2">
+                  <Badge className={selectedClinic.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                    {selectedClinic.is_verified ? 'Verified' : 'Pending'}
+                  </Badge>
+                  <span className="text-gray-500 text-xs">ID: {selectedClinic.id}</span>
+                  <span className={`text-xs font-semibold ${selectedClinic.is_active ? 'text-green-600' : 'text-red-600'}`}>{selectedClinic.is_active ? 'Active' : 'Inactive'}</span>
+                  <span className="text-xs text-blue-600">{selectedClinic.clinic_type.replace('_', ' ')}</span>
+                </div>
+                <div className="text-gray-600 text-sm mb-2 flex flex-wrap gap-2 items-center">
+                  <MapPin className="inline w-4 h-4 mr-1 text-[#E17726]" />
+                  {selectedClinic.street}, {selectedClinic.city}, {selectedClinic.state}, {selectedClinic.pincode}, {selectedClinic.country}
+                </div>
               </div>
-            </CardHeader>
-            <div className="overflow-y-auto max-h-[calc(95vh-80px)]">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Contact Information</h3>
-                      <div className="space-y-2">
-                        <p className="flex items-center text-gray-600">
-                          <MapPin className="w-4 h-4 mr-2" />
-                          {selectedClinic.street}, {selectedClinic.city}, {selectedClinic.state} - {selectedClinic.pincode}
-                        </p>
-                        <p className="flex items-center text-gray-600">
-                          <Phone className="w-4 h-4 mr-2" />
-                          {selectedClinic.phone}
-                        </p>
-                        <p className="flex items-center text-gray-600">
-                          <Mail className="w-4 h-4 mr-2" />
-                          {selectedClinic.email}
-                        </p>
-                        <p className="flex items-center text-gray-600">
-                          <Globe className="w-4 h-4 mr-2" />
-                          {selectedClinic.website || 'No website'}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Clinic Details</h3>
-                      <div className="space-y-2">
-                        <p className="text-gray-600">
-                          <span className="font-medium">Registration:</span> {selectedClinic.registration_number}
-                        </p>
-                        <p className="text-gray-600">
-                          <span className="font-medium">License:</span> {selectedClinic.license_number || 'Not provided'}
-                        </p>
-                        <p className="text-gray-600">
-                          <span className="font-medium">Accreditation:</span> {selectedClinic.accreditation || 'Not provided'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Status Information</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <p className="text-lg font-bold text-midnight">{selectedClinic.is_active ? 'Active' : 'Inactive'}</p>
-                          <p className="text-sm text-gray-600">Status</p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                          <p className="text-lg font-bold text-[#E17726]">{selectedClinic.is_verified ? 'Verified' : 'Pending'}</p>
-                          <p className="text-sm text-gray-600">Verification</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Description</h3>
-                      <p className="text-gray-600">{selectedClinic.description || 'No description provided'}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Specialties & Services</h3>
-                      <div className="space-y-3">
-                        {selectedClinic.specialties && selectedClinic.specialties.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-700 mb-2">Specialties:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedClinic.specialties.map((specialty, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {specialty}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {selectedClinic.services && selectedClinic.services.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-700 mb-2">Services:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedClinic.services.map((service, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {service}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Facilities</h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {selectedClinic.facilities && selectedClinic.facilities.length > 0 ? (
-                          selectedClinic.facilities.map((facility, index) => (
-                            <div key={index} className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <span className="text-sm text-green-800">{facility}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-gray-500 text-sm">No facilities listed</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-midnight mb-3">Timestamps</h3>
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Created:</span> {new Date(selectedClinic.created_at).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Last Updated:</span> {new Date(selectedClinic.updated_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
+              <div className="flex flex-col items-end gap-2">
+                {selectedClinic.logo && <img src={selectedClinic.logo} alt="Clinic Logo" className="h-16 w-16 object-contain rounded shadow" />}
+                {selectedClinic.cover_image && <img src={selectedClinic.cover_image} alt="Cover" className="h-16 w-32 object-cover rounded shadow" />}
+              </div>
+            </div>
+            <div className="p-4 sm:p-6 pt-4 bg-white grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 flex-1 min-h-0 overflow-y-auto">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><UserCog className="w-4 h-4 text-blue-600" /> Admin</h3>
+                  <span className="text-gray-700 text-sm font-medium">{selectedClinic.admin_name || selectedClinic.admin}</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><Phone className="w-4 h-4 text-[#E17726]" /> Contact</h3>
+                  <ul className="ml-1 text-gray-700 text-sm space-y-1">
+                    <li><Phone className="inline w-4 h-4 mr-1" /> {selectedClinic.phone || '—'}</li>
+                    <li><Mail className="inline w-4 h-4 mr-1" /> {selectedClinic.email || '—'}</li>
+                    <li><Globe className="inline w-4 h-4 mr-1" /> {selectedClinic.website || '—'}</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><Award className="w-4 h-4 text-green-600" /> Facilities</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedClinic.facilities && selectedClinic.facilities.length ? selectedClinic.facilities.map((f, i) => (
+                      <Badge key={i} variant="outline" className="text-xs bg-green-50 border-green-200 text-green-800">{f}</Badge>
+                    )) : <span className="text-gray-400">—</span>}
                   </div>
                 </div>
-              </CardContent>
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><Star className="w-4 h-4 text-yellow-500" /> Specialties</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedClinic.specialties && selectedClinic.specialties.length ? selectedClinic.specialties.map((s, i) => (
+                      <Badge key={i} variant="outline" className="text-xs bg-yellow-50 border-yellow-200 text-yellow-800">{s}</Badge>
+                    )) : <span className="text-gray-400">—</span>}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><ClipboardList className="w-4 h-4 text-blue-500" /> Services</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedClinic.services && selectedClinic.services.length ? selectedClinic.services.map((s, i) => (
+                      <Badge key={i} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-800">{s}</Badge>
+                    )) : <span className="text-gray-400">—</span>}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><Calendar className="w-4 h-4 text-purple-600" /> Operating Hours</h3>
+                  <div className="overflow-x-auto">
+                    {selectedClinic.operating_hours && Object.keys(selectedClinic.operating_hours).length > 0 ? (
+                      <table className="min-w-max text-xs mt-2 border rounded overflow-hidden w-full">
+                        <tbody>
+                          {Object.entries(selectedClinic.operating_hours).map(([day, hours]) => (
+                            <tr key={day} className="even:bg-gray-50">
+                              <td className="pr-2 font-medium capitalize py-1 w-24 whitespace-nowrap">{day}:</td>
+                              <td className="py-1">
+                                {hours.open && hours.close ? (
+                                  <span className="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono">{hours.open} - {hours.close}</span>
+                                ) : <span className="text-gray-400">Closed</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><Info className="w-4 h-4 text-indigo-600" /> Clinic Info</h3>
+                  <div className="text-gray-700 text-sm space-y-1">
+                    <div><strong>Registration #:</strong> {selectedClinic.registration_number || '—'}</div>
+                    <div><strong>License #:</strong> {selectedClinic.license_number || '—'}</div>
+                    <div><strong>Accreditation:</strong> {selectedClinic.accreditation || '—'}</div>
+                    <div><strong>Created At:</strong> {new Date(selectedClinic.created_at).toLocaleString()}</div>
+                    <div><strong>Updated At:</strong> {new Date(selectedClinic.updated_at).toLocaleString()}</div>
+                    <div><strong>Accepts Online Consultations:</strong> {selectedClinic.accepts_online_consultations ? 'Yes' : 'No'}</div>
+                  </div>
+                </div>
+                {selectedClinic.gallery_images && selectedClinic.gallery_images.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><Image className="w-4 h-4 text-pink-600" /> Gallery</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {selectedClinic.gallery_images.map((img, idx) => (
+                        <img key={idx} src={img} alt={`Gallery ${idx + 1}`} className="h-20 w-full object-cover rounded shadow" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-semibold text-midnight mb-1 flex items-center gap-1"><AlignLeft className="w-4 h-4 text-gray-500" /> Description</h3>
+                  <div className="text-gray-700 text-sm whitespace-pre-line">{selectedClinic.description || '—'}</div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+            <div className="flex flex-col sm:flex-row flex-wrap justify-end bg-white px-4 sm:px-6 pb-4 pt-2 border-t gap-2 shrink-0">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSelectedClinic(null)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Delete Confirmation Dialog */}

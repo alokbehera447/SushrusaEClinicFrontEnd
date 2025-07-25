@@ -137,6 +137,7 @@ const ConsultationManagementFlow = () => {
           consultationFee: c.consultation_fee,
           paymentMethod: '',
           paymentStatus: c.payment_status,
+          meetingLink: c.doctor_meeting_link || c.meeting_link || c.meetingLink || null,
           createdAt: c.created_at,
           updatedAt: c.updated_at,
         }));
@@ -395,8 +396,8 @@ const ConsultationManagementFlow = () => {
                       End Consultation
                     </Button>
                     {consultation.consultationType === 'video' && consultation.meetingLink && (
-                      <Button
-                        size="sm"
+                      <Button 
+                        size="sm" 
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={() => navigate(`/consultation-meeting?meeting=${encodeURIComponent(consultation.meetingLink)}`)}
                       >
@@ -431,6 +432,17 @@ const ConsultationManagementFlow = () => {
                       </Button>
                     )}
                   </>
+                )}
+
+                {consultation.meetingLink && (
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => navigate(`/consultation-meeting?meeting=${encodeURIComponent(consultation.meetingLink)}`)}
+                  >
+                    <Video className="w-4 h-4 mr-2" />
+                    Join Now
+                  </Button>
                 )}
 
                 <Button 

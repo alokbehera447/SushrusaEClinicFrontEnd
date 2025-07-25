@@ -218,6 +218,7 @@ export interface CreateEClinicData {
   gallery_images?: string[];
   is_active?: boolean;
   accepts_online_consultations?: boolean;
+  admin?: string; // <-- Add this line
 }
 
 // API Response types
