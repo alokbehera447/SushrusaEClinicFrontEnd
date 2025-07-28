@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // API base URL utility
-export const API_BASE_URL = 'https://139.59.21.121';
+export const API_BASE_URL = 'https://sushrusaeclinic.com';
 
 import axios from 'axios';
 export const api = axios.create({
