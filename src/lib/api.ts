@@ -181,7 +181,6 @@ export interface EClinic {
   registration_number: string;
   license_number: string;
   accreditation: string;
-  logo: string | null;
   cover_image: string | null;
   gallery_images: string[];
   is_active: boolean;
@@ -213,7 +212,6 @@ export interface CreateEClinicData {
   registration_number: string;
   license_number?: string;
   accreditation?: string;
-  logo?: File;
   cover_image?: File;
   gallery_images?: string[];
   is_active?: boolean;
@@ -707,13 +705,16 @@ export const superAdminApi = {
   },
 
   // Create new e-clinic
-  createEClinic: async (clinicData: CreateEClinicData): Promise<EClinic> => {
-    const response = await api.post<ApiResponse<EClinic>>('/api/eclinic/', clinicData);
+  createEClinic: async (clinicData: CreateEClinicData | FormData): Promise<EClinic> => {
+    const config = clinicData instanceof FormData ? {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    } : {};
+    const response = await api.post<ApiResponse<EClinic>>('/api/eclinic/', clinicData, config);
     return response.data.data;
   },
 
   // Update e-clinic
-  updateEClinic: async (clinicId: string, clinicData: Partial<CreateEClinicData>): Promise<EClinic> => {
+  updateEClinic: async (clinicId: string, clinicData: Partial<CreateEClinicData> | FormData): Promise<EClinic> => {
     const response = await api.put<ApiResponse<EClinic>>(`/api/eclinic/${clinicId}/`, clinicData);
     return response.data.data;
   },
@@ -860,6 +861,7 @@ export interface DoctorProfile {
   user_name: string;
   user_phone: string;
   user_email: string;
+  profile_picture?: string;
   license_number: string;
   qualification: string;
   specialization: string;
@@ -885,7 +887,7 @@ export interface DoctorProfile {
 
 export const doctorApi = {
   // Create doctor account and profile in one call (SuperAdmin only)
-  createDoctor: async (data: CreateDoctorUserData & CreateDoctorProfileData): Promise<{
+  createDoctor: async (data: FormData): Promise<{
     doctor_profile: DoctorProfile;
     user_account: {
       user_id: string;
@@ -906,7 +908,9 @@ export const doctorApi = {
         role: string;
         password: string;
       };
-    }>>('/api/doctors/superadmin/', data);
+    }>>('/api/doctors/superadmin/', data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data.data;
   },
 

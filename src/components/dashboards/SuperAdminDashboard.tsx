@@ -111,6 +111,23 @@ const DoctorsManagement = () => {
     is_active: true,
   });
 
+  // Add state for profile image
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+
+  // Handler for profile image change
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setProfileImage(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setProfileImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setProfileImagePreview(null);
+    }
+  };
+
   // Fetch doctors list
   const fetchDoctors = async () => {
     setLoading(true);
@@ -134,6 +151,73 @@ const DoctorsManagement = () => {
     fetchDoctors();
   }, [searchTerm, filters]);
 
+  // Enhanced validation helper
+  const validateDoctorForm = () => {
+    const errors: string[] = [];
+    
+    // Required field validation
+    if (!doctorForm.name.trim()) errors.push('Full name is required');
+    if (!doctorForm.phone.trim()) errors.push('Phone number is required');
+    if (!doctorForm.license_number.trim()) errors.push('License number is required');
+    if (!doctorForm.qualification.trim()) errors.push('Qualification is required');
+    if (!doctorForm.specialization) errors.push('Specialization is required');
+    
+    // Phone number validation
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(doctorForm.phone.replace(/\s/g, ''))) {
+      errors.push('Please enter a valid phone number');
+    }
+    
+    // Email validation
+    if (doctorForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(doctorForm.email)) {
+      errors.push('Please enter a valid email address');
+    }
+    
+    // Numeric field validation
+    const consultationFee = parseFloat(doctorForm.consultation_fee);
+    const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
+    const experienceYears = parseInt(doctorForm.experience_years);
+    const consultationDuration = parseInt(doctorForm.consultation_duration);
+    
+    if (isNaN(consultationFee) || consultationFee < 0) {
+      errors.push('Please enter a valid consultation fee');
+    }
+    
+    if (isNaN(onlineConsultationFee) || onlineConsultationFee < 0) {
+      errors.push('Please enter a valid online consultation fee');
+    }
+    
+    if (isNaN(experienceYears) || experienceYears < 0 || experienceYears > 50) {
+      errors.push('Please enter a valid experience (0-50 years)');
+    }
+    
+    if (isNaN(consultationDuration) || consultationDuration < 15 || consultationDuration > 120) {
+      errors.push('Please enter a valid consultation duration (15-120 minutes)');
+    }
+    
+    return errors;
+  };
+
+  // Enhanced form submission with validation
+  const handleFormSubmit = async () => {
+    const validationErrors = validateDoctorForm();
+    
+    if (validationErrors.length > 0) {
+      toast({ 
+        title: 'Validation Error', 
+        description: validationErrors.join(', '), 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    if (editingDoctor) {
+      await handleUpdateDoctor();
+    } else {
+      await handleCreateDoctor();
+    }
+  };
+
   // Handle doctor creation
   const handleCreateDoctor = async () => {
     try {
@@ -145,8 +229,18 @@ const DoctorsManagement = () => {
         experience_years: parseInt(doctorForm.experience_years),
         consultation_duration: parseInt(doctorForm.consultation_duration),
       };
-      
-      const result = await doctorApi.createDoctor(combinedData);
+      const formData = new FormData();
+      Object.entries(combinedData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value as any);
+        }
+      });
+      if (profileImage) {
+        formData.append('profile_picture', profileImage);
+      }
+      const result = await doctorApi.createDoctor(formData);
       
       toast({ 
         title: 'Doctor Created', 
@@ -155,6 +249,8 @@ const DoctorsManagement = () => {
       
       setShowAddForm(false);
       resetForm();
+      setProfileImage(null);
+      setProfileImagePreview(null);
       fetchDoctors();
     } catch (error: unknown) {
       let message = 'Failed to create doctor';
@@ -209,51 +305,124 @@ const DoctorsManagement = () => {
     try {
       setLoading(true);
       
-      // Validate required fields
-      if (!doctorForm.name || !doctorForm.phone || !doctorForm.license_number || !doctorForm.qualification || !doctorForm.specialization) {
-        toast({ title: 'Error', description: 'Please fill in all required fields', variant: 'destructive' });
+      // Enhanced validation
+      const requiredFields = ['name', 'phone', 'license_number', 'qualification', 'specialization'];
+      const missingFields = requiredFields.filter(field => !doctorForm[field as keyof typeof doctorForm]);
+      
+      if (missingFields.length > 0) {
+        toast({ 
+          title: 'Validation Error', 
+          description: `Please fill in all required fields: ${missingFields.join(', ')}`, 
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      // Validate phone number format
+      const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(doctorForm.phone.replace(/\s/g, ''))) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid phone number', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      // Validate email format if provided
+      if (doctorForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(doctorForm.email)) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid email address', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      // Validate numeric fields
+      const consultationFee = parseFloat(doctorForm.consultation_fee);
+      const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
+      const experienceYears = parseInt(doctorForm.experience_years);
+      const consultationDuration = parseInt(doctorForm.consultation_duration);
+
+      if (isNaN(consultationFee) || consultationFee < 0) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid consultation fee', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      if (isNaN(onlineConsultationFee) || onlineConsultationFee < 0) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid online consultation fee', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      if (isNaN(experienceYears) || experienceYears < 0 || experienceYears > 50) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid experience (0-50 years)', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+
+      if (isNaN(consultationDuration) || consultationDuration < 15 || consultationDuration > 120) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid consultation duration (15-120 minutes)', 
+          variant: 'destructive' 
+        });
         return;
       }
       
       const updateData = {
-        name: doctorForm.name,
-        phone: doctorForm.phone,
-        email: doctorForm.email,
-        license_number: doctorForm.license_number,
-        qualification: doctorForm.qualification,
+        name: doctorForm.name.trim(),
+        phone: doctorForm.phone.trim(),
+        email: doctorForm.email.trim() || undefined,
+        license_number: doctorForm.license_number.trim(),
+        qualification: doctorForm.qualification.trim(),
         specialization: doctorForm.specialization,
-        sub_specialization: doctorForm.sub_specialization,
-        consultation_fee: parseFloat(doctorForm.consultation_fee) || 0,
-        online_consultation_fee: parseFloat(doctorForm.online_consultation_fee) || parseFloat(doctorForm.consultation_fee) || 0,
-        experience_years: parseInt(doctorForm.experience_years) || 0,
-        clinic_name: doctorForm.clinic_name,
-        clinic_address: doctorForm.clinic_address,
-        bio: doctorForm.bio,
-        languages_spoken: doctorForm.languages_spoken,
-        consultation_duration: parseInt(doctorForm.consultation_duration) || 30,
+        sub_specialization: doctorForm.sub_specialization.trim() || undefined,
+        consultation_fee: consultationFee,
+        online_consultation_fee: onlineConsultationFee,
+        experience_years: experienceYears,
+        clinic_name: doctorForm.clinic_name.trim() || undefined,
+        clinic_address: doctorForm.clinic_address.trim() || undefined,
+        bio: doctorForm.bio.trim() || undefined,
+        languages_spoken: doctorForm.languages_spoken.filter(lang => lang.trim() !== ''),
+        consultation_duration: consultationDuration,
         is_online_consultation_available: doctorForm.is_online_consultation_available,
         is_active: doctorForm.is_active,
       };
       
       console.log('Updating doctor:', editingDoctor.id, updateData); // DEBUG
       
-      await doctorApi.updateDoctor(editingDoctor.id.toString(), updateData);
+      const updatedDoctor = await doctorApi.updateDoctor(editingDoctor.id.toString(), updateData);
       
       toast({ 
         title: 'Success', 
-        description: 'Doctor profile updated successfully' 
+        description: `Doctor ${updatedDoctor.user_name} updated successfully` 
       });
       
       setEditingDoctor(null);
       resetForm();
       setShowAddForm(false);
       fetchDoctors(); // Refresh the list
+      fetchDoctorStats(); // Refresh stats
     } catch (error: unknown) {
       console.error('Update error:', error); // DEBUG
       let message = 'Failed to update doctor';
       const err = error as any;
       if (err?.response?.data?.error?.message) {
         message = err.response.data.error.message;
+      } else if (err?.response?.data?.message) {
+        message = err.response.data.message;
       } else if (err?.message) {
         message = err.message;
       }
@@ -478,6 +647,13 @@ const DoctorsManagement = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Profile Image</label>
+                  <Input id="profile_picture" type="file" accept="image/*" onChange={handleProfileImageChange} />
+                  {profileImagePreview && (
+                    <img src={profileImagePreview} alt="Profile Preview" className="w-20 h-20 rounded-full mt-2 border border-gray-300" />
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                   <Input 
                     type="email" 
@@ -644,7 +820,7 @@ const DoctorsManagement = () => {
             </div>
             <div className="flex gap-4 pt-4">
               <Button 
-                onClick={editingDoctor ? handleUpdateDoctor : handleCreateDoctor}
+                onClick={handleFormSubmit}
                 disabled={loading}
                 className="bg-[#E17726] hover:bg-[#c9651e] text-white px-8 rounded-xl"
               >
@@ -692,8 +868,16 @@ const DoctorsManagement = () => {
             <CardContent className="p-6">
               <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                 <div className="flex items-center space-x-4 min-w-0 flex-1">
-                  <div className="w-16 h-16 bg-gradient-to-br from-[#E17726]/20 to-blue-500/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-16 h-16 bg-gradient-to-br from-[#E17726]/20 to-blue-500/20 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {doctor.profile_picture ? (
+                      <img 
+                        src={doctor.profile_picture} 
+                        alt={doctor.user_name} 
+                        className="w-full h-full object-cover rounded-2xl"
+                      />
+                    ) : (
                     <Stethoscope className="w-8 h-8 text-[#E17726]" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-lg font-bold text-midnight truncate" title={doctor.user_name}>
@@ -744,6 +928,15 @@ const DoctorsManagement = () => {
                   <Button 
                     size="sm" 
                     variant="outline" 
+                    className="border-blue-300 text-blue-600 hover:bg-blue-50 rounded-lg"
+                    onClick={() => loadDoctorForEdit(doctor)}
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
                     className="border-red-300 text-red-600 hover:bg-red-50 rounded-lg"
                     onClick={() => setDeletingDoctor(doctor)}
                   >
@@ -784,7 +977,7 @@ const DoctorsManagement = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <p className="text-midnight">{viewingDoctor.user_email || '-'}</p>
+                  <p className="text-midnight">{viewingDoctor.user_email || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
@@ -798,16 +991,17 @@ const DoctorsManagement = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
                   <p className="text-midnight">{viewingDoctor.specialization}</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Specialization</label>
-                  <p className="text-midnight">{viewingDoctor.sub_specialization || '-'}</p>
-                </div>
+                {viewingDoctor.sub_specialization && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Specialization</label>
+                    <p className="text-midnight">{viewingDoctor.sub_specialization}</p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
                   <p className="text-midnight">{viewingDoctor.experience_years} years</p>
                 </div>
               </div>
-              
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee</label>
@@ -823,42 +1017,70 @@ const DoctorsManagement = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Clinic Name</label>
-                  <p className="text-midnight">{viewingDoctor.clinic_name || '-'}</p>
+                  <p className="text-midnight">{viewingDoctor.clinic_name || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Clinic Address</label>
-                  <p className="text-midnight">{viewingDoctor.clinic_address || '-'}</p>
+                  <p className="text-midnight">{viewingDoctor.clinic_address || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Languages Spoken</label>
+                  <div className="flex flex-wrap gap-1">
+                    {viewingDoctor.languages_spoken && viewingDoctor.languages_spoken.length > 0 ? (
+                      viewingDoctor.languages_spoken.map((lang, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {lang}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-gray-500">Not specified</span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <Badge className={viewingDoctor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                    {viewingDoctor.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Badge className={viewingDoctor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                      {viewingDoctor.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Badge className={viewingDoctor.is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}>
+                      {viewingDoctor.is_verified ? 'Verified' : 'Pending Verification'}
+                    </Badge>
+                    <Badge className={viewingDoctor.is_online_consultation_available ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}>
+                      {viewingDoctor.is_online_consultation_available ? 'Online Available' : 'Offline Only'}
+                    </Badge>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Verification</label>
-                  <Badge className={viewingDoctor.is_verified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}>
-                    {viewingDoctor.is_verified ? 'Verified' : 'Not Verified'}
-                  </Badge>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          className={`w-4 h-4 ${star <= viewingDoctor.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-gray-600">({viewingDoctor.rating.toFixed(1)})</span>
+                    <span className="text-sm text-gray-500">({viewingDoctor.total_reviews} reviews)</span>
+                  </div>
                 </div>
               </div>
             </div>
-            
             {viewingDoctor.bio && (
               <div className="mt-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                <p className="text-midnight bg-gray-50 p-3 rounded-lg">{viewingDoctor.bio}</p>
+                <p className="text-midnight whitespace-pre-line">{viewingDoctor.bio}</p>
               </div>
             )}
-            
             <div className="flex gap-4 mt-6">
               <Button 
                 onClick={() => {
-                  loadDoctorForEdit(viewingDoctor);
-                  setShowAddForm(true);
                   setViewingDoctor(null);
+                  loadDoctorForEdit(viewingDoctor);
                 }}
-                className="bg-[#E17726] hover:bg-[#c9651e] text-white px-6 rounded-xl"
+                className="bg-[#E17726] hover:bg-[#c9651e] text-white"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Doctor
@@ -866,7 +1088,6 @@ const DoctorsManagement = () => {
               <Button 
                 variant="outline" 
                 onClick={() => setViewingDoctor(null)}
-                className="border-gray-300 px-6 rounded-xl"
               >
                 Close
               </Button>
@@ -1653,6 +1874,23 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
     fetchClinics(1, pagination.pageSize);
   };
 
+  // Add state for clinic images
+  const [clinicCoverImage, setClinicCoverImage] = useState<File | null>(null);
+  const [clinicCoverPreview, setClinicCoverPreview] = useState<string | null>(null);
+
+  // Handle clinic cover image change
+  const handleClinicCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setClinicCoverImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setClinicCoverPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -1677,6 +1915,8 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
       accepts_online_consultations: true
     });
     setSelectedAdminId('');
+    setClinicCoverImage(null);
+    setClinicCoverPreview(null);
   };
 
   const handleSubmit = async () => {
@@ -1703,17 +1943,29 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
         return;
       }
 
-      const clinicData: CreateEClinicData = {
-        ...formData,
-        operating_hours: formData.operating_hours,
-        specialties: formData.specialties,
-        services: formData.services,
-        facilities: formData.facilities,
-        is_active: formData.is_active,
-        admin: selectedAdminId // <-- Ensure admin is sent to backend
-      };
+      // Create FormData for file uploads
+      const formDataToSend = new FormData();
+      
+      // Add all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formDataToSend.append(key, JSON.stringify(value));
+        } else if (typeof value === 'object' && value !== null) {
+          formDataToSend.append(key, JSON.stringify(value));
+        } else {
+          formDataToSend.append(key, value as any);
+        }
+      });
+      
+      // Add image files
+      if (clinicCoverImage) {
+        formDataToSend.append('cover_image', clinicCoverImage);
+      }
+      
+      // Add admin
+      formDataToSend.append('admin', selectedAdminId);
 
-      await superAdminApi.createEClinic(clinicData);
+      await superAdminApi.createEClinic(formDataToSend);
       
       toast({
         title: 'Success',
@@ -1821,17 +2073,30 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
     if (!editingClinic) return;
     try {
       setIsSubmitting(true);
-      const updateData = {
-        ...formData,
-        operating_hours: formData.operating_hours,
-        specialties: formData.specialties,
-        services: formData.services,
-        facilities: formData.facilities,
-        is_active: formData.is_active,
-        accepts_online_consultations: formData.accepts_online_consultations,
-        admin: selectedAdminId // <-- Ensure admin is sent to backend
-      };
-      await superAdminApi.updateEClinic(editingClinic.id, updateData);
+      
+      // Create FormData for file uploads (same as create form)
+      const formDataToSend = new FormData();
+      
+      // Add all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formDataToSend.append(key, JSON.stringify(value));
+        } else if (typeof value === 'object' && value !== null) {
+          formDataToSend.append(key, JSON.stringify(value));
+        } else {
+          formDataToSend.append(key, value as any);
+        }
+      });
+      
+      // Add image files
+      if (clinicCoverImage) {
+        formDataToSend.append('cover_image', clinicCoverImage);
+      }
+      
+      // Add admin
+      formDataToSend.append('admin', selectedAdminId);
+      
+      await superAdminApi.updateEClinic(editingClinic.id, formDataToSend);
       toast({ title: 'Success', description: 'E-Clinic updated successfully' });
       setEditingClinic(null);
       fetchClinics();
@@ -1880,6 +2145,16 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
       is_active: clinic.is_active ?? true,
       accepts_online_consultations: clinic.accepts_online_consultations ?? true
     });
+    
+    // Set cover image preview if it exists
+    if (clinic.cover_image) {
+      setClinicCoverPreview(clinic.cover_image);
+    } else {
+      setClinicCoverPreview(null);
+    }
+    
+    // Reset file input
+    setClinicCoverImage(null);
   };
 
   // Days of the week for operating hours
@@ -2173,6 +2448,24 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                         value={formData.website}
                         onChange={(e) => handleInputChange('website', e.target.value)}
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cover Image
+                      </label>
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleClinicCoverChange}
+                        className="rounded-xl"
+                      />
+                      {clinicCoverPreview && (
+                        <img 
+                          src={clinicCoverPreview} 
+                          alt="Cover Preview" 
+                          className="w-32 h-20 rounded-lg mt-2 border border-gray-300 object-cover" 
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2536,6 +2829,24 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                         value={formData.website}
                         onChange={(e) => handleInputChange('website', e.target.value)}
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cover Image
+                      </label>
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleClinicCoverChange}
+                        className="rounded-xl"
+                      />
+                      {clinicCoverPreview && (
+                        <img 
+                          src={clinicCoverPreview} 
+                          alt="Cover Preview" 
+                          className="w-32 h-20 rounded-lg mt-2 border border-gray-300 object-cover" 
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3008,14 +3319,24 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
           clinics.map((clinic) => (
           <Card key={clinic.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden">
             {/* Clinic Header */}
-            <div className="h-32 bg-gradient-to-br from-[#E17726]/10 to-cyan-400/10 relative">
+            <div className="h-32 relative overflow-hidden">
+              {clinic.cover_image ? (
+                <img 
+                  src={clinic.cover_image} 
+                  alt={`${clinic.name} Cover`} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#E17726]/10 to-cyan-400/10" />
+              )}
+              <div className="absolute inset-0 bg-black/20" />
               <div className="absolute top-4 right-4">
                 <Badge className={clinic.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
                   {clinic.is_verified ? 'Verified' : 'Pending'}
                 </Badge>
               </div>
               <div className="absolute bottom-4 left-4">
-                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
                   <Building2 className="w-8 h-8 text-[#E17726]" />
                 </div>
               </div>
@@ -3181,7 +3502,6 @@ const EClinicsManagement = ({ onClinicChange }: { onClinicChange?: () => void })
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                {selectedClinic.logo && <img src={selectedClinic.logo} alt="Clinic Logo" className="h-16 w-16 object-contain rounded shadow" />}
                 {selectedClinic.cover_image && <img src={selectedClinic.cover_image} alt="Cover" className="h-16 w-32 object-cover rounded shadow" />}
               </div>
             </div>

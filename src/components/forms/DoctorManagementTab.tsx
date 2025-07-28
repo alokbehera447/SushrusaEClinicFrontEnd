@@ -67,6 +67,7 @@ interface DoctorProfile {
   total_reviews: number;
   total_consultations: number;
   created_at: string;
+  profile_picture?: string; // Added for image upload
 }
 
 interface DoctorEducation {
@@ -97,6 +98,8 @@ const DoctorManagementTab = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   // Mock data based on the flow
   const [doctorUsers, setDoctorUsers] = useState<DoctorUser[]>([
@@ -245,6 +248,18 @@ const DoctorManagementTab = () => {
         : profile
     ));
     setShowVerifyDialog(false);
+  };
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setProfileImage(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setProfileImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setProfileImagePreview(null);
+    }
   };
 
   const stats = {
@@ -436,9 +451,14 @@ const DoctorManagementTab = () => {
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-3">
+                  {profile?.profile_picture && (
+                    <img src={profile.profile_picture} alt={profile.user} className="w-12 h-12 rounded-full object-cover" />
+                  )}
+                  {!profile?.profile_picture && (
                   <div className="w-12 h-12 bg-[#E17726] rounded-full flex items-center justify-center">
                     <User className="w-6 h-6 text-white" />
                   </div>
+                  )}
                   <div>
                           <CardTitle className="text-lg font-semibold text-gray-900">
                       {doctor.name}
@@ -591,9 +611,14 @@ const DoctorManagementTab = () => {
                     <div key={profile.id} className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
+                          {profile.profile_picture && (
+                            <img src={profile.profile_picture} alt={profile.user} className="w-10 h-10 rounded-full object-cover" />
+                          )}
+                          {!profile.profile_picture && (
                           <div className="w-10 h-10 bg-[#E17726] rounded-full flex items-center justify-center">
                             <Stethoscope className="w-5 h-5 text-white" />
                           </div>
+                          )}
                           <div>
                             <h4 className="font-semibold text-gray-900">{user?.name}</h4>
                             <p className="text-sm text-gray-600">{profile.specialization}</p>
@@ -722,6 +747,13 @@ const DoctorManagementTab = () => {
                 <Label htmlFor="experience_years">Experience (Years) *</Label>
                 <Input id="experience_years" type="number" placeholder="8" />
               </div>
+              <div>
+                <Label htmlFor="profile_picture">Profile Image</Label>
+                <Input id="profile_picture" type="file" accept="image/*" onChange={handleProfileImageChange} />
+                {profileImagePreview && (
+                  <img src={profileImagePreview} alt="Profile Preview" className="w-20 h-20 rounded-full mt-2" />
+                )}
+              </div>
             </div>
 
             <div>
@@ -746,6 +778,26 @@ const DoctorManagementTab = () => {
               <Button 
                 className="bg-[#E17726] hover:bg-[#c9651e] text-white"
                 onClick={() => {
+                  const formData = new FormData();
+                  formData.append('user', 'DOC003'); // Placeholder for user ID
+                  formData.append('license_number', 'MED789012');
+                  formData.append('qualification', 'MBBS, MD');
+                  formData.append('specialization', 'General Medicine');
+                  formData.append('consultation_fee', '800');
+                  formData.append('online_consultation_fee', '600');
+                  formData.append('experience_years', '5');
+                  formData.append('clinic_name', 'General Clinic');
+                  formData.append('clinic_address', '456 Health Street, City, State - 123456');
+                  formData.append('bio', 'Experienced general physician');
+                  formData.append('languages_spoken', JSON.stringify(['English', 'Hindi']));
+                  formData.append('consultation_duration', '30');
+                  formData.append('is_online_consultation_available', 'true');
+                  formData.append('is_verified', 'false');
+                  formData.append('is_active', 'true');
+                  formData.append('is_accepting_patients', 'false');
+                  if (profileImage) {
+                    formData.append('profile_picture', profileImage);
+                  }
                   handleCreateProfile({
                     user: 'DOC003',
                     license_number: 'MED789012',
