@@ -657,7 +657,7 @@ const DoctorManagementTab = () => {
 
       {/* Create Account Dialog */}
       <Dialog open={showCreateAccountDialog} onOpenChange={setShowCreateAccountDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md !fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900">
               Step 1: Create Doctor Account
@@ -701,7 +701,7 @@ const DoctorManagementTab = () => {
 
       {/* Create Profile Dialog */}
       <Dialog open={showCreateProfileDialog} onOpenChange={setShowCreateProfileDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto !fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900">
               Step 2: Create Doctor Profile
@@ -827,7 +827,7 @@ const DoctorManagementTab = () => {
 
       {/* Verify Doctor Dialog */}
       <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md !fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900">
               Step 3: Verify Doctor Profile

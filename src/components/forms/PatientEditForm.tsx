@@ -24,7 +24,6 @@ import {
   MapPin, 
   Heart, 
   FileText, 
-  Shield, 
   Languages,
   Plus,
   X,
@@ -76,9 +75,6 @@ const PatientEditForm: React.FC<PatientEditFormProps> = ({
     allergies: '',
     chronic_conditions: [],
     current_medications: [],
-    insurance_provider: '',
-    insurance_policy_number: '',
-    insurance_expiry: '',
     preferred_language: 'english'
   });
 
@@ -271,7 +267,7 @@ const PatientEditForm: React.FC<PatientEditFormProps> = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic" className="flex items-center gap-2">
               <User className="w-4 h-4" />
               Basic Info
@@ -283,10 +279,6 @@ const PatientEditForm: React.FC<PatientEditFormProps> = ({
             <TabsTrigger value="address" className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
               Address
-            </TabsTrigger>
-            <TabsTrigger value="insurance" className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Insurance
             </TabsTrigger>
           </TabsList>
 
@@ -635,57 +627,7 @@ const PatientEditForm: React.FC<PatientEditFormProps> = ({
             </Card>
           </TabsContent>
 
-          <TabsContent value="insurance" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Insurance Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="insurance_provider" className="text-sm font-medium">
-                      Insurance Provider
-                    </Label>
-                    <Input
-                      id="insurance_provider"
-                      value={profileData.insurance_provider}
-                      onChange={(e) => handleProfileDataChange('insurance_provider', e.target.value)}
-                      placeholder="e.g., Max Bupa, Star Health"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="insurance_policy_number" className="text-sm font-medium">
-                      Policy Number
-                    </Label>
-                    <Input
-                      id="insurance_policy_number"
-                      value={profileData.insurance_policy_number}
-                      onChange={(e) => handleProfileDataChange('insurance_policy_number', e.target.value)}
-                      placeholder="Enter policy number"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <Label htmlFor="insurance_expiry" className="text-sm font-medium">
-                    Insurance Expiry Date
-                  </Label>
-                  <Input
-                    id="insurance_expiry"
-                    type="date"
-                    value={profileData.insurance_expiry}
-                    onChange={(e) => handleProfileDataChange('insurance_expiry', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-3 pt-6 border-t">

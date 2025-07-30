@@ -6,7 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // API base URL utility
-export const API_BASE_URL = 'https://sushrusaeclinic.com';
+export const API_BASE_URL = 'http://127.0.0.1:8000';
+// export const API_BASE_URL = 'https://sushrusaeclinic.com';  
 
 import axios from 'axios';
 export const api = axios.create({
@@ -44,9 +45,12 @@ api.interceptors.response.use(
           }
         }
       } catch (refreshError) {
-        // Refresh failed, logout
+        // Refresh failed, logout but don't reload page
         localStorage.clear();
-        window.location.reload();
+        // Instead of reloading, redirect to login page
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

@@ -29,7 +29,7 @@ import PrescriptionWriter from '@/components/workflow/PrescriptionWriter';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation } from '@/lib/api';
+import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation, DoctorProfile } from '@/lib/api';
 
 // Define Slot type
 interface Slot {
@@ -64,15 +64,33 @@ const DoctorDashboard = () => {
   const [loadingStats, setLoadingStats] = useState(true);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loadingConsultations, setLoadingConsultations] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | DoctorProfile | null>(null);
   useEffect(() => {
     async function fetchProfile() {
       if (user && user.role === 'doctor') {
-        const data = await patientApi.getCurrentUserProfile();
-        setProfile(data);
+        setLoadingProfile(true);
+        try {
+          // Try to get doctor profile first, fallback to user profile
+          try {
+            const data = await doctorApi.getCurrentDoctorProfile();
+            setProfile(data);
+          } catch (doctorError) {
+            console.log('Doctor profile not found, trying user profile:', doctorError);
+            const data = await patientApi.getCurrentUserProfile();
+            setProfile(data);
+          }
+        } catch (error) {
+          console.error('Error fetching doctor profile:', error);
+          // Don't clear profile, keep previous data if available
+        } finally {
+          setLoadingProfile(false);
+        }
+      } else {
+        setLoadingProfile(false);
       }
     }
     fetchProfile();
@@ -83,6 +101,8 @@ const DoctorDashboard = () => {
       if (user && user.role === 'doctor') {
         patientApi.getCurrentUserProfile().then((data) => {
           setProfile(data);
+        }).catch((error) => {
+          console.error('Error fetching doctor profile on mount:', error);
         });
       }
     }
@@ -91,9 +111,15 @@ const DoctorDashboard = () => {
   useEffect(() => {
     async function fetchStats() {
       setLoadingStats(true);
-      const data = await doctorAnalyticsApi.getPerformanceStats();
-      setStats(data);
-      setLoadingStats(false);
+      try {
+        const data = await doctorAnalyticsApi.getPerformanceStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Error fetching doctor stats:', error);
+        // Don't set stats to null, keep previous data if available
+      } finally {
+        setLoadingStats(false);
+      }
     }
     fetchStats();
   }, []);
@@ -101,12 +127,61 @@ const DoctorDashboard = () => {
   useEffect(() => {
     async function fetchConsultations() {
       setLoadingConsultations(true);
-      const data = await doctorApi.getUpcomingConsultations();
-      setConsultations(data);
-      setLoadingConsultations(false);
+      try {
+        const data = await doctorApi.getUpcomingConsultations();
+        setConsultations(data);
+      } catch (error) {
+        console.error('Error fetching consultations:', error);
+        // Don't clear consultations, keep previous data if available
+      } finally {
+        setLoadingConsultations(false);
+      }
     }
     fetchConsultations();
   }, []);
+
+  // Helper function to get display name from profile
+  const getDisplayName = (profile: UserProfile | DoctorProfile | null): string => {
+    if (!profile) return 'Doctor';
+    
+    // Check if it's a DoctorProfile (has user_name) or UserProfile (has name)
+    const name = 'user_name' in profile ? profile.user_name : profile.name;
+    return name && name.startsWith('Dr.') ? name : `Dr. ${name || 'Doctor'}`;
+  };
+
+  // Helper function to get profile details
+  const getProfileDetails = (profile: UserProfile | DoctorProfile | null): string => {
+    if (!profile) return '';
+    
+    if ('user_name' in profile) {
+      // DoctorProfile
+      return `${profile.bio || ''}${profile.clinic_address ? ' • ' + profile.clinic_address : ''}`;
+    } else {
+      // UserProfile
+      return `${profile.medical_history || ''}${profile.street ? ' • ' + profile.street : ''}`;
+    }
+  };
+
+  // Helper function to get meeting link
+  const getMeetingLink = (profile: UserProfile | DoctorProfile | null): string | null => {
+    if (!profile) return null;
+    
+    // For now, return null as neither interface has meeting_link
+    // This can be extended when meeting_link is added to the interfaces
+    return null;
+  };
+
+  // Show loading state if profile is still loading
+  if (loadingProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#E17726] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading doctor dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Dynamic stats for today
   const todayStats = [
@@ -288,17 +363,17 @@ const DoctorDashboard = () => {
               />
               <div>
                 <h1 className="text-xl font-bold text-midnight">
-                  {profile ? `${profile.name.startsWith('Dr.') ? profile.name : `Dr. ${profile.name}`}` : 'Doctor'}
+                  {getDisplayName(profile)}
                 </h1>
                 <p className="text-sm text-gray-600">
-                  {profile ? `${profile.medical_history || ''}${profile.street ? ' • ' + profile.street : ''}` : ''}
+                  {getProfileDetails(profile)}
                 </p>
               </div>
               <Badge className="bg-green-100 text-green-800">
                 Available
               </Badge>
-              {profile && profile.meeting_link && (
-                <a href={profile.meeting_link} target="_blank" rel="noopener noreferrer">
+              {getMeetingLink(profile) && (
+                <a href={getMeetingLink(profile)!} target="_blank" rel="noopener noreferrer">
                   <Button className="ml-4 bg-blue-600 hover:bg-blue-700 text-white" size="sm">
                     <Video className="w-4 h-4 mr-2" />
                     Join My Room

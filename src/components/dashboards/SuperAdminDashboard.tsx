@@ -48,7 +48,8 @@ import {
   MoreVertical,
   Languages,
   Upload,
-  Save
+  Save,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { superAdminApi, UserProfile, EClinic, CreateEClinicData } from '@/lib/api';
@@ -78,6 +79,12 @@ import { doctorApi, CreateDoctorUserData, CreateDoctorProfileData, DoctorProfile
 import ManageAdmins from './ManageAdmins';
 import DoctorViewModal from './DoctorViewModal';
 import DoctorEditModal from './DoctorEditModal';
+import EClinicManagement from './EClinicManagement';
+import AnalyticsDashboard from './AnalyticsDashboard';
+import SuperAdminOverview from './SuperAdminOverview';
+import SuperAdminAnalytics from './SuperAdminAnalytics';
+
+
 
 // Doctors Management Component
 const DoctorsManagement = () => {
@@ -115,172 +122,217 @@ const DoctorsManagement = () => {
     consultation_duration: '30',
     is_online_consultation_available: true,
     is_active: true,
+    date_of_birth: '',
+    date_of_anniversary: '',
   });
 
-  // Add state for profile image
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
-
-  // Doctor stats
-  const [doctorStats, setDoctorStats] = useState([
-    { label: 'Total Doctors', value: '0', change: '+0%', icon: Users, color: 'text-[#E17726]' },
-    { label: 'Active Doctors', value: '0', change: '+0%', icon: Activity, color: 'text-green-600' },
-    { label: 'New This Month', value: '0', change: '+0%', icon: Plus, color: 'text-blue-600' },
-    { label: 'Avg Rating', value: '0/5', change: '+0', icon: Star, color: 'text-yellow-600' }
-  ]);
-
-  // Handler for profile image change
-  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setProfileImage(file);
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setProfileImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setProfileImagePreview(null);
-    }
-  };
-
-  // Fetch doctors list
-  const fetchDoctors = async () => {
-    setLoading(true);
-    try {
-      const data = await doctorApi.getDoctors({ 
-        is_active: filters.is_active, 
-        search: searchTerm,
-        is_verified: filters.is_verified,
-        specialization: filters.specialization
-      });
-      setDoctors(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to load doctors', variant: 'destructive' });
-      setDoctors([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     fetchDoctors();
   }, [searchTerm, filters]);
 
-  // Enhanced validation helper
+  const fetchDoctors = async () => {
+    setLoading(true);
+    try {
+      const response = await doctorApi.getDoctors({
+        is_active: filters.is_active, 
+        search: searchTerm,
+        is_verified: filters.is_verified,
+        specialization: filters.specialization
+      });
+      setDoctors(response);
+    } catch (error) {
+      console.error('Failed to fetch doctors:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch doctors",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validateDoctorForm = () => {
-    const errors: string[] = [];
-    
-    // Required field validation
-    if (!doctorForm.name.trim()) errors.push('Full name is required');
-    if (!doctorForm.phone.trim()) errors.push('Phone number is required');
-    if (!doctorForm.license_number.trim()) errors.push('License number is required');
-    if (!doctorForm.qualification.trim()) errors.push('Qualification is required');
-    if (!doctorForm.specialization) errors.push('Specialization is required');
-    
-    // Phone number validation
+    if (!doctorForm.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Doctor name is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!doctorForm.phone.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Phone number is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!doctorForm.license_number.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "License number is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!doctorForm.qualification.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Qualification is required",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!doctorForm.specialization) {
+      toast({
+        title: "Validation Error",
+        description: "Specialization is required",
+        variant: "destructive",
+      });
+      return false;
+    }
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     if (!phoneRegex.test(doctorForm.phone.replace(/\s/g, ''))) {
-      errors.push('Please enter a valid phone number');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid phone number",
+        variant: "destructive",
+      });
+      return false;
     }
-    
-    // Email validation
     if (doctorForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(doctorForm.email)) {
-      errors.push('Please enter a valid email address');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return false;
     }
-    
-    // Numeric field validation
     const consultationFee = parseFloat(doctorForm.consultation_fee);
     const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
     const experienceYears = parseInt(doctorForm.experience_years);
     const consultationDuration = parseInt(doctorForm.consultation_duration);
     
     if (isNaN(consultationFee) || consultationFee < 0) {
-      errors.push('Please enter a valid consultation fee');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid consultation fee",
+        variant: "destructive",
+      });
+      return false;
     }
     
     if (isNaN(onlineConsultationFee) || onlineConsultationFee < 0) {
-      errors.push('Please enter a valid online consultation fee');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid online consultation fee",
+        variant: "destructive",
+      });
+      return false;
     }
     
     if (isNaN(experienceYears) || experienceYears < 0 || experienceYears > 50) {
-      errors.push('Please enter a valid experience (0-50 years)');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid experience (0-50 years)",
+        variant: "destructive",
+      });
+      return false;
     }
     
     if (isNaN(consultationDuration) || consultationDuration < 15 || consultationDuration > 120) {
-      errors.push('Please enter a valid consultation duration (15-120 minutes)');
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid consultation duration (15-120 minutes)",
+        variant: "destructive",
+      });
+      return false;
     }
-    
-    return errors;
+    return true;
   };
 
-  // Enhanced form submission with validation
   const handleFormSubmit = async () => {
-    const validationErrors = validateDoctorForm();
-    
-    if (validationErrors.length > 0) {
-      toast({ 
-        title: 'Validation Error', 
-        description: validationErrors.join(', '), 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    
+    if (!validateDoctorForm()) return;
+
+    setLoading(true);
+    try {
     if (editingDoctor) {
       await handleUpdateDoctor();
     } else {
       await handleCreateDoctor();
+      }
+    } catch (error) {
+      console.error('Failed to submit doctor form:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Create doctor
   const handleCreateDoctor = async () => {
-    setLoading(true);
     try {
       const consultationFee = parseFloat(doctorForm.consultation_fee);
       const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
       const experienceYears = parseInt(doctorForm.experience_years);
       const consultationDuration = parseInt(doctorForm.consultation_duration);
 
-      const createData = {
-        name: doctorForm.name.trim(),
-        phone: doctorForm.phone.trim(),
-        email: doctorForm.email.trim() || undefined,
-        license_number: doctorForm.license_number.trim(),
-        qualification: doctorForm.qualification.trim(),
-        specialization: doctorForm.specialization,
-        sub_specialization: doctorForm.sub_specialization.trim() || undefined,
-        consultation_fee: consultationFee,
-        online_consultation_fee: onlineConsultationFee,
-        experience_years: experienceYears,
-        clinic_name: doctorForm.clinic_name.trim() || undefined,
-        clinic_address: doctorForm.clinic_address.trim() || undefined,
-        bio: doctorForm.bio.trim() || undefined,
-        languages_spoken: doctorForm.languages_spoken.filter(lang => lang.trim() !== ''),
-        consultation_duration: consultationDuration,
-        is_online_consultation_available: doctorForm.is_online_consultation_available,
-        is_active: doctorForm.is_active,
-      };
+      const formData = new FormData();
+      formData.append('name', doctorForm.name.trim());
+      formData.append('phone', doctorForm.phone.trim());
+      if (doctorForm.email.trim()) formData.append('email', doctorForm.email.trim());
+      formData.append('license_number', doctorForm.license_number.trim());
+      formData.append('qualification', doctorForm.qualification.trim());
+      formData.append('specialization', doctorForm.specialization);
+      if (doctorForm.sub_specialization.trim()) formData.append('sub_specialization', doctorForm.sub_specialization.trim());
+      formData.append('consultation_fee', consultationFee.toString());
+      formData.append('online_consultation_fee', onlineConsultationFee.toString());
+      formData.append('experience_years', experienceYears.toString());
+      if (doctorForm.clinic_name.trim()) formData.append('clinic_name', doctorForm.clinic_name.trim());
+      if (doctorForm.clinic_address.trim()) formData.append('clinic_address', doctorForm.clinic_address.trim());
+      if (doctorForm.bio.trim()) formData.append('bio', doctorForm.bio.trim());
+      formData.append('languages_spoken', JSON.stringify(doctorForm.languages_spoken.filter(lang => lang.trim() !== '')));
+      formData.append('consultation_duration', consultationDuration.toString());
+      formData.append('is_online_consultation_available', doctorForm.is_online_consultation_available.toString());
+      formData.append('is_active', doctorForm.is_active.toString());
+      if (doctorForm.date_of_birth) formData.append('date_of_birth', doctorForm.date_of_birth);
+      if (doctorForm.date_of_anniversary) formData.append('date_of_anniversary', doctorForm.date_of_anniversary);
 
-      const newDoctor = await doctorApi.createDoctor(createData);
-      setDoctors(prev => [...prev, newDoctor]);
+      const newDoctor = await doctorApi.createDoctor(formData);
+      setDoctors(prev => [newDoctor.doctor_profile, ...prev]);
+      
       toast({
-        title: 'Success',
-        description: `Doctor ${newDoctor.user_name} created successfully`
+        title: "Success",
+        description: "Doctor created successfully",
       });
+      
       resetForm();
       setShowAddForm(false);
     } catch (error) {
+      console.error('Failed to create doctor:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to create doctor',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to create doctor",
+        variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Load doctor for editing
   const loadDoctorForEdit = (doctor: DoctorProfile) => {
     setDoctorForm({
       name: doctor.user_name || '',
@@ -300,16 +352,16 @@ const DoctorsManagement = () => {
       consultation_duration: doctor.consultation_duration?.toString() || '30',
       is_online_consultation_available: doctor.is_online_consultation_available || true,
       is_active: doctor.is_active || true,
+      date_of_birth: doctor.date_of_birth || '',
+      date_of_anniversary: doctor.date_of_anniversary || '',
     });
     setEditingDoctor(doctor);
     setShowAddForm(true);
   };
 
-  // Update doctor
   const handleUpdateDoctor = async () => {
     if (!editingDoctor) return;
 
-    setLoading(true);
     try {
       const consultationFee = parseFloat(doctorForm.consultation_fee);
       const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
@@ -334,51 +386,56 @@ const DoctorsManagement = () => {
         consultation_duration: consultationDuration,
         is_online_consultation_available: doctorForm.is_online_consultation_available,
         is_active: doctorForm.is_active,
+        date_of_birth: doctorForm.date_of_birth || undefined,
+        date_of_anniversary: doctorForm.date_of_anniversary || undefined,
       };
 
       const updatedDoctor = await doctorApi.updateDoctor(editingDoctor.id.toString(), updateData);
-      setDoctors(prev => prev.map(doc => doc.id === editingDoctor.id ? updatedDoctor : doc));
+      setDoctors(prev => prev.map(doc => 
+        doc.id === editingDoctor.id ? updatedDoctor : doc
+      ));
+      
       toast({
-        title: 'Success',
-        description: `Doctor ${updatedDoctor.user_name} updated successfully`
+        title: "Success",
+        description: "Doctor updated successfully",
       });
+      
       resetForm();
-      setEditingDoctor(null);
       setShowAddForm(false);
+      setEditingDoctor(null);
     } catch (error) {
+      console.error('Failed to update doctor:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update doctor',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to update doctor",
+        variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Delete doctor
   const handleDeleteDoctor = async () => {
     if (!deletingDoctor) return;
 
     try {
       await doctorApi.deleteDoctor(deletingDoctor.id.toString());
       setDoctors(prev => prev.filter(doc => doc.id !== deletingDoctor.id));
+      
       toast({
-        title: 'Success',
-        description: `Doctor ${deletingDoctor.user_name} deleted successfully`
+        title: "Success",
+        description: "Doctor deleted successfully",
       });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete doctor',
-        variant: 'destructive'
-      });
-    } finally {
+      
       setDeletingDoctor(null);
+    } catch (error) {
+      console.error('Failed to delete doctor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete doctor",
+        variant: "destructive",
+      });
     }
   };
 
-  // Reset form
   const resetForm = () => {
     setDoctorForm({
       name: '',
@@ -398,66 +455,28 @@ const DoctorsManagement = () => {
       consultation_duration: '30',
       is_online_consultation_available: true,
       is_active: true,
+      date_of_birth: '',
+      date_of_anniversary: '',
     });
     setProfileImage(null);
     setProfileImagePreview(null);
   };
 
-  // Fetch doctor stats
   const fetchDoctorStats = async () => {
     try {
       const stats = await doctorApi.getDoctorStats();
-      setDoctorStats([
-        { label: 'Total Doctors', value: stats.total_doctors.toString(), change: '+12%', icon: Users, color: 'text-[#E17726]' },
-        { label: 'Active Doctors', value: stats.active_doctors.toString(), change: '+8%', icon: Activity, color: 'text-green-600' },
-        { label: 'New This Month', value: stats.new_this_month.toString(), change: '+25%', icon: Plus, color: 'text-blue-600' },
-        { label: 'Avg Rating', value: stats.avg_rating, change: '+0.2', icon: Star, color: 'text-yellow-600' }
-      ]);
+      return stats;
     } catch (error) {
       console.error('Failed to fetch doctor stats:', error);
+      return null;
     }
   };
-
-  useEffect(() => {
-    fetchDoctorStats();
-  }, []);
-
-  // Filter doctors
-  const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = doctor.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.license_number.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesActiveFilter = filters.is_active === undefined || doctor.is_active === filters.is_active;
-    const matchesVerifiedFilter = filters.is_verified === undefined || doctor.is_verified === filters.is_verified;
-    const matchesSpecializationFilter = !filters.specialization || 
-                                       doctor.specialization.toLowerCase().includes(filters.specialization.toLowerCase());
-
-    return matchesSearch && matchesActiveFilter && matchesVerifiedFilter && matchesSpecializationFilter;
-  });
 
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {doctorStats.map((stat, index) => (
-          <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
-                  <p className="text-2xl font-bold text-midnight">{stat.value}</p>
-                  <p className="text-sm text-green-600 font-medium mt-1">
-                    {stat.change} from last month
-                  </p>
-                </div>
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color === 'text-[#E17726]' ? 'from-[#E17726]/10 to-[#E17726]/5' : 'from-blue-500/10 to-blue-500/5'} flex items-center justify-center`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {/* This section was removed as per the new_code, as the stats are now fetched by EClinicManagement */}
       </div>
 
       {/* Search and Add Section */}
@@ -554,7 +573,7 @@ const DoctorsManagement = () => {
       <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Doctors ({filteredDoctors.length})</span>
+            <span>Doctors ({doctors.length})</span>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           </CardTitle>
         </CardHeader>
@@ -563,7 +582,7 @@ const DoctorsManagement = () => {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-[#E17726]" />
             </div>
-          ) : filteredDoctors.length === 0 ? (
+          ) : doctors.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p>No doctors found</p>
@@ -571,7 +590,7 @@ const DoctorsManagement = () => {
           ) : (
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
-                {filteredDoctors.map((doctor) => (
+                {doctors.map((doctor) => (
                   <div
                     key={doctor.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -683,15 +702,15 @@ const DoctorsManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Doctor Form */}
-      {showAddForm && (
-        <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+      {/* Add/Edit Doctor Form Dialog */}
+      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5 text-[#E17726]" />
               {editingDoctor ? 'Edit Doctor' : 'Add New Doctor'}
-            </CardTitle>
-          </CardHeader>
+            </DialogTitle>
+          </DialogHeader>
           <CardContent>
             <div className="space-y-6">
               {/* Profile Image Section */}
@@ -840,6 +859,28 @@ const DoctorsManagement = () => {
                 </div>
               </div>
 
+              {/* Date Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="date_of_birth">Date of Birth</Label>
+                  <Input
+                    id="date_of_birth"
+                    type="date"
+                    value={doctorForm.date_of_birth}
+                    onChange={(e) => setDoctorForm({...doctorForm, date_of_birth: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="date_of_anniversary">Date of Anniversary</Label>
+                  <Input
+                    id="date_of_anniversary"
+                    type="date"
+                    value={doctorForm.date_of_anniversary}
+                    onChange={(e) => setDoctorForm({...doctorForm, date_of_anniversary: e.target.value})}
+                  />
+                </div>
+              </div>
+
               {/* Clinic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -962,8 +1003,8 @@ const DoctorsManagement = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* View Doctor Modal */}
       <DoctorViewModal
@@ -1026,7 +1067,7 @@ const DoctorsManagement = () => {
 
 const SuperAdminDashboard = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('doctors');
+  const [activeTab, setActiveTab] = useState('overview');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -1045,6 +1086,18 @@ const SuperAdminDashboard = () => {
     fetchUserProfile();
   }, []);
 
+  // Listen for tab change events from quick actions
+  useEffect(() => {
+    const handleTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('changeTab', handleTabChange as EventListener);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange as EventListener);
+    };
+  }, []);
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },
@@ -1055,16 +1108,18 @@ const SuperAdminDashboard = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'overview':
+        return <SuperAdminOverview />;
       case 'doctors':
         return <DoctorsManagement />;
       case 'admins':
         return <ManageAdmins />;
       case 'clinics':
-        return <ManageAdmins />;
+        return <EClinicManagement />;
       case 'analytics':
-        return <div>Analytics Content</div>;
+        return <SuperAdminAnalytics />;
       default:
-        return <div>Overview Content</div>;
+        return <SuperAdminOverview />;
     }
   };
 

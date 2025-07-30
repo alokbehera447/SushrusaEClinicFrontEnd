@@ -290,13 +290,7 @@ export const patientApi = {
     return response.data.data.results;
   },
 
-  // Get patient notes
-  getPatientNotes: async (patientId: string): Promise<PatientNote[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<PatientNote>>>(
-      `/api/patients/${patientId}/notes/`
-    );
-    return response.data.data.results;
-  },
+
 
   // Update user profile
   updateUserProfile: async (profileData: Partial<UserProfile>): Promise<UserProfile> => {
@@ -364,26 +358,22 @@ export interface PatientStats {
 export const adminPatientApi = {
   // Create patient account and profile in one call (Admin only)
   createPatient: async (data: CreatePatientUserData & CreatePatientProfileData): Promise<{
-    patient_profile: PatientProfile;
-    user_account: {
+    user_id: string;
+    phone: string;
+    name: string;
+    email: string;
+    role: string;
+    password: string;
+    patient_profile: string | null;
+  }> => {
+    const response = await api.post<ApiResponse<{
       user_id: string;
       phone: string;
       name: string;
       email: string;
       role: string;
       password: string;
-    };
-  }> => {
-    const response = await api.post<ApiResponse<{
-      patient_profile: PatientProfile;
-      user_account: {
-        user_id: string;
-        phone: string;
-        name: string;
-        email: string;
-        role: string;
-        password: string;
-      };
+      patient_profile: string | null;
     }>>('/api/auth/admin/users/', {
       ...data,
       role: 'patient',
@@ -557,7 +547,7 @@ export const adminPatientApi = {
     page_size?: number;
     record_type?: string;
     search?: string;
-  }): Promise<{ results: MedicalRecord[]; count: number }> => {
+  }): Promise<MedicalRecord[]> => {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -567,8 +557,55 @@ export const adminPatientApi = {
       });
     }
     
-    const response = await api.get<ApiResponse<{ results: MedicalRecord[]; count: number }>>(
+    const response = await api.get<ApiResponse<MedicalRecord[]>>(
       `/api/patients/${patientId}/medical-records/?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+
+
+  // Get patient notes (Admin only)
+  getPatientNotes: async (patientId: string, params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+  }): Promise<PatientNote[]> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const response = await api.get<ApiResponse<PatientNote[]>>(
+      `/api/patients/${patientId}/notes/?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Delete medical record (Admin only)
+  deleteMedicalRecord: async (patientId: string, recordId: number): Promise<{ medical_record_id: string; status: string }> => {
+    const response = await api.delete<ApiResponse<{ medical_record_id: string; status: string }>>(
+      `/api/patients/${patientId}/medical-records/${recordId}/`
+    );
+    return response.data.data;
+  },
+
+  // Delete patient document (Admin only)
+  deletePatientDocument: async (patientId: string, documentId: number): Promise<{ document_id: string; status: string }> => {
+    const response = await api.delete<ApiResponse<{ document_id: string; status: string }>>(
+      `/api/patients/${patientId}/documents/${documentId}/`
+    );
+    return response.data.data;
+  },
+
+  // Delete patient note (Admin only)
+  deletePatientNote: async (patientId: string, noteId: number): Promise<{ note_id: string; status: string }> => {
+    const response = await api.delete<ApiResponse<{ note_id: string; status: string }>>(
+      `/api/patients/${patientId}/notes/${noteId}/`
     );
     return response.data.data;
   },
@@ -579,7 +616,7 @@ export const adminPatientApi = {
     page_size?: number;
     document_type?: string;
     is_verified?: boolean;
-  }): Promise<{ results: PatientDocument[]; count: number }> => {
+  }): Promise<PatientDocument[]> => {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -589,32 +626,12 @@ export const adminPatientApi = {
       });
     }
     
-    const response = await api.get<ApiResponse<{ results: PatientDocument[]; count: number }>>(
+    const response = await api.get<ApiResponse<PatientDocument[]>>(
       `/api/patients/${patientId}/documents/?${queryParams.toString()}`
     );
     return response.data.data;
   },
 
-  // Get patient notes (Admin only)
-  getPatientNotes: async (patientId: string, params?: {
-    page?: number;
-    page_size?: number;
-    is_private?: boolean;
-  }): Promise<{ results: PatientNote[]; count: number }> => {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const response = await api.get<ApiResponse<{ results: PatientNote[]; count: number }>>(
-      `/api/patients/${patientId}/notes/?${queryParams.toString()}`
-    );
-    return response.data.data;
-  }
 };
 
 // User Session interface
@@ -627,8 +644,189 @@ export interface UserSession {
   updated_at: string;
 }
 
+export interface ClinicAnalytics {
+  overview: {
+    total_clinics: number;
+    active_clinics: number;
+    verified_clinics: number;
+    online_clinics: number;
+    verification_rate: number;
+    activation_rate: number;
+    online_rate: number;
+  };
+  growth: {
+    new_clinics_7d: number;
+    new_clinics_30d: number;
+    new_clinics_90d: number;
+    growth_rate_7d: number;
+    growth_rate_30d: number;
+    growth_rate_90d: number;
+  };
+  geographic: {
+    cities: Array<{ city: string; count: number }>;
+    states: Array<{ state: string; count: number }>;
+  };
+  specializations: {
+    top_specialties: Array<{ specialty: string; count: number }>;
+    total_specialties: number;
+  };
+  trends: {
+    monthly_growth: Array<{ month: string; count: number; period: string }>;
+    last_updated: string;
+  };
+  recent_activity: Array<{
+    id: string;
+    name: string;
+    city: string;
+    state: string;
+    created_at: string;
+    is_verified: boolean;
+    is_active: boolean;
+  }>;
+}
+
+// SuperAdmin Analytics Interfaces
+export interface SuperAdminOverviewStats {
+  total_clinics: { value: number; change: string };
+  active_clinics: { value: number; change: string };
+  total_doctors: { value: number; change: string };
+  active_doctors: { value: number; change: string };
+  total_admins: { value: number; change: string };
+  total_patients: { value: number; change: string };
+  total_consultations: { value: number; change: string };
+  total_revenue: { value: number; change: string };
+}
+
+export interface SuperAdminAnalytics {
+  overview: SuperAdminOverviewStats;
+  revenue_analytics: {
+    total_revenue: number;
+    revenue_breakdown: Record<string, number>;
+    growth_rate: number;
+    top_revenue_sources: Array<{
+      doctor_name: string;
+      total_revenue: number;
+    }>;
+  };
+  consultation_analytics: {
+    total_consultations: number;
+    completed_consultations: number;
+    cancelled_consultations: number;
+    average_duration: number;
+    consultation_types: Record<string, number>;
+    peak_hours: Array<{ hour: number; count: number }>;
+    doctor_performance: Array<{
+      doctor_name: string;
+      total_consultations: number;
+      avg_rating: number;
+    }>;
+  };
+  patient_analytics: {
+    total_patients: number;
+    new_patients_this_month: number;
+    active_patients: number;
+    gender_distribution: Record<string, number>;
+    age_distribution: Record<string, number>;
+    top_cities: Array<{ city: string; count: number }>;
+  };
+  clinic_analytics: {
+    total_clinics: number;
+    active_clinics: number;
+    verified_clinics: number;
+    top_clinics: Array<{
+      id: string;
+      name: string;
+      consultations: number;
+      revenue: number;
+    }>;
+  };
+  doctor_analytics: {
+    total_doctors: number;
+    active_doctors: number;
+    verified_doctors: number;
+    top_doctors: Array<{
+      doctor_name: string;
+      consultations: number;
+      revenue: number;
+      rating: number;
+    }>;
+  };
+}
+
 // SuperAdmin API service functions
 export const superAdminApi = {
+  // Analytics
+  getAnalytics: async (): Promise<ClinicAnalytics> => {
+    const response = await api.get<ApiResponse<ClinicAnalytics>>('/api/eclinic/analytics/');
+    return response.data.data;
+  },
+
+  // Get SuperAdmin overview statistics
+  getOverviewStats: async (): Promise<SuperAdminOverviewStats> => {
+    const response = await api.get<ApiResponse<SuperAdminOverviewStats>>('/api/analytics/superadmin/overview/');
+    return response.data.data;
+  },
+
+  // Get comprehensive SuperAdmin analytics
+  getComprehensiveAnalytics: async (): Promise<SuperAdminAnalytics> => {
+    const response = await api.get<ApiResponse<SuperAdminAnalytics>>('/api/analytics/superadmin/comprehensive/');
+    return response.data.data;
+  },
+
+  // Get revenue analytics
+  getRevenueAnalytics: async (): Promise<SuperAdminAnalytics['revenue_analytics']> => {
+    const response = await api.get<ApiResponse<SuperAdminAnalytics['revenue_analytics']>>('/api/analytics/superadmin/revenue/');
+    return response.data.data;
+  },
+
+  // Get consultation analytics
+  getConsultationAnalytics: async (): Promise<SuperAdminAnalytics['consultation_analytics']> => {
+    const response = await api.get<ApiResponse<SuperAdminAnalytics['consultation_analytics']>>('/api/analytics/superadmin/consultations/');
+    return response.data.data;
+  },
+
+  // Get patient analytics
+  getPatientAnalytics: async (): Promise<SuperAdminAnalytics['patient_analytics']> => {
+    const response = await api.get<ApiResponse<SuperAdminAnalytics['patient_analytics']>>('/api/analytics/superadmin/patients/');
+    return response.data.data;
+  },
+
+  // Get clinic analytics
+  getClinicAnalytics: async (): Promise<SuperAdminAnalytics['clinic_analytics']> => {
+    const response = await api.get<ApiResponse<SuperAdminAnalytics['clinic_analytics']>>('/api/analytics/superadmin/clinics/');
+    return response.data.data;
+  },
+
+  // Get doctor analytics
+  getDoctorAnalytics: async (): Promise<SuperAdminAnalytics['doctor_analytics']> => {
+    const response = await api.get<ApiResponse<SuperAdminAnalytics['doctor_analytics']>>('/api/analytics/superadmin/doctors/');
+    return response.data.data;
+  },
+
+  // Get real-time metrics
+  getRealTimeMetrics: async (): Promise<{
+    active_users: number;
+    ongoing_consultations: number;
+    pending_payments: number;
+    system_status: string;
+    api_calls_per_minute: number;
+    error_rate_last_hour: number;
+    database_connections: number;
+    queue_size: number;
+  }> => {
+    const response = await api.get<ApiResponse<{
+      active_users: number;
+      ongoing_consultations: number;
+      pending_payments: number;
+      system_status: string;
+      api_calls_per_minute: number;
+      error_rate_last_hour: number;
+      database_connections: number;
+      queue_size: number;
+    }>>('/api/analytics/realtime/');
+    return response.data.data;
+  },
+
   // Get current SuperAdmin profile
   getCurrentUserProfile: async (): Promise<UserProfile> => {
     const response = await api.get<ApiResponse<UserProfile>>('/api/auth/profile/');
@@ -709,14 +907,35 @@ export const superAdminApi = {
     const config = clinicData instanceof FormData ? {
       headers: { 'Content-Type': 'multipart/form-data' }
     } : {};
-    const response = await api.post<ApiResponse<EClinic>>('/api/eclinic/', clinicData, config);
+    const response = await api.post('/api/eclinic/', clinicData, config);
+    console.log('Raw API Response:', response);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
     return response.data.data;
+    } else if (response.data) {
+      return response.data;
+    } else {
+      throw new Error('Invalid response format from API');
+    }
   },
 
   // Update e-clinic
   updateEClinic: async (clinicId: string, clinicData: Partial<CreateEClinicData> | FormData): Promise<EClinic> => {
-    const response = await api.put<ApiResponse<EClinic>>(`/api/eclinic/${clinicId}/`, clinicData);
+    const config = clinicData instanceof FormData ? {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    } : {};
+    const response = await api.put(`/api/eclinic/${clinicId}/`, clinicData, config);
+    console.log('Raw API Response:', response);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
     return response.data.data;
+    } else if (response.data) {
+      return response.data;
+    } else {
+      throw new Error('Invalid response format from API');
+    }
   },
 
   // Delete e-clinic
@@ -728,21 +947,6 @@ export const superAdminApi = {
   getAdminUsers: async (): Promise<UserProfile[]> => {
     const response = await api.get('/api/auth/admin/users/?type=admins');
     return response.data.data || [];
-  },
-
-  // Get comprehensive platform overview statistics
-  getOverviewStats: async (): Promise<{
-    total_clinics: { value: number; change: string };
-    active_clinics: { value: number; change: string };
-    total_doctors: { value: number; change: string };
-    active_doctors: { value: number; change: string };
-    total_admins: { value: number; change: string };
-    total_patients: { value: number; change: string };
-    total_consultations: { value: number; change: string };
-    total_revenue: { value: number; change: string };
-  }> => {
-    const response = await api.get('/api/analytics/superadmin/overview/');
-    return response.data.data;
   }
 };
 
@@ -770,30 +974,152 @@ export const adminAnalyticsApi = {
 export const adminConsultationApi = {
   getTodaysConsultations: async (): Promise<Consultation[]> => {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(`/api/consultations/?scheduled_date=${today}`);
-    return response.data.data.results;
+    const response = await api.get(`/api/consultations/?scheduled_date=${today}`);
+    
+    // Handle different response structures
+    if (response.data && response.data.data && response.data.data.results) {
+      return response.data.data.results;
+    } else if (response.data && response.data.results) {
+      return response.data.results;
+    } else if (Array.isArray(response.data)) {
+      return response.data;
+    } else {
+      console.warn('Unexpected response structure for getTodaysConsultations:', response.data);
+      return [];
+    }
   },
+  
   // Fetch all consultations (paginated)
-  getAllConsultations: async (params?: { page?: number; page_size?: number; search?: string; status?: string; ordering?: string }): Promise<PaginatedResponse<Consultation>> => {
+  getAllConsultations: async (params?: { 
+    page?: number; 
+    page_size?: number; 
+    search?: string; 
+    status?: string; 
+    consultation_type?: string;
+    scheduled_date?: string;
+    ordering?: string 
+  }): Promise<PaginatedResponse<Consultation>> => {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
+        if (value !== undefined && value !== null && (typeof value !== 'string' || value !== '')) {
           queryParams.append(key, value.toString());
         }
       });
     }
     const response = await api.get(`/api/consultations/?${queryParams.toString()}`);
-    // Handle both wrapped and unwrapped paginated responses
-    let paginated;
-    if (response.data && response.data.data && typeof response.data.data === 'object' && 'results' in response.data.data) {
-      paginated = response.data.data;
+    
+    // Handle the specific response structure from the API
+    if (response.data && response.data.results && response.data.results.data && Array.isArray(response.data.results.data)) {
+      // Structure: { count, next, previous, results: { success, data: [...], message, timestamp } }
+      return {
+        count: response.data.count,
+        next: response.data.next,
+        previous: response.data.previous,
+        results: response.data.results.data
+      };
+    } else if (response.data && response.data.data && typeof response.data.data === 'object' && 'results' in response.data.data) {
+      return response.data.data;
     } else if (response.data && 'results' in response.data) {
-      paginated = response.data;
+      return response.data;
+    } else if (Array.isArray(response.data)) {
+      // If response is a direct array, wrap it in paginated format
+      return {
+        count: response.data.length,
+        next: null,
+        previous: null,
+        results: response.data
+      };
     } else {
-      throw new Error('Unexpected consultations API response structure');
+      console.warn('Unexpected response structure for getAllConsultations:', response.data);
+      return {
+        count: 0,
+        next: null,
+        previous: null,
+        results: []
+      };
     }
-    return paginated;
+  },
+
+  // Get single consultation
+  getConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await api.get<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`);
+    return response.data.data;
+  },
+
+  // Create new consultation
+  createConsultation: async (consultationData: {
+    patient: string | number;
+    doctor: string | number;
+    consultation_type: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    duration: number | string;
+    chief_complaint: string;
+    symptoms?: string;
+    consultation_fee?: number | string;
+  }): Promise<Consultation> => {
+    const response = await api.post<ApiResponse<Consultation>>('/api/consultations/', consultationData);
+    return response.data.data;
+  },
+
+  // Update consultation
+  updateConsultation: async (consultationId: string, consultationData: Partial<{
+    patient: string | number;
+    doctor: string | number;
+    consultation_type: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    duration: number | string;
+    chief_complaint: string;
+    symptoms: string;
+    consultation_fee: number | string;
+    status: string;
+  }>): Promise<Consultation> => {
+    const response = await api.put<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
+    return response.data.data;
+  },
+
+  // Delete consultation
+  deleteConsultation: async (consultationId: string): Promise<void> => {
+    await api.delete(`/api/consultations/${consultationId}/`);
+  },
+
+  // Cancel consultation
+  cancelConsultation: async (consultationId: string, reason?: string): Promise<Consultation> => {
+    const response = await api.post<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/cancel/`, { reason });
+    return response.data.data;
+  },
+
+  // Reschedule consultation
+  rescheduleConsultation: async (consultationId: string, newDate: string, newTime: string): Promise<Consultation> => {
+    const response = await api.post<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/reschedule/`, {
+      scheduled_date: newDate,
+      scheduled_time: newTime
+    });
+    return response.data.data;
+  },
+
+  // Get consultation statistics
+  getConsultationStats: async (): Promise<{
+    total_consultations: number;
+    today_consultations: number;
+    completed_consultations: number;
+    pending_consultations: number;
+    cancelled_consultations: number;
+    total_revenue: number;
+    pending_revenue: number;
+  }> => {
+    const response = await api.get<ApiResponse<{
+      total_consultations: number;
+      today_consultations: number;
+      completed_consultations: number;
+      pending_consultations: number;
+      cancelled_consultations: number;
+      total_revenue: number;
+      pending_revenue: number;
+    }>>('/api/consultations/stats/');
+    return response.data.data;
   },
 };
 
@@ -853,6 +1179,8 @@ export interface CreateDoctorProfileData {
   clinic_name?: string;
   clinic_address?: string;
   is_active?: boolean;
+  date_of_birth?: string;
+  date_of_anniversary?: string;
 }
 
 export interface DoctorProfile {
@@ -881,6 +1209,8 @@ export interface DoctorProfile {
   is_accepting_patients: boolean;
   rating: number;
   total_reviews: number;
+  date_of_birth?: string;
+  date_of_anniversary?: string;
   created_at: string;
   updated_at: string;
 }
@@ -986,6 +1316,12 @@ export const doctorApi = {
     return response.data.data;
   },
 
+  // Get current doctor's profile
+  getCurrentDoctorProfile: async (): Promise<DoctorProfile> => {
+    const response = await api.get<ApiResponse<DoctorProfile>>('/api/doctors/me/');
+    return response.data.data;
+  },
+
   // Get doctor statistics (SuperAdmin only)
   getDoctorStats: async (): Promise<{
     total_doctors: number;
@@ -1057,7 +1393,7 @@ export const createConsultation = async (data: {
   chief_complaint: string;
   symptoms?: string;
   consultation_fee?: number | string;
-}): Promise<any> => {
+}): Promise<Consultation> => {
   const response = await api.post('/api/consultations/', data);
   return response.data;
 };

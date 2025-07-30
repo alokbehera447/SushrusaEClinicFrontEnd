@@ -18,7 +18,6 @@ import {
   MapPin, 
   Heart, 
   FileText, 
-  Shield, 
   Languages,
   Plus,
   X,
@@ -46,7 +45,6 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
     phone: '',
     name: '',
     email: '',
-    password: '',
     date_of_birth: '',
     gender: '',
     blood_group: '',
@@ -68,9 +66,6 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
     allergies: '',
     chronic_conditions: [],
     current_medications: [],
-    insurance_provider: '',
-    insurance_policy_number: '',
-    insurance_expiry: '',
     preferred_language: 'english'
   });
 
@@ -120,14 +115,7 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
     }));
   };
 
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setUserData(prev => ({ ...prev, password }));
-  };
+
 
   const validateForm = () => {
     if (!userData.phone || !userData.name) {
@@ -167,15 +155,14 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
     try {
       const combinedData = {
         ...userData,
-        ...profileData,
-        password: userData.password || undefined
+        ...profileData
       };
 
       const result = await adminPatientApi.createPatient(combinedData);
       
       toast({
         title: "Success",
-        description: `Patient ${result.user_account.name} created successfully!`,
+        description: `Patient ${result.name} created successfully!`,
       });
 
       onPatientCreated?.(result);
@@ -186,7 +173,6 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
         phone: '',
         name: '',
         email: '',
-        password: '',
         date_of_birth: '',
         gender: '',
         blood_group: '',
@@ -206,9 +192,6 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
         allergies: '',
         chronic_conditions: [],
         current_medications: [],
-        insurance_provider: '',
-        insurance_policy_number: '',
-        insurance_expiry: '',
         preferred_language: 'english'
       });
     } catch (error: any) {
@@ -237,7 +220,7 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic" className="flex items-center gap-2">
               <User className="w-4 h-4" />
               Basic Info
@@ -249,10 +232,6 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
             <TabsTrigger value="address" className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
               Address
-            </TabsTrigger>
-            <TabsTrigger value="insurance" className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Insurance
             </TabsTrigger>
           </TabsList>
 
@@ -302,29 +281,6 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
                       placeholder="patient@example.com"
                       className="mt-1"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="password" className="text-sm font-medium">
-                      Password
-                    </Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="password"
-                        type="text"
-                        value={userData.password}
-                        onChange={(e) => handleUserDataChange('password', e.target.value)}
-                        placeholder="Auto-generated if empty"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={generatePassword}
-                        className="px-3"
-                      >
-                        Generate
-                      </Button>
-                    </div>
                   </div>
                   <div>
                     <Label htmlFor="date_of_birth" className="text-sm font-medium">
@@ -624,57 +580,7 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
             </Card>
           </TabsContent>
 
-          <TabsContent value="insurance" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Insurance Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="insurance_provider" className="text-sm font-medium">
-                      Insurance Provider
-                    </Label>
-                    <Input
-                      id="insurance_provider"
-                      value={profileData.insurance_provider}
-                      onChange={(e) => handleProfileDataChange('insurance_provider', e.target.value)}
-                      placeholder="e.g., Max Bupa, Star Health"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="insurance_policy_number" className="text-sm font-medium">
-                      Policy Number
-                    </Label>
-                    <Input
-                      id="insurance_policy_number"
-                      value={profileData.insurance_policy_number}
-                      onChange={(e) => handleProfileDataChange('insurance_policy_number', e.target.value)}
-                      placeholder="Enter policy number"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <Label htmlFor="insurance_expiry" className="text-sm font-medium">
-                    Insurance Expiry Date
-                  </Label>
-                  <Input
-                    id="insurance_expiry"
-                    type="date"
-                    value={profileData.insurance_expiry}
-                    onChange={(e) => handleProfileDataChange('insurance_expiry', e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-3 pt-6 border-t">

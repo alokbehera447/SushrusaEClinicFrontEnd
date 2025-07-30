@@ -593,7 +593,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* Create Doctor Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto !fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle>Add New Doctor</DialogTitle>
             <DialogDescription>
@@ -796,7 +796,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* Edit Doctor Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto !fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle>Edit Doctor</DialogTitle>
             <DialogDescription>
@@ -999,7 +999,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* View Doctor Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto !fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle>Doctor Details</DialogTitle>
           </DialogHeader>
@@ -1117,7 +1117,7 @@ const AdminDoctorManagementTab = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
+        <DialogContent className="!fixed !top-4 !right-4 !left-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
             <DialogTitle>Delete Doctor</DialogTitle>
             <DialogDescription>

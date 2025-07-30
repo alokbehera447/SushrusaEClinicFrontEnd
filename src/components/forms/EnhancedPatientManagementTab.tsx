@@ -69,7 +69,7 @@ import {
   UserX
 } from 'lucide-react';
 
-const PatientManagementTab: React.FC = () => {
+const EnhancedPatientManagementTab: React.FC = () => {
   const { toast } = useToast();
   
   // Main states
@@ -178,9 +178,9 @@ const PatientManagementTab: React.FC = () => {
         adminPatientApi.getPatientNotes(patientId)
       ]);
       
-      setPatientMedicalRecords(records.results || []);
-      setPatientDocuments(documents.results || []);
-      setPatientNotes(notes.results || []);
+      setPatientMedicalRecords(records || []);
+      setPatientDocuments(documents || []);
+      setPatientNotes(notes || []);
     } catch (error: any) {
       console.error('Error loading patient details:', error);
       toast({
@@ -193,12 +193,13 @@ const PatientManagementTab: React.FC = () => {
     }
   };
 
-  const handlePatientCreated = (newPatient: { patient_profile: PatientProfile; user_account: { name: string } }) => {
-    setPatients(prev => [newPatient.patient_profile, ...prev]);
+  const handlePatientCreated = (newPatient: { user_id: string; name: string; patient_profile: string | null }) => {
+    // Reload the patients list to get the updated data
+    loadPatients();
     loadPatientStats();
     toast({
       title: "Success",
-      description: `Patient ${newPatient.user_account.name} created successfully!`,
+      description: `Patient ${newPatient.name} created successfully!`,
     });
   };
 
@@ -215,7 +216,8 @@ const PatientManagementTab: React.FC = () => {
 
   const handleDeletePatient = async (patient: PatientProfile) => {
     try {
-      await adminPatientApi.deletePatient(patient.id);
+      // Delete the user account (which will cascade delete the patient profile)
+      await adminPatientApi.deletePatient(patient.user);
       setPatients(prev => prev.filter(p => p.id !== patient.id));
       if (selectedPatient?.id === patient.id) {
         setSelectedPatient(null);
@@ -1112,4 +1114,4 @@ const PatientManagementTab: React.FC = () => {
   );
 };
 
-export default PatientManagementTab; 
+export default EnhancedPatientManagementTab; 
