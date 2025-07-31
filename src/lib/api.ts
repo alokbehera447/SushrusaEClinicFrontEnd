@@ -1,5 +1,58 @@
 import { api } from './utils';
 
+// Utility function to extract error messages from backend responses
+export const extractErrorMessage = (error: any): string => {
+  console.log('Error object:', error);
+  
+  // If it's an axios error with response data
+  if (error.response && error.response.data) {
+    const responseData = error.response.data;
+    
+    // Handle Django REST Framework validation errors
+    if (responseData.admin && Array.isArray(responseData.admin)) {
+      return responseData.admin[0]; // Return first admin error
+    }
+    
+    // Handle field-specific errors
+    if (typeof responseData === 'object') {
+      const fieldErrors = Object.entries(responseData)
+        .filter(([key, value]) => Array.isArray(value) && value.length > 0)
+        .map(([key, value]) => `${key}: ${(value as string[])[0]}`)
+        .join(', ');
+      
+      if (fieldErrors) {
+        return fieldErrors;
+      }
+    }
+    
+    // Handle general error message
+    if (responseData.message) {
+      return responseData.message;
+    }
+    
+    // Handle non-field error
+    if (responseData.error) {
+      return responseData.error;
+    }
+    
+    // Handle string error
+    if (typeof responseData === 'string') {
+      return responseData;
+    }
+  }
+  
+  // Handle network errors
+  if (error.message) {
+    if (error.message.includes('Network Error')) {
+      return 'Network error. Please check your connection.';
+    }
+    return error.message;
+  }
+  
+  // Default error message
+  return 'An unexpected error occurred. Please try again.';
+};
+
 // HTTP method helpers
 export const get = <T = unknown>(url: string, config?: Record<string, unknown>) => api.get<T>(url, config).then(res => res.data);
 export const post = <T = unknown>(url: string, data?: unknown, config?: Record<string, unknown>) => api.post<T>(url, data, config).then(res => res.data);
@@ -23,6 +76,17 @@ export interface PatientProfile {
   insurance_policy_number: string;
   insurance_expiry: string | null;
   preferred_language: string;
+  emergency_contact?: string;
+  medical_history?: string;
+  street: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_relationship: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
   age: number | null;
@@ -68,6 +132,21 @@ export interface Consultation {
   payment_status: string;
   consultation_fee: number;
   is_paid: boolean;
+  payment_method?: string;
+  chief_complaint: string;
+  symptoms?: string;
+  doctor_notes?: string;
+  patient_notes?: string;
+  actual_start_time?: string;
+  actual_end_time?: string;
+  is_follow_up?: boolean;
+  follow_up_required?: boolean;
+  follow_up_date?: string;
+  parent_consultation?: string;
+  cancelled_by?: string;
+  cancellation_reason?: string;
+  cancelled_at?: string;
+  booked_slot?: number;
   created_at: string;
   updated_at: string;
 }
@@ -186,7 +265,10 @@ export interface EClinic {
   is_active: boolean;
   is_verified: boolean;
   accepts_online_consultations: boolean;
+  consultation_duration: number; // Duration in minutes
   admin: string;
+  admin_name?: string;
+  admin_phone?: string;
   created_at: string;
   updated_at: string;
 }
@@ -216,7 +298,8 @@ export interface CreateEClinicData {
   gallery_images?: string[];
   is_active?: boolean;
   accepts_online_consultations?: boolean;
-  admin?: string; // <-- Add this line
+  consultation_duration?: number; // Duration in minutes
+  admin?: string;
 }
 
 // API Response types
@@ -303,6 +386,88 @@ export const patientApi = {
     const response = await api.put<ApiResponse<PatientProfile>>(`/api/patients/${patientId}/`, profileData);
     return response.data.data;
   }
+};
+
+// --- Patient Interfaces ---
+export interface Patient {
+  id: string;
+  user: string;
+  user_name: string;
+  user_phone: string;
+  user_email: string;
+  date_of_birth: string;
+  gender: string;
+  blood_group: string;
+  allergies: string;
+  chronic_conditions: string[];
+  current_medications: string[];
+  insurance_provider: string;
+  insurance_policy_number: string;
+  insurance_expiry: string;
+  preferred_language: string;
+  medical_history: string;
+  street: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_relationship: string;
+  created_at: string;
+  updated_at: string;
+  age: number;
+  total_consultations?: number;
+  last_consultation_date?: string;
+}
+
+export interface PatientFilters {
+  search?: string;
+  gender?: string;
+  blood_group?: string;
+  age_min?: number;
+  age_max?: number;
+  city?: string;
+  state?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface CreatePatientData {
+  blood_group?: string;
+  allergies?: string;
+  chronic_conditions?: string[];
+  current_medications?: string[];
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_expiry?: string;
+  preferred_language?: string;
+}
+
+// --- SuperAdmin Patient API ---
+export const superAdminPatientApi = {
+  getPatients: async (filters: PatientFilters = {}): Promise<{ results: Patient[]; count: number }> => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        params.append(key, value.toString());
+      }
+    });
+    const response = await api.get(`/api/patients/?${params.toString()}`);
+    return response.data;
+  },
+  getPatient: async (id: string): Promise<Patient> => {
+    const response = await api.get(`/api/patients/${id}/`);
+    return response.data.data || response.data;
+  },
+  createPatient: async (data: CreatePatientData): Promise<Patient> => {
+    const response = await api.post(`/api/patients/`, data);
+    return response.data.data || response.data;
+  },
+  updatePatient: async (id: string, data: Partial<CreatePatientData>): Promise<Patient> => {
+    const response = await api.put(`/api/patients/${id}/`, data);
+    return response.data.data || response.data;
+  },
 };
 
 // Admin Patient Management API functions
@@ -635,6 +800,26 @@ export const adminPatientApi = {
 };
 
 // User Session interface
+export interface Notification {
+  id: string;
+  type: 'critical' | 'important' | 'info' | 'success';
+  title: string;
+  message: string;
+  category: 'system' | 'doctors' | 'clinics' | 'payments' | 'analytics' | 'security';
+  timestamp: string;
+  isRead: boolean;
+  actionRequired?: boolean;
+  actionUrl?: string;
+  metadata?: {
+    doctorId?: string;
+    clinicId?: string;
+    paymentId?: string;
+    userId?: string;
+    amount?: number;
+    errorCode?: string;
+  };
+}
+
 export interface UserSession {
   id: string;
   user: string;
@@ -752,6 +937,59 @@ export interface SuperAdminAnalytics {
     }>;
   };
 }
+
+// Notification API functions - Commented out for now
+// export const notificationApi = {
+//   // Get all notifications
+//   getNotifications: async (params?: {
+//     page?: number;
+//     page_size?: number;
+//     category?: string;
+//     type?: string;
+//     is_read?: boolean;
+//   }): Promise<PaginatedResponse<Notification>> => {
+//     const queryParams = new URLSearchParams();
+//     if (params?.page) queryParams.append('page', params.page.toString());
+//     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+//     if (params?.category) queryParams.append('category', params.category);
+//     if (params?.type) queryParams.append('type', params.type);
+//     if (params?.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
+//     
+//     const response = await api.get<ApiResponse<PaginatedResponse<Notification>>>(`/api/notifications/?${queryParams}`);
+//     return response.data.data;
+//   },
+
+//   // Mark notification as read
+//   markAsRead: async (notificationId: string): Promise<void> => {
+//     await api.patch<ApiResponse<void>>(`/api/notifications/${notificationId}/mark-read/`);
+//   },
+
+//   // Mark all notifications as read
+//   markAllAsRead: async (): Promise<void> => {
+//     await api.post<ApiResponse<void>>('/api/notifications/mark-all-read/');
+//   },
+
+//   // Delete notification
+//   deleteNotification: async (notificationId: string): Promise<void> => {
+//     await api.delete<ApiResponse<void>>(`/api/notifications/${notificationId}/`);
+//   },
+
+//   // Get notification stats
+//   getNotificationStats: async (): Promise<{
+//     total: number;
+//     unread: number;
+//     critical: number;
+//     action_required: number;
+//   }> => {
+//     const response = await api.get<ApiResponse<{
+//       total: number;
+//       unread: number;
+//       critical: number;
+//       action_required: number;
+//     }>>('/api/notifications/stats/');
+//     return response.data.data;
+//   },
+// };
 
 // SuperAdmin API service functions
 export const superAdminApi = {
@@ -904,37 +1142,47 @@ export const superAdminApi = {
 
   // Create new e-clinic
   createEClinic: async (clinicData: CreateEClinicData | FormData): Promise<EClinic> => {
-    const config = clinicData instanceof FormData ? {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    } : {};
-    const response = await api.post('/api/eclinic/', clinicData, config);
-    console.log('Raw API Response:', response);
-    
-    // Handle different response formats
-    if (response.data && response.data.data) {
-    return response.data.data;
-    } else if (response.data) {
-      return response.data;
-    } else {
-      throw new Error('Invalid response format from API');
+    try {
+      const config = clinicData instanceof FormData ? {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      } : {};
+      const response = await api.post('/api/eclinic/', clinicData, config);
+      console.log('Raw API Response:', response);
+      
+      // Handle different response formats
+      if (response.data && response.data.data) {
+        return response.data.data;
+      } else if (response.data) {
+        return response.data;
+      } else {
+        throw new Error('Invalid response format from API');
+      }
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error);
+      throw new Error(errorMessage);
     }
   },
 
   // Update e-clinic
   updateEClinic: async (clinicId: string, clinicData: Partial<CreateEClinicData> | FormData): Promise<EClinic> => {
-    const config = clinicData instanceof FormData ? {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    } : {};
-    const response = await api.put(`/api/eclinic/${clinicId}/`, clinicData, config);
-    console.log('Raw API Response:', response);
-    
-    // Handle different response formats
-    if (response.data && response.data.data) {
-    return response.data.data;
-    } else if (response.data) {
-      return response.data;
-    } else {
-      throw new Error('Invalid response format from API');
+    try {
+      const config = clinicData instanceof FormData ? {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      } : {};
+      const response = await api.put(`/api/eclinic/${clinicId}/`, clinicData, config);
+      console.log('Raw API Response:', response);
+      
+      // Handle different response formats
+      if (response.data && response.data.data) {
+        return response.data.data;
+      } else if (response.data) {
+        return response.data;
+      } else {
+        throw new Error('Invalid response format from API');
+      }
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error);
+      throw new Error(errorMessage);
     }
   },
 
@@ -1047,6 +1295,12 @@ export const adminConsultationApi = {
     return response.data.data;
   },
 
+  // Get consultation by ID (alias for getConsultation)
+  getConsultationById: async (consultationId: string): Promise<Consultation> => {
+    const response = await api.get<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`);
+    return response.data.data;
+  },
+
   // Create new consultation
   createConsultation: async (consultationData: {
     patient: string | number;
@@ -1083,6 +1337,18 @@ export const adminConsultationApi = {
   // Delete consultation
   deleteConsultation: async (consultationId: string): Promise<void> => {
     await api.delete(`/api/consultations/${consultationId}/`);
+  },
+
+  // Start consultation
+  startConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await api.post<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/start/`);
+    return response.data.data;
+  },
+
+  // Complete consultation
+  completeConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await api.post<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/complete/`);
+    return response.data.data;
   },
 
   // Cancel consultation
@@ -1211,6 +1477,7 @@ export interface DoctorProfile {
   total_reviews: number;
   date_of_birth?: string;
   date_of_anniversary?: string;
+  is_available?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -1296,9 +1563,16 @@ export const doctorApi = {
     return response.data.data;
   },
 
+  // Get doctor by ID (alias for getDoctor)
+  getDoctorById: async (doctorId: string): Promise<DoctorProfile> => {
+    const response = await api.get<ApiResponse<DoctorProfile>>(`/api/doctors/superadmin/${doctorId}/`);
+    return response.data.data;
+  },
+
   // Update doctor profile (SuperAdmin only)
-  updateDoctor: async (doctorId: string, data: Partial<CreateDoctorProfileData>): Promise<DoctorProfile> => {
-    const response = await api.put<ApiResponse<DoctorProfile>>(`/api/doctors/superadmin/${doctorId}/`, data);
+  updateDoctor: async (doctorId: string, data: Partial<CreateDoctorProfileData> | FormData): Promise<DoctorProfile> => {
+    const config = data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const response = await api.put<ApiResponse<DoctorProfile>>(`/api/doctors/superadmin/${doctorId}/`, data, config);
     return response.data.data;
   },
 
@@ -1350,15 +1624,12 @@ export const doctorApi = {
     return response.data.data;
   },
 
-  // Get upcoming/scheduled consultations for the logged-in doctor
+  // Get consultations for the logged-in doctor (NEW API)
   getUpcomingConsultations: async (): Promise<Consultation[]> => {
-    const response = await api.get<{ data: { results: Consultation[] } }>(
-      '/api/consultations/?status=scheduled&ordering=scheduled_date'
+    const response = await api.get<ApiResponse<Consultation[]>>(
+      '/api/consultations/doctor/my-consultations/?status=scheduled'
     );
-    if (response.data && response.data.data && response.data.data.results) {
-      return response.data.data.results;
-    }
-    return [];
+    return response.data.data || [];
   },
 
   // Get all consultations for the logged-in doctor (with optional filters)
@@ -1393,19 +1664,67 @@ export const createConsultation = async (data: {
   chief_complaint: string;
   symptoms?: string;
   consultation_fee?: number | string;
+  slot_id: number; // New field for slot-based booking
 }): Promise<Consultation> => {
-  const response = await api.post('/api/consultations/', data);
-  return response.data;
+  const response = await api.post<ApiResponse<Consultation>>('/api/consultations/', data);
+  return response.data.data;
+};
+
+// New API functions for slot-based consultation system
+export const getAvailableSlots = async (params: {
+  doctor_id: string | number;
+  clinic_id: string | number;
+  date: string; // YYYY-MM-DD
+}): Promise<DoctorSlot[]> => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    queryParams.append(key, value.toString());
+  });
+  
+  const response = await api.get<ApiResponse<DoctorSlot[]>>(`/api/consultations/available_slots/?${queryParams.toString()}`);
+  return response.data.data;
+};
+
+export const generateDoctorSlots = async (doctorId: string | number, data: {
+  clinic: number;
+  date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+}): Promise<DoctorSlot[]> => {
+  const response = await api.post<ApiResponse<DoctorSlot[]>>(`/api/doctors/${doctorId}/slots/generate_slots/`, data);
+  return response.data.data;
+};
+
+export const getDoctorSlots = async (doctorId: string | number, params?: {
+  month?: number;
+  year?: number;
+  date?: string;
+}): Promise<DoctorSlot[]> => {
+  const queryParams = new URLSearchParams();
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+  }
+  
+  const response = await api.get<ApiResponse<DoctorSlot[]>>(`/api/doctors/${doctorId}/slots/?${queryParams.toString()}`);
+  return response.data.data;
 };
 
 // Doctor Slot & Schedule API
 export interface DoctorSlot {
   id: number;
   doctor: number;
+  clinic: number;
+  clinic_name: string;
   date: string; // YYYY-MM-DD
   start_time: string; // HH:MM
   end_time: string; // HH:MM
   is_available: boolean;
+  is_booked: boolean;
+  booked_consultation: number | null;
   created_at: string;
   updated_at: string;
 }

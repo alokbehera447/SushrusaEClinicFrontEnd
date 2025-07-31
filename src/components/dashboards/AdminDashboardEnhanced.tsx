@@ -432,7 +432,7 @@ const AdminDashboardEnhanced = () => {
 
         {/* Main Dashboard Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+          <TabsList className="grid w-full grid-cols-5 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
             <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Activity className="w-4 h-4 mr-2" />
               Overview
@@ -452,6 +452,14 @@ const AdminDashboardEnhanced = () => {
             >
               <Video className="w-4 h-4 mr-2" />
               Consultations
+            </TabsTrigger>
+            <TabsTrigger 
+              value="slots" 
+              className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white"
+              disabled={!isAssignedToClinic}
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Slot Management
             </TabsTrigger>
             <TabsTrigger 
               value="payments" 
@@ -627,6 +635,43 @@ const AdminDashboardEnhanced = () => {
           {/* Consultations Tab */}
           <TabsContent value="consultations" className="space-y-6">
             <ConsultationManagementEnhanced isAssignedToClinic={isAssignedToClinic} />
+          </TabsContent>
+
+          {/* Slot Management Tab */}
+          <TabsContent value="slots" className="space-y-6">
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                  <Clock className="w-5 h-5 mr-2 text-[#E17726]" />
+                  Slot Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Smart Slot Management</h3>
+                  <p className="text-gray-500 mb-4">
+                    Manage consultation slots with our intelligent slot-based booking system.
+                  </p>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>• Generate slots based on doctor availability</p>
+                    <p>• Automatic slot division by clinic duration</p>
+                    <p>• Prevent double-booking and conflicts</p>
+                    <p>• Real-time availability updates</p>
+                  </div>
+                  <Button 
+                    className="mt-4 bg-[#E17726] hover:bg-[#c9651e] text-white"
+                    onClick={() => {
+                      // Navigate to slot management page
+                      window.location.href = '/slot-management';
+                    }}
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    Open Slot Management
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Payments Tab */}

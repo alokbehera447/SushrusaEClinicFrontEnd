@@ -129,10 +129,16 @@ const DoctorDashboard = () => {
       setLoadingConsultations(true);
       try {
         const data = await doctorApi.getUpcomingConsultations();
-        setConsultations(data);
+        // Ensure data is always an array
+        if (Array.isArray(data)) {
+          setConsultations(data);
+        } else {
+          console.error('Invalid consultations data format:', data);
+          setConsultations([]);
+        }
       } catch (error) {
         console.error('Error fetching consultations:', error);
-        // Don't clear consultations, keep previous data if available
+        setConsultations([]);
       } finally {
         setLoadingConsultations(false);
       }
@@ -457,8 +463,8 @@ const DoctorDashboard = () => {
                       <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <div className="flex items-center space-x-4">
                           <div className="text-center">
-                            <div className="text-sm font-semibold text-[#E17726]">{consultation.time}</div>
-                            <div className="text-xs text-gray-500">{consultation.type}</div>
+                            <div className="text-sm font-semibold text-[#E17726]">{consultation.scheduled_time}</div>
+                            <div className="text-xs text-gray-500">{consultation.consultation_type}</div>
                           </div>
                           <img 
                             src="/patient-avatar-1.svg" 
@@ -466,9 +472,9 @@ const DoctorDashboard = () => {
                             className="w-12 h-12 rounded-full"
                           />
                           <div>
-                            <h4 className="font-semibold text-midnight">{consultation.patient.name}</h4>
-                            <p className="text-sm text-gray-600">{consultation.patient.age}yr, {consultation.patient.gender}</p>
-                            <p className="text-xs text-gray-500">{consultation.symptoms}</p>
+                            <h4 className="font-semibold text-midnight">{consultation.patient_name}</h4>
+                            <p className="text-sm text-gray-600">{consultation.chief_complaint}</p>
+                            <p className="text-xs text-gray-500">{consultation.symptoms || 'No symptoms listed'}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -476,9 +482,13 @@ const DoctorDashboard = () => {
                             {consultation.status.replace('-', ' ')}
                           </Badge>
                           {consultation.status === 'scheduled' && (
-                            <Button size="sm" className="bg-aqua hover:bg-aqua/90 text-white">
+                            <Button 
+                              size="sm" 
+                              className="bg-aqua hover:bg-aqua/90 text-white"
+                              onClick={() => navigate(`/consultation/${consultation.id}/meeting`)}
+                            >
                               <Video className="w-4 h-4 mr-2" />
-                              Join Call
+                              Join Meeting
                             </Button>
                           )}
                           {consultation.status === 'in-progress' && (
@@ -688,19 +698,19 @@ const DoctorDashboard = () => {
                       <div className="flex items-center space-x-4">
                         <div className="text-center">
                           <div className="text-sm font-semibold text-[#E17726]">{consultation.id}</div>
-                          <div className="text-xs text-gray-500">{consultation.date}</div>
-                          <div className="text-xs text-gray-500">{consultation.time}</div>
+                          <div className="text-xs text-gray-500">{consultation.scheduled_date}</div>
+                          <div className="text-xs text-gray-500">{consultation.scheduled_time}</div>
                         </div>
                         <Avatar className="w-12 h-12">
                           <AvatarFallback className="bg-[#E17726]/10 text-[#E17726] font-semibold">
-                            {consultation.patient.name.split(' ').map(n => n[0]).join('')}
+                            {consultation.patient_name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h4 className="font-semibold text-midnight">{consultation.patient.name}</h4>
-                          <p className="text-sm text-gray-600">{consultation.patient.age}yr, {consultation.patient.gender}</p>
-                          <p className="text-xs text-gray-500">{consultation.symptoms}</p>
-                          <p className="text-xs text-gray-500">{consultation.type}</p>
+                          <h4 className="font-semibold text-midnight">{consultation.patient_name}</h4>
+                          <p className="text-sm text-gray-600">{consultation.consultation_type}</p>
+                          <p className="text-xs text-gray-500">{consultation.chief_complaint}</p>
+                          <p className="text-xs text-gray-500">{consultation.symptoms || 'No symptoms listed'}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
@@ -717,9 +727,13 @@ const DoctorDashboard = () => {
                             {expandedConsultation === consultation.id ? 'Hide Details' : 'Manage'}
                           </Button>
                           {consultation.status === 'scheduled' && (
-                            <Button size="sm" className="bg-aqua hover:bg-aqua/90 text-white rounded-lg">
+                            <Button 
+                              size="sm" 
+                              className="bg-aqua hover:bg-aqua/90 text-white rounded-lg"
+                              onClick={() => navigate(`/consultation/${consultation.id}/meeting`)}
+                            >
                               <Video className="w-4 h-4 mr-2" />
-                              Join
+                              Join Meeting
                             </Button>
                           )}
                         </div>
@@ -736,19 +750,15 @@ const DoctorDashboard = () => {
                             <div className="space-y-3">
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Patient Name:</span>
-                                <span className="font-medium">{consultation.patient.name}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-600">Age & Gender:</span>
-                                <span className="font-medium">{consultation.patient.age}yr, {consultation.patient.gender}</span>
+                                <span className="font-medium">{consultation.patient_name}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Consultation Type:</span>
-                                <span className="font-medium">{consultation.type}</span>
+                                <span className="font-medium">{consultation.consultation_type}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Date & Time:</span>
-                                <span className="font-medium">{consultation.date} at {consultation.time}</span>
+                                <span className="font-medium">{consultation.scheduled_date} at {consultation.scheduled_time}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-600">Status:</span>
@@ -757,8 +767,12 @@ const DoctorDashboard = () => {
                                 </Badge>
                               </div>
                               <div>
+                                <span className="text-gray-600">Chief Complaint:</span>
+                                <p className="font-medium mt-1">{consultation.chief_complaint}</p>
+                              </div>
+                              <div>
                                 <span className="text-gray-600">Symptoms:</span>
-                                <p className="font-medium mt-1">{consultation.symptoms}</p>
+                                <p className="font-medium mt-1">{consultation.symptoms || 'No symptoms listed'}</p>
                               </div>
                             </div>
                           </div>

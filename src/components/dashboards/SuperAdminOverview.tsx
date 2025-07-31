@@ -27,7 +27,11 @@ import {
 import { superAdminApi, SuperAdminOverviewStats } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
 
-const SuperAdminOverview = () => {
+interface SuperAdminOverviewProps {
+  isDarkMode?: boolean;
+}
+
+const SuperAdminOverview: React.FC<SuperAdminOverviewProps> = ({ isDarkMode = false }) => {
   const [overviewStats, setOverviewStats] = useState<SuperAdminOverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -179,7 +183,9 @@ const SuperAdminOverview = () => {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[#E17726] mx-auto mb-4" />
-          <p className="text-gray-600">Loading platform overview...</p>
+          <p className={`transition-colors duration-300 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Loading platform overview...
+          </p>
         </div>
       </div>
     );
@@ -190,14 +196,24 @@ const SuperAdminOverview = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-midnight mb-2">Platform Overview</h2>
-          <p className="text-gray-600">Comprehensive statistics and insights for the entire platform</p>
+          <h2 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${
+            isDarkMode ? 'text-white' : 'text-midnight'
+          }`}>
+            Platform Overview
+          </h2>
+          <p className={`transition-colors duration-300 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            Comprehensive statistics and insights for the entire platform
+          </p>
         </div>
         <Button
           onClick={handleRefresh}
           disabled={refreshing}
           variant="outline"
-          className="flex items-center gap-2"
+          className={`flex items-center gap-2 transition-colors duration-300 ${
+            isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+          }`}
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh
@@ -209,7 +225,9 @@ const SuperAdminOverview = () => {
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+            <Card key={index} className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm rounded-2xl ${
+              isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+            }`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
@@ -223,8 +241,16 @@ const SuperAdminOverview = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-midnight mb-1">{stat.value}</p>
-                  <p className="text-sm text-gray-600">{stat.title}</p>
+                  <p className={`text-2xl font-bold mb-1 transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : 'text-midnight'
+                  }`}>
+                    {stat.value}
+                  </p>
+                  <p className={`text-sm transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {stat.title}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -233,9 +259,13 @@ const SuperAdminOverview = () => {
       </div>
 
       {/* Quick Actions */}
-      <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl">
+      <Card className={`border-0 shadow-lg backdrop-blur-sm rounded-2xl transition-colors duration-300 ${
+        isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+      }`}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+            isDarkMode ? 'text-white' : ''
+          }`}>
             <Zap className="w-5 h-5 text-[#E17726]" />
             Quick Actions
           </CardTitle>
@@ -257,8 +287,16 @@ const SuperAdminOverview = () => {
                   <div className={`w-10 h-10 rounded-lg ${action.bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                     <Icon className={`w-5 h-5 ${action.color}`} />
                   </div>
-                  <h3 className="font-semibold text-midnight mb-1">{action.title}</h3>
-                  <p className="text-sm text-gray-600">{action.description}</p>
+                  <h3 className={`font-semibold mb-1 transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : 'text-midnight'
+                  }`}>
+                    {action.title}
+                  </h3>
+                  <p className={`text-sm transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {action.description}
+                  </p>
                 </button>
               );
             })}
@@ -268,9 +306,13 @@ const SuperAdminOverview = () => {
 
       {/* Platform Health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl">
+        <Card className={`border-0 shadow-lg backdrop-blur-sm rounded-2xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+        }`}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+              isDarkMode ? 'text-white' : ''
+            }`}>
               <Activity className="w-5 h-5 text-green-600" />
               Platform Health
             </CardTitle>
@@ -278,28 +320,46 @@ const SuperAdminOverview = () => {
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">System Status</span>
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>System Status</span>
                 <Badge className="bg-green-100 text-green-800">Healthy</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">API Response Time</span>
-                <span className="text-sm font-medium">~120ms</span>
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>API Response Time</span>
+                <span className={`text-sm font-medium transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : ''
+                }`}>~120ms</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Uptime</span>
-                <span className="text-sm font-medium">99.9%</span>
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>Uptime</span>
+                <span className={`text-sm font-medium transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : ''
+                }`}>99.9%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Active Sessions</span>
-                <span className="text-sm font-medium">156</span>
+                <span className={`text-sm transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>Active Sessions</span>
+                <span className={`text-sm font-medium transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : ''
+                }`}>156</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl">
+        <Card className={`border-0 shadow-lg backdrop-blur-sm rounded-2xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+        }`}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+              isDarkMode ? 'text-white' : ''
+            }`}>
               <Globe className="w-5 h-5 text-blue-600" />
               Recent Activity
             </CardTitle>
@@ -309,29 +369,45 @@ const SuperAdminOverview = () => {
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">New clinic registered</p>
-                  <p className="text-xs text-gray-500">2 minutes ago</p>
+                  <p className={`text-sm font-medium transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : ''
+                  }`}>New clinic registered</p>
+                  <p className={`text-xs transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>2 minutes ago</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Doctor verification completed</p>
-                  <p className="text-xs text-gray-500">5 minutes ago</p>
+                  <p className={`text-sm font-medium transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : ''
+                  }`}>Doctor verification completed</p>
+                  <p className={`text-xs transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>5 minutes ago</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">New consultation scheduled</p>
-                  <p className="text-xs text-gray-500">8 minutes ago</p>
+                  <p className={`text-sm font-medium transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : ''
+                  }`}>New consultation scheduled</p>
+                  <p className={`text-xs transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>8 minutes ago</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Payment processed</p>
-                  <p className="text-xs text-gray-500">12 minutes ago</p>
+                  <p className={`text-sm font-medium transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : ''
+                  }`}>Payment processed</p>
+                  <p className={`text-xs transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}>12 minutes ago</p>
                 </div>
               </div>
             </div>

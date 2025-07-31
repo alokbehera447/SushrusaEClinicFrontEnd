@@ -49,10 +49,24 @@ import {
   Languages,
   Upload,
   Save,
-  RefreshCw
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Shield,
+  ShieldCheck,
+  Database,
+  Server,
+  Zap,
+  Sun,
+  Moon,
+  LogOut,
+  UserPlus,
+  HelpCircle,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { superAdminApi, UserProfile, EClinic, CreateEClinicData } from '@/lib/api';
+// import { notificationApi } from '@/lib/api';
 import { api } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -78,16 +92,17 @@ import { Switch } from '@/components/ui/switch';
 import { doctorApi, CreateDoctorUserData, CreateDoctorProfileData, DoctorProfile } from '@/lib/api';
 import ManageAdmins from './ManageAdmins';
 import DoctorViewModal from './DoctorViewModal';
-import DoctorEditModal from './DoctorEditModal';
+import NotificationCenter from './NotificationCenter';
+
 import EClinicManagement from './EClinicManagement';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import SuperAdminOverview from './SuperAdminOverview';
 import SuperAdminAnalytics from './SuperAdminAnalytics';
-
+import PatientManagement from './PatientManagement';
 
 
 // Doctors Management Component
-const DoctorsManagement = () => {
+const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
@@ -296,6 +311,9 @@ const DoctorsManagement = () => {
       formData.append('name', doctorForm.name.trim());
       formData.append('phone', doctorForm.phone.trim());
       if (doctorForm.email.trim()) formData.append('email', doctorForm.email.trim());
+      if (profileImage) {
+        formData.append('profile_picture', profileImage);
+      }
       formData.append('license_number', doctorForm.license_number.trim());
       formData.append('qualification', doctorForm.qualification.trim());
       formData.append('specialization', doctorForm.specialization);
@@ -355,6 +373,17 @@ const DoctorsManagement = () => {
       date_of_birth: doctor.date_of_birth || '',
       date_of_anniversary: doctor.date_of_anniversary || '',
     });
+    
+    // Set profile image preview for editing
+    if (doctor.profile_picture) {
+      setProfileImagePreview(doctor.profile_picture);
+    } else {
+      setProfileImagePreview(null);
+    }
+    
+    // Clear any previously selected new image
+    setProfileImage(null);
+    
     setEditingDoctor(doctor);
     setShowAddForm(true);
   };
@@ -368,29 +397,32 @@ const DoctorsManagement = () => {
       const experienceYears = parseInt(doctorForm.experience_years);
       const consultationDuration = parseInt(doctorForm.consultation_duration);
 
-      const updateData = {
-        name: doctorForm.name.trim(),
-        phone: doctorForm.phone.trim(),
-        email: doctorForm.email.trim() || undefined,
-        license_number: doctorForm.license_number.trim(),
-        qualification: doctorForm.qualification.trim(),
-        specialization: doctorForm.specialization,
-        sub_specialization: doctorForm.sub_specialization.trim() || undefined,
-        consultation_fee: consultationFee,
-        online_consultation_fee: onlineConsultationFee,
-        experience_years: experienceYears,
-        clinic_name: doctorForm.clinic_name.trim() || undefined,
-        clinic_address: doctorForm.clinic_address.trim() || undefined,
-        bio: doctorForm.bio.trim() || undefined,
-        languages_spoken: doctorForm.languages_spoken.filter(lang => lang.trim() !== ''),
-        consultation_duration: consultationDuration,
-        is_online_consultation_available: doctorForm.is_online_consultation_available,
-        is_active: doctorForm.is_active,
-        date_of_birth: doctorForm.date_of_birth || undefined,
-        date_of_anniversary: doctorForm.date_of_anniversary || undefined,
-      };
+      // Use FormData for file upload support
+      const formData = new FormData();
+      formData.append('name', doctorForm.name.trim());
+      formData.append('phone', doctorForm.phone.trim());
+      if (doctorForm.email.trim()) formData.append('email', doctorForm.email.trim());
+      if (profileImage) {
+        formData.append('profile_picture', profileImage);
+      }
+      formData.append('license_number', doctorForm.license_number.trim());
+      formData.append('qualification', doctorForm.qualification.trim());
+      formData.append('specialization', doctorForm.specialization);
+      if (doctorForm.sub_specialization.trim()) formData.append('sub_specialization', doctorForm.sub_specialization.trim());
+      formData.append('consultation_fee', consultationFee.toString());
+      formData.append('online_consultation_fee', onlineConsultationFee.toString());
+      formData.append('experience_years', experienceYears.toString());
+      if (doctorForm.clinic_name.trim()) formData.append('clinic_name', doctorForm.clinic_name.trim());
+      if (doctorForm.clinic_address.trim()) formData.append('clinic_address', doctorForm.clinic_address.trim());
+      if (doctorForm.bio.trim()) formData.append('bio', doctorForm.bio.trim());
+      formData.append('languages_spoken', JSON.stringify(doctorForm.languages_spoken.filter(lang => lang.trim() !== '')));
+      formData.append('consultation_duration', consultationDuration.toString());
+      formData.append('is_online_consultation_available', doctorForm.is_online_consultation_available.toString());
+      formData.append('is_active', doctorForm.is_active.toString());
+      if (doctorForm.date_of_birth) formData.append('date_of_birth', doctorForm.date_of_birth);
+      if (doctorForm.date_of_anniversary) formData.append('date_of_anniversary', doctorForm.date_of_anniversary);
 
-      const updatedDoctor = await doctorApi.updateDoctor(editingDoctor.id.toString(), updateData);
+      const updatedDoctor = await doctorApi.updateDoctor(editingDoctor.id.toString(), formData);
       setDoctors(prev => prev.map(doc => 
         doc.id === editingDoctor.id ? updatedDoctor : doc
       ));
@@ -570,9 +602,13 @@ const DoctorsManagement = () => {
       )}
 
       {/* Doctors List */}
-      <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+      <Card className={`border-0 shadow-lg rounded-2xl backdrop-blur-sm transition-colors duration-300 ${
+        isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+      }`}>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={`flex items-center justify-between transition-colors duration-300 ${
+            isDarkMode ? 'text-white' : ''
+          }`}>
             <span>Doctors ({doctors.length})</span>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           </CardTitle>
@@ -583,8 +619,12 @@ const DoctorsManagement = () => {
               <Loader2 className="w-8 h-8 animate-spin text-[#E17726]" />
             </div>
           ) : doctors.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Stethoscope className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <div className={`text-center py-8 transition-colors duration-300 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-500'
+            }`}>
+              <Stethoscope className={`w-12 h-12 mx-auto mb-4 transition-colors duration-300 ${
+                isDarkMode ? 'text-gray-500' : 'text-gray-300'
+              }`} />
               <p>No doctors found</p>
             </div>
           ) : (
@@ -593,17 +633,31 @@ const DoctorsManagement = () => {
                 {doctors.map((doctor) => (
                   <div
                     key={doctor.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className={`flex items-center justify-between p-4 border rounded-lg transition-colors duration-300 ${
+                      isDarkMode 
+                        ? 'border-gray-600 hover:bg-gray-700' 
+                        : 'hover:bg-gray-50'
+                    }`}
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-[#E17726] text-white">
-                          {doctor.user_name?.charAt(0) || 'D'}
-                        </AvatarFallback>
+                        {doctor.profile_picture ? (
+                          <img 
+                            src={doctor.profile_picture} 
+                            alt={doctor.user_name} 
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-[#E17726] text-white">
+                            {doctor.user_name?.charAt(0) || 'D'}
+                          </AvatarFallback>
+                        )}
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-midnight truncate">
+                          <h3 className={`font-semibold truncate transition-colors duration-300 ${
+                            isDarkMode ? 'text-white' : 'text-midnight'
+                          }`}>
                             Dr. {doctor.user_name}
                           </h3>
                           <Badge className={doctor.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
@@ -613,7 +667,9 @@ const DoctorsManagement = () => {
                             {doctor.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className={`flex items-center gap-4 text-sm transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
                           <span className="flex items-center gap-1">
                             <GraduationCap className="w-3 h-3" />
                             {doctor.specialization}
@@ -633,7 +689,9 @@ const DoctorsManagement = () => {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                        <div className={`flex items-center gap-4 text-xs mt-1 transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
                           <span className="flex items-center gap-1">
                             <Phone className="w-3 h-3" />
                             {doctor.user_phone}
@@ -652,7 +710,9 @@ const DoctorsManagement = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => setViewingDoctor(doctor)}
-                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                        className={`border-blue-300 text-blue-600 transition-colors duration-300 ${
+                          isDarkMode ? 'hover:bg-blue-900/20' : 'hover:bg-blue-50'
+                        }`}
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
@@ -661,32 +721,50 @@ const DoctorsManagement = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => loadDoctorForEdit(doctor)}
-                        className="border-green-300 text-green-600 hover:bg-green-50"
+                        className={`border-green-300 text-green-600 transition-colors duration-300 ${
+                          isDarkMode ? 'hover:bg-green-900/20' : 'hover:bg-green-50'
+                        }`}
                       >
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" className={`transition-colors duration-300 ${
+                            isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+                          }`}>
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setViewingDoctor(doctor)}>
+                        <DropdownMenuContent align="end" className={`transition-colors duration-300 ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : ''
+                        }`}>
+                          <DropdownMenuLabel className={`transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-200' : ''
+                          }`}>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator className={`transition-colors duration-300 ${
+                            isDarkMode ? 'bg-gray-700' : ''
+                          }`} />
+                          <DropdownMenuItem onClick={() => setViewingDoctor(doctor)} className={`transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
+                          }`}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => loadDoctorForEdit(doctor)}>
+                          <DropdownMenuItem onClick={() => loadDoctorForEdit(doctor)} className={`transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
+                          }`}>
                             <Edit className="w-4 h-4 mr-2" />
                             Edit Doctor
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          <DropdownMenuSeparator className={`transition-colors duration-300 ${
+                            isDarkMode ? 'bg-gray-700' : ''
+                          }`} />
                           <DropdownMenuItem 
                             onClick={() => setDeletingDoctor(doctor)}
-                            className="text-red-600"
+                            className={`text-red-600 transition-colors duration-300 ${
+                              isDarkMode ? 'hover:bg-gray-700' : ''
+                            }`}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete Doctor
@@ -704,9 +782,13 @@ const DoctorsManagement = () => {
 
       {/* Add/Edit Doctor Form Dialog */}
       <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className={`max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-900 border-gray-700' : ''
+        }`}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+              isDarkMode ? 'text-white' : ''
+            }`}>
               <Plus className="w-5 h-5 text-[#E17726]" />
               {editingDoctor ? 'Edit Doctor' : 'Add New Doctor'}
             </DialogTitle>
@@ -716,13 +798,29 @@ const DoctorsManagement = () => {
               {/* Profile Image Section */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-[#E17726] text-white text-xl">
-                    {doctorForm.name?.charAt(0) || 'D'}
-                  </AvatarFallback>
+                  {profileImagePreview ? (
+                    <img 
+                      src={profileImagePreview} 
+                      alt="Profile Preview" 
+                      className="h-20 w-20 rounded-full object-cover"
+                    />
+                  ) : editingDoctor && editingDoctor.profile_picture ? (
+                    <img 
+                      src={editingDoctor.profile_picture} 
+                      alt="Current Profile" 
+                      className="h-20 w-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-[#E17726] text-white text-xl">
+                      {doctorForm.name?.charAt(0) || 'D'}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
-                <div>
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="profile-image" className="cursor-pointer">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#E17726]">
+                    <div className={`flex items-center gap-2 text-sm transition-colors duration-300 ${
+                      isDarkMode ? 'text-gray-300 hover:text-[#E17726]' : 'text-gray-600 hover:text-[#E17726]'
+                    }`}>
                       <Upload className="w-4 h-4" />
                       Upload Profile Picture
                     </div>
@@ -734,6 +832,29 @@ const DoctorsManagement = () => {
                     onChange={handleProfileImageChange}
                     className="hidden"
                   />
+                  {profileImage && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-green-600">✓ {profileImage.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setProfileImage(null);
+                          setProfileImagePreview(null);
+                        }}
+                        className="text-red-600 hover:text-red-700 p-1 h-auto"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                  {editingDoctor && editingDoctor.profile_picture && !profileImage && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-600">📷 Current: {editingDoctor.profile_picture.split('/').pop()?.split('?')[0]}</span>
+                    </div>
+                  )}
+
                 </div>
               </div>
 
@@ -1016,18 +1137,7 @@ const DoctorsManagement = () => {
         }}
       />
 
-      {/* Edit Doctor Modal */}
-      <DoctorEditModal
-        doctor={editingDoctor}
-        onClose={() => setEditingDoctor(null)}
-        onSave={(updatedDoctor) => {
-          setDoctors(prev => prev.map(doc => 
-            doc.id === updatedDoctor.id ? updatedDoctor : doc
-          ));
-          setEditingDoctor(null);
-        }}
-        isOpen={!!editingDoctor}
-      />
+
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deletingDoctor} onOpenChange={() => setDeletingDoctor(null)}>
@@ -1065,11 +1175,26 @@ const DoctorsManagement = () => {
 // Rest of the components (AdminsManagement, AnalyticsManagement, etc.) would go here...
 // For brevity, I'm focusing on the DoctorsManagement component
 
-const SuperAdminDashboard = () => {
+interface SuperAdminDashboardProps {
+  isDarkMode?: boolean;
+  setIsDarkMode?: (value: boolean) => void;
+}
+
+const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: externalSetIsDarkMode }: SuperAdminDashboardProps = {}) => {
+  const [internalIsDarkMode, setInternalIsDarkMode] = React.useState(false);
+  
+  // Use external state if provided, otherwise use internal state
+  const isDarkMode = externalIsDarkMode !== undefined ? externalIsDarkMode : internalIsDarkMode;
+  const setIsDarkMode = externalSetIsDarkMode || setInternalIsDarkMode;
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [systemStatus, setSystemStatus] = useState('online');
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [lastActivity, setLastActivity] = useState('2 minutes ago');
 
   const fetchUserProfile = async () => {
     try {
@@ -1082,9 +1207,45 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const fetchNotificationCount = async () => {
+    // Commented out API call for now
+    // try {
+    //   const stats = await notificationApi.getNotificationStats();
+    //   setNotificationCount(stats.unread);
+    // } catch (error) {
+    //   console.error('Failed to fetch notification count:', error);
+    // }
+    
+    // Set mock count for now
+    setNotificationCount(3);
+  };
+
   useEffect(() => {
     fetchUserProfile();
+    fetchNotificationCount();
+    
+    // Update last activity time
+    const updateActivity = () => {
+      const now = new Date();
+      const startTime = new Date(now.getTime() - 2 * 60 * 1000); // 2 minutes ago
+      const minutes = Math.floor((now.getTime() - startTime.getTime()) / (1000 * 60));
+      setLastActivity(`${minutes} minutes ago`);
+    };
+    
+    updateActivity();
+    const interval = setInterval(updateActivity, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
   }, []);
+
+  // Dark mode effect
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Listen for tab change events from quick actions
   useEffect(() => {
@@ -1101,6 +1262,7 @@ const SuperAdminDashboard = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },
+    { id: 'patients', label: 'Patients', icon: Users },
     { id: 'admins', label: 'Admins', icon: UserCog },
     { id: 'clinics', label: 'E-Clinics', icon: Building2 },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp }
@@ -1109,17 +1271,19 @@ const SuperAdminDashboard = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <SuperAdminOverview />;
+        return <SuperAdminOverview isDarkMode={isDarkMode} />;
       case 'doctors':
-        return <DoctorsManagement />;
+        return <DoctorsManagement isDarkMode={isDarkMode} />;
+      case 'patients':
+        return <PatientManagement isDarkMode={isDarkMode} />;
       case 'admins':
-        return <ManageAdmins />;
+        return <ManageAdmins isDarkMode={isDarkMode} />;
       case 'clinics':
-        return <EClinicManagement />;
+        return <EClinicManagement isDarkMode={isDarkMode} />;
       case 'analytics':
-        return <SuperAdminAnalytics />;
+        return <SuperAdminAnalytics isDarkMode={isDarkMode} />;
       default:
-        return <SuperAdminOverview />;
+        return <SuperAdminOverview isDarkMode={isDarkMode} />;
     }
   };
 
@@ -1132,38 +1296,178 @@ const SuperAdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
+        : 'bg-gradient-to-br from-blue-50 via-white to-orange-50'
+    }`}>
+      {/* Enhanced Header */}
+      <header className={`shadow-lg border-b transition-colors duration-300 ${
+        isDarkMode 
+          ? 'bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800 border-gray-700' 
+          : 'bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 border-blue-500'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-midnight">Super Admin Dashboard</h1>
-            </div>
+            {/* Left Section - Logo and Title */}
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Bell className="w-4 h-4" />
-              </Button>
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-[#E17726] text-white">
-                    {userProfile?.name?.charAt(0) || 'S'}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium text-gray-700">
-                  {userProfile?.name || 'Super Admin'}
-                </span>
+              <div className="flex items-center space-x-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className={`text-xl font-bold transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : 'text-white'
+                  }`}>Super Admin Dashboard</h1>
+                  <div className={`flex items-center space-x-2 text-xs transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-blue-100'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${systemStatus === 'online' ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                    <span>{systemStatus === 'online' ? 'System Online' : 'System Offline'}</span>
+                    <span>•</span>
+                    <span>Last activity: {lastActivity}</span>
+                  </div>
+                </div>
               </div>
+            </div>
+
+
+
+            {/* Right Section - Actions and User */}
+            <div className="flex items-center space-x-3">
+              {/* Quick Actions Button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className={`transition-colors duration-300 ${
+                    isDarkMode ? 'text-white hover:bg-gray-700' : 'text-white hover:bg-white/20'
+                  }`}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Quick Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={`w-56 ${isDarkMode ? 'bg-gray-800 border-gray-700' : ''}`}>
+                  <DropdownMenuLabel className={isDarkMode ? 'text-gray-200' : ''}>Quick Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator className={isDarkMode ? 'bg-gray-700' : ''} />
+                  <DropdownMenuItem onClick={() => setActiveTab('doctors')} className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add New Doctor
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('clinics')} className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Add New Clinic
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('admins')} className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <UserCog className="w-4 h-4 mr-2" />
+                    Manage Admins
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Reports
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className={isDarkMode ? 'bg-gray-700' : ''} />
+                  <DropdownMenuItem className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    System Settings
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Theme Toggle */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`transition-colors duration-300 ${
+                  isDarkMode ? 'text-white hover:bg-gray-700' : 'text-white hover:bg-white/20'
+                }`}
+              >
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+
+              {/* Help Button */}
+              <Button variant="ghost" size="sm" className={`transition-colors duration-300 ${
+                isDarkMode ? 'text-white hover:bg-gray-700' : 'text-white hover:bg-white/20'
+              }`}>
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+
+              {/* Notifications */}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowNotifications(true)}
+                className={`relative transition-colors duration-300 ${
+                  isDarkMode ? 'text-white hover:bg-gray-700' : 'text-white hover:bg-white/20'
+                }`}
+              >
+                <Bell className="w-4 h-4" />
+                {notificationCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-red-500 border border-white">
+                    {notificationCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* User Profile */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className={`flex items-center space-x-2 transition-colors duration-300 ${
+                    isDarkMode ? 'text-white hover:bg-gray-700' : 'text-white hover:bg-white/20'
+                  }`}>
+                    <Avatar className="h-8 w-8 border-2 border-white/20">
+                      <AvatarFallback className="bg-white/20 text-white font-semibold">
+                        {userProfile?.name?.charAt(0) || 'S'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-white">
+                        {userProfile?.name || 'Super Admin'}
+                      </p>
+                      <p className={`text-xs transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-300' : 'text-blue-100'
+                      }`}>
+                        {userProfile?.email || 'superadmin@example.com'}
+                      </p>
+                    </div>
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className={`w-56 ${isDarkMode ? 'bg-gray-800 border-gray-700' : ''}`}>
+                  <DropdownMenuLabel className={isDarkMode ? 'text-gray-200' : ''}>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator className={isDarkMode ? 'bg-gray-700' : ''} />
+                  <DropdownMenuItem className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <User className="w-4 h-4 mr-2" />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Support
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className={isDarkMode ? 'bg-gray-700' : ''} />
+                  <DropdownMenuItem className={`text-red-600 ${isDarkMode ? 'hover:bg-gray-700' : ''}`}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300 ${
+        isDarkMode ? 'text-white' : 'text-gray-900'
+      }`}>
         {/* Tabs */}
         <div className="mb-8">
-          <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm">
+          <div className={`flex space-x-1 p-1 rounded-xl shadow-sm transition-colors duration-300 ${
+            isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'
+          }`}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -1173,7 +1477,9 @@ const SuperAdminDashboard = () => {
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'bg-[#E17726] text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      : isDarkMode 
+                        ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -1187,6 +1493,13 @@ const SuperAdminDashboard = () => {
         {/* Tab Content */}
         {renderTabContent()}
       </main>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)}
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 };

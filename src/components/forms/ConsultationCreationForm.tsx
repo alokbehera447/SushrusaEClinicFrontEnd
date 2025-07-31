@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { adminPatientApi, doctorApi, doctorSlotApi, DoctorSlotFrontend, PatientProfile, DoctorProfile, createConsultation } from '@/lib/api';
+import { adminPatientApi, doctorApi, doctorSlotApi, DoctorSlotFrontend, PatientProfile, DoctorProfile, createConsultation, getAvailableSlots } from '@/lib/api';
 import { debounce } from 'lodash';
 
 const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
@@ -98,6 +98,44 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
       setPatientOptions([]);
     }
   }, 400), []);
+
+  // Function to fetch available slots
+  const fetchAvailableSlots = async (date: Date) => {
+    if (!selectedDoctor || !selectedClinic) {
+      setDoctorSlots([]);
+      return;
+    }
+
+    setSlotLoading(true);
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const slots = await getAvailableSlots({
+        doctor_id: selectedDoctor.user,
+        clinic_id: selectedClinic,
+        date: formattedDate
+      });
+      
+      // Convert to frontend format
+      const frontendSlots: DoctorSlotFrontend[] = slots.map(slot => ({
+        id: slot.id,
+        doctor: slot.doctor,
+        date: slot.date,
+        startTime: slot.start_time.slice(0, 5),
+        endTime: slot.end_time.slice(0, 5),
+        isAvailable: slot.is_available && !slot.is_booked,
+        created_at: slot.created_at,
+        updated_at: slot.updated_at,
+        type: slot.is_available && !slot.is_booked ? 'available' : 'booked',
+      }));
+      
+      setDoctorSlots(frontendSlots);
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      setDoctorSlots([]);
+    } finally {
+      setSlotLoading(false);
+    }
+  };
   React.useEffect(() => {
     debouncedPatientSearch(patientSearch);
   }, [patientSearch]);
@@ -120,19 +158,14 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   React.useEffect(() => {
     debouncedDoctorSearch(doctorSearch);
   }, [doctorSearch]);
-  // Fetch slots for selected doctor and date
+  // Fetch available slots for selected doctor, clinic, and date
   React.useEffect(() => {
-    if (!selectedDoctor || !selectedDate) return;
-    setSlotLoading(true);
-    const y = selectedDate.getFullYear();
-    const m = selectedDate.getMonth();
-    const d = selectedDate.getDate();
-    // Fetch all slots for the month, then filter for the selected date
-    doctorSlotApi.getSlots(selectedDoctor.user, m, y).then(slots => {
-      const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      setDoctorSlots(slots.filter(slot => slot.date === dateKey));
-    }).finally(() => setSlotLoading(false));
-  }, [selectedDoctor, selectedDate]);
+    if (!selectedDoctor || !selectedDate || !selectedClinic) {
+      setDoctorSlots([]);
+      return;
+    }
+    fetchAvailableSlots(selectedDate);
+  }, [selectedDoctor, selectedDate, selectedClinic]);
 
   // Fetch clinics for dropdown (you can filter by admin, etc. as needed)
   React.useEffect(() => {
@@ -171,7 +204,6 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
       const payload = {
         patient: selectedPatient.user, // user code (e.g., PAT001)
         doctor: selectedDoctor.user,   // user code (e.g., DOC001)
-        clinic: selectedClinic,        // clinic code (e.g., CLI001)
         consultation_type: 'video_call',
         scheduled_date: selectedSlot.date,
         scheduled_time: selectedSlot.startTime,
@@ -179,6 +211,7 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
         chief_complaint: formData.chiefComplaint,
         symptoms: formData.symptoms,
         consultation_fee: Number(getConsultationFee()),
+        slot_id: selectedSlot.id, // New field for slot-based booking
       };
       const result = await createConsultation(payload);
       alert('Consultation created successfully!');

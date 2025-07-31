@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, 
   Phone, 
@@ -35,7 +36,9 @@ import {
   Building2,
   Users,
   DollarSign,
-  Video
+  Video,
+  Upload,
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { get, post, put, del } from '@/lib/api';
@@ -67,6 +70,7 @@ interface Doctor {
   created_at: string;
   updated_at: string;
   meeting_link?: string;
+  profile_picture?: string;
 }
 
 interface DoctorStats {
@@ -115,6 +119,11 @@ const AdminDoctorManagementTab = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Profile image state
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [currentProfileImage, setCurrentProfileImage] = useState<string | null>(null);
+
   // Form state for create/edit
   const [formData, setFormData] = useState({
     name: '',
@@ -136,11 +145,37 @@ const AdminDoctorManagementTab = () => {
     is_accepting_patients: true
   });
 
+  // Profile image handlers
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File input changed:', e.target.files);
+    const file = e.target.files?.[0] || null;
+    console.log('Selected file:', file);
+    setProfileImage(file);
+    if (file) {
+      console.log('File selected:', file.name, file.size, file.type);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        console.log('FileReader result:', reader.result);
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      console.log('No file selected');
+      setProfileImagePreview(null);
+    }
+  };
+
+  const handleRemoveProfileImage = () => {
+    setProfileImage(null);
+    setProfileImagePreview(null);
+    setCurrentProfileImage(null);
+  };
+
   // Fetch doctors data
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      const response = await get('/api/doctors/');
+      const response: any = await get('/api/doctors/superadmin/');
       // Handle the nested response structure
       const doctorsData = response.results?.data || response.results || [];
       setDoctors(doctorsData);
@@ -159,7 +194,7 @@ const AdminDoctorManagementTab = () => {
   // Fetch stats
   const fetchStats = async () => {
     try {
-      const response = await get('/api/doctors/stats/');
+      const response: any = await get('/api/doctors/stats/');
       // Handle the nested response structure
       const statsData = response.data || response;
       setStats(statsData);
@@ -192,13 +227,47 @@ const AdminDoctorManagementTab = () => {
   const handleCreateDoctor = async () => {
     try {
       setIsSubmitting(true);
-      const response = await post('/api/doctors/', {
-        ...formData,
-        consultation_fee: parseFloat(formData.consultation_fee),
-        online_consultation_fee: formData.online_consultation_fee ? parseFloat(formData.online_consultation_fee) : null,
-        experience_years: parseInt(formData.experience_years),
-        consultation_duration: parseInt(formData.consultation_duration),
-        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0)
+      
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      
+      // Add text fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'consultation_fee') {
+          formDataToSend.append(key, parseFloat(value as string).toString());
+        } else if (key === 'online_consultation_fee' && value) {
+          formDataToSend.append(key, parseFloat(value as string).toString());
+        } else if (key === 'experience_years') {
+          formDataToSend.append(key, parseInt(value as string).toString());
+        } else if (key === 'consultation_duration') {
+          formDataToSend.append(key, parseInt(value as string).toString());
+        } else if (key === 'languages_spoken') {
+          formDataToSend.append(key, (value as string).split(',').map(lang => lang.trim()).filter(lang => lang.length > 0).join(','));
+        } else if (typeof value === 'boolean') {
+          formDataToSend.append(key, value.toString());
+        } else {
+          formDataToSend.append(key, value as string);
+        }
+      });
+      
+      // Add profile image if selected
+      if (profileImage) {
+        formDataToSend.append('profile_picture', profileImage);
+        console.log('Profile image added to FormData:', profileImage.name, profileImage.size);
+      } else {
+        console.log('No profile image selected');
+      }
+      
+      // Debug: Log all FormData entries
+      console.log('FormData contents:');
+      for (const [key, value] of formDataToSend.entries()) {
+        console.log(key, ':', value);
+      }
+      
+      const response = await post('/api/doctors/superadmin/', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
       toast({
@@ -208,6 +277,8 @@ const AdminDoctorManagementTab = () => {
       
       setShowCreateDialog(false);
       resetForm();
+      setProfileImage(null);
+      setProfileImagePreview(null);
       fetchDoctors();
       fetchStats();
     } catch (error) {
@@ -228,13 +299,47 @@ const AdminDoctorManagementTab = () => {
     
     try {
       setIsSubmitting(true);
-      const response = await put(`/api/doctors/${selectedDoctor.id}/`, {
-        ...formData,
-        consultation_fee: parseFloat(formData.consultation_fee),
-        online_consultation_fee: formData.online_consultation_fee ? parseFloat(formData.online_consultation_fee) : null,
-        experience_years: parseInt(formData.experience_years),
-        consultation_duration: parseInt(formData.consultation_duration),
-        languages_spoken: formData.languages_spoken.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0)
+      
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      
+      // Add text fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'consultation_fee') {
+          formDataToSend.append(key, parseFloat(value as string).toString());
+        } else if (key === 'online_consultation_fee' && value) {
+          formDataToSend.append(key, parseFloat(value as string).toString());
+        } else if (key === 'experience_years') {
+          formDataToSend.append(key, parseInt(value as string).toString());
+        } else if (key === 'consultation_duration') {
+          formDataToSend.append(key, parseInt(value as string).toString());
+        } else if (key === 'languages_spoken') {
+          formDataToSend.append(key, (value as string).split(',').map(lang => lang.trim()).filter(lang => lang.length > 0).join(','));
+        } else if (typeof value === 'boolean') {
+          formDataToSend.append(key, value.toString());
+        } else {
+          formDataToSend.append(key, value as string);
+        }
+      });
+      
+      // Add profile image if selected
+      if (profileImage) {
+        formDataToSend.append('profile_picture', profileImage);
+        console.log('Profile image added to FormData (edit):', profileImage.name, profileImage.size);
+      } else {
+        console.log('No profile image selected for edit');
+      }
+      
+      // Debug: Log all FormData entries
+      console.log('FormData contents (edit):');
+      for (const [key, value] of formDataToSend.entries()) {
+        console.log(key, ':', value);
+      }
+      
+      const response = await put(`/api/doctors/superadmin/${selectedDoctor.id}/`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
       toast({
@@ -244,6 +349,9 @@ const AdminDoctorManagementTab = () => {
       
       setShowEditDialog(false);
       resetForm();
+      setProfileImage(null);
+      setProfileImagePreview(null);
+      setCurrentProfileImage(null);
       fetchDoctors();
       fetchStats();
     } catch (error) {
@@ -264,7 +372,7 @@ const AdminDoctorManagementTab = () => {
     
     try {
       setIsSubmitting(true);
-      await del(`/api/doctors/${selectedDoctor.id}/`);
+      await del(`/api/doctors/superadmin/${selectedDoctor.id}/`);
       
       toast({
         title: 'Success',
@@ -307,6 +415,9 @@ const AdminDoctorManagementTab = () => {
       is_online_consultation_available: true,
       is_accepting_patients: true
     });
+    setProfileImage(null);
+    setProfileImagePreview(null);
+    setCurrentProfileImage(null);
   };
 
   // Open edit dialog
@@ -331,6 +442,9 @@ const AdminDoctorManagementTab = () => {
       is_online_consultation_available: doctor.is_online_consultation_available,
       is_accepting_patients: doctor.is_accepting_patients
     });
+    setCurrentProfileImage(doctor.profile_picture || null);
+    setProfileImage(null);
+    setProfileImagePreview(null);
     setShowEditDialog(true);
   };
 
@@ -499,9 +613,18 @@ const AdminDoctorManagementTab = () => {
             filteredDoctors.map((doctor) => (
               <div key={doctor.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-[#E17726] rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-white" />
-                  </div>
+                  {doctor.profile_picture ? (
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={doctor.profile_picture} alt={doctor.user_name} />
+                      <AvatarFallback className="bg-[#E17726] text-white">
+                        <User className="w-6 h-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="w-12 h-12 bg-[#E17726] rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                   <div>
                     <h4 className="font-semibold text-midnight">{doctor.user_name}</h4>
                     <p className="text-sm text-gray-600 flex items-center">
@@ -778,6 +901,67 @@ const AdminDoctorManagementTab = () => {
                 placeholder="English, Hindi"
               />
             </div>
+            
+            {/* Profile Image Upload */}
+            <div>
+              <Label htmlFor="profile_picture">Profile Picture</Label>
+              <div className="mt-2 space-y-4">
+                {/* Debug info */}
+                <div className="text-xs text-gray-500">
+                  Debug: profileImage={profileImage ? 'File selected' : 'null'}, 
+                  profileImagePreview={profileImagePreview ? 'Preview available' : 'null'}, 
+                  currentProfileImage={currentProfileImage ? 'Current image' : 'null'}
+                </div>
+                {/* Current/Preview Image */}
+                {(currentProfileImage || profileImagePreview) && (
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="w-20 h-20">
+                      <AvatarImage 
+                        src={profileImagePreview || currentProfileImage || ''} 
+                        alt="Profile Preview" 
+                      />
+                      <AvatarFallback>
+                        <User className="w-8 h-8" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveProfileImage}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
+                
+                {/* File Input */}
+                <div className="flex items-center space-x-4">
+                  <Input
+                    id="profile_picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageChange}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('profile_picture')?.click()}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Choose File
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Upload a profile picture (JPG, PNG, GIF). Max size: 5MB
+                </p>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -981,6 +1165,67 @@ const AdminDoctorManagementTab = () => {
                 placeholder="English, Hindi"
               />
             </div>
+            
+            {/* Profile Image Upload */}
+            <div>
+              <Label htmlFor="edit-profile_picture">Profile Picture</Label>
+              <div className="mt-2 space-y-4">
+                {/* Debug info */}
+                <div className="text-xs text-gray-500">
+                  Debug: profileImage={profileImage ? 'File selected' : 'null'}, 
+                  profileImagePreview={profileImagePreview ? 'Preview available' : 'null'}, 
+                  currentProfileImage={currentProfileImage ? 'Current image' : 'null'}
+                </div>
+                {/* Current/Preview Image */}
+                {(currentProfileImage || profileImagePreview) && (
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="w-20 h-20">
+                      <AvatarImage 
+                        src={profileImagePreview || currentProfileImage || ''} 
+                        alt="Profile Preview" 
+                      />
+                      <AvatarFallback>
+                        <User className="w-8 h-8" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveProfileImage}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
+                
+                {/* File Input */}
+                <div className="flex items-center space-x-4">
+                  <Input
+                    id="edit-profile_picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageChange}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById('edit-profile_picture')?.click()}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Choose File
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Upload a profile picture (JPG, PNG, GIF). Max size: 5MB
+                </p>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
@@ -1006,9 +1251,18 @@ const AdminDoctorManagementTab = () => {
           {selectedDoctor && (
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-[#E17726] rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-white" />
-                </div>
+                {selectedDoctor.profile_picture ? (
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={selectedDoctor.profile_picture} alt={selectedDoctor.user_name} />
+                    <AvatarFallback className="bg-[#E17726] text-white">
+                      <User className="w-8 h-8" />
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="w-16 h-16 bg-[#E17726] rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+                )}
                 <div>
                   <h3 className="text-xl font-bold text-midnight">{selectedDoctor.user_name}</h3>
                   <p className="text-gray-600">{selectedDoctor.specialization}</p>

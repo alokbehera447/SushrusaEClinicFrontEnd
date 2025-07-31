@@ -51,7 +51,11 @@ interface Stats {
 
 const PAGE_SIZE = 10;
 
-const ManageAdmins: React.FC = () => {
+interface ManageAdminsProps {
+  isDarkMode?: boolean;
+}
+
+const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
   const { toast } = useToast();
   const [stats, setStats] = useState<Stats | null>(null);
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -223,7 +227,9 @@ const ManageAdmins: React.FC = () => {
     <div className="space-y-6">
             {/* Header with Stats */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Admin Management</h2>
+        <h2 className={`text-2xl font-bold transition-colors duration-300 ${
+          isDarkMode ? 'text-white' : 'text-gray-900'
+        }`}>Admin Management</h2>
         <Button 
           variant="outline"
           onClick={() => setShowCreate(true)}
@@ -236,12 +242,18 @@ const ManageAdmins: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card className="border-0 shadow-lg rounded-xl">
+        <Card className={`border-0 shadow-lg rounded-xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Total Admins</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>Total Admins</p>
+                <p className={`text-2xl font-bold transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
                   {statsLoading ? '...' : stats?.total_admins.value || 0}
                 </p>
               </div>
@@ -252,12 +264,18 @@ const ManageAdmins: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg rounded-xl">
+        <Card className={`border-0 shadow-lg rounded-xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Active Admins</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>Active Admins</p>
+                <p className={`text-2xl font-bold transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
                   {statsLoading ? '...' : stats?.active_admins.value || 0}
                 </p>
               </div>
@@ -268,12 +286,18 @@ const ManageAdmins: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg rounded-xl">
+        <Card className={`border-0 shadow-lg rounded-xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">New This Month</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>New This Month</p>
+                <p className={`text-2xl font-bold transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
                   {statsLoading ? '...' : stats?.new_this_month.value || 0}
                 </p>
               </div>
@@ -284,12 +308,18 @@ const ManageAdmins: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg rounded-xl">
+        <Card className={`border-0 shadow-lg rounded-xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">Avg Performance</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>Avg Performance</p>
+                <p className={`text-2xl font-bold transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
                   {statsLoading ? '...' : stats?.avg_performance.value || '0%'}
                 </p>
               </div>
@@ -304,22 +334,30 @@ const ManageAdmins: React.FC = () => {
       {/* Admin List */}
       <div className="space-y-6">
         {/* Search and Filters */}
-        <Card className="border-0 shadow-lg rounded-xl">
+        <Card className={`border-0 shadow-lg rounded-xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className={`absolute left-3 top-3 h-4 w-4 transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-400'
+                }`} />
                 <Input
                   placeholder="Search admins..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className={`pl-10 transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''
+                  }`}
                 />
               </div>
               <select 
                 value={filterStatus} 
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#E17726] focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#E17726] focus:border-transparent transition-colors duration-300 ${
+                  isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'
+                }`}
               >
                 <option value="">All Status</option>
                 <option value="active">Active</option>
@@ -332,7 +370,9 @@ const ManageAdmins: React.FC = () => {
                   setSearch('');
                   setFilterStatus('');
                 }}
-                className="border-gray-300"
+                className={`transition-colors duration-300 ${
+                  isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : 'border-gray-300'
+                }`}
               >
                 <Filter className="w-4 h-4 mr-2" />
                 Clear Filters
@@ -342,15 +382,21 @@ const ManageAdmins: React.FC = () => {
         </Card>
 
         {/* Admins Table */}
-        <Card className="border-0 shadow-lg rounded-xl">
+        <Card className={`border-0 shadow-lg rounded-xl transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Admin Accounts</CardTitle>
+            <CardTitle className={`text-lg font-semibold transition-colors duration-300 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Admin Accounts</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {loading ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">Loading admins...</p>
+                  <p className={`transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                  }`}>Loading admins...</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-8">
@@ -358,20 +404,34 @@ const ManageAdmins: React.FC = () => {
                 </div>
               ) : filteredAdmins.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No admins found</p>
+                  <p className={`transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                  }`}>No admins found</p>
                 </div>
               ) : (
                 filteredAdmins.map((admin) => (
-                  <div key={admin.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div key={admin.id} className={`flex items-center justify-between p-4 rounded-lg transition-colors duration-300 ${
+                    isDarkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600' 
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}>
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-[#E17726] rounded-full flex items-center justify-center">
                         <User className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">{admin.name}</h4>
-                        <p className="text-sm text-gray-600">{admin.email}</p>
-                        <p className="text-sm text-gray-500">{admin.phone}</p>
-                        <p className="text-xs text-gray-400">
+                        <h4 className={`font-semibold transition-colors duration-300 ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>{admin.name}</h4>
+                        <p className={`text-sm transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>{admin.email}</p>
+                        <p className={`text-sm transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                        }`}>{admin.phone}</p>
+                        <p className={`text-xs transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                        }`}>
                           Joined: {new Date(admin.date_joined).toLocaleDateString()}
                         </p>
                       </div>
@@ -385,7 +445,9 @@ const ManageAdmins: React.FC = () => {
                           size="sm" 
                           variant="outline"
                           onClick={() => setShowView(admin)}
-                          className="border-gray-300 hover:bg-gray-50"
+                          className={`transition-colors duration-300 ${
+                            isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-50'
+                          }`}
                         >
                           <Eye className="w-4 h-4 mr-2" />
                           View
@@ -394,7 +456,9 @@ const ManageAdmins: React.FC = () => {
                           size="sm" 
                           variant="outline"
                           onClick={() => setShowEdit(admin)}
-                          className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                          className={`transition-colors duration-300 ${
+                            isDarkMode ? 'border-blue-400 text-blue-300 hover:bg-blue-900/20' : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                          }`}
                         >
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
@@ -404,7 +468,9 @@ const ManageAdmins: React.FC = () => {
                           variant="outline"
                           onClick={() => handleDeactivate(admin)}
                           disabled={deactivating === admin.id}
-                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          className={`transition-colors duration-300 ${
+                            isDarkMode ? 'border-red-400 text-red-300 hover:bg-red-900/20' : 'border-red-300 text-red-600 hover:bg-red-50'
+                          }`}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete

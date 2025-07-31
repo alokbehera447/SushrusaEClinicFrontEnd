@@ -66,9 +66,17 @@ const DoctorViewModal: React.FC<DoctorViewModalProps> = ({ doctor, onClose, onEd
           </div>
           <div className="flex flex-col items-end gap-2">
             <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-[#E17726] text-white text-lg">
-                {doctor.user_name?.charAt(0) || 'D'}
-              </AvatarFallback>
+              {doctor.profile_picture ? (
+                <img 
+                  src={doctor.profile_picture} 
+                  alt={doctor.user_name} 
+                  className="h-16 w-16 rounded-full object-cover"
+                />
+              ) : (
+                <AvatarFallback className="bg-[#E17726] text-white text-lg">
+                  {doctor.user_name?.charAt(0) || 'D'}
+                </AvatarFallback>
+              )}
             </Avatar>
           </div>
         </div>

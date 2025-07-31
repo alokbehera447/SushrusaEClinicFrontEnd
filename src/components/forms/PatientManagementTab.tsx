@@ -69,7 +69,11 @@ import {
   UserX
 } from 'lucide-react';
 
-const PatientManagementTab: React.FC = () => {
+interface PatientManagementTabProps {
+  isDarkMode?: boolean;
+}
+
+const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode = false }) => {
   const { toast } = useToast();
   
   // Main states
@@ -84,8 +88,8 @@ const PatientManagementTab: React.FC = () => {
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
-    gender: '',
-    blood_group: '',
+    gender: 'all',
+    blood_group: 'all',
     city: '',
     state: '',
     age_min: '',
@@ -129,10 +133,10 @@ const PatientManagementTab: React.FC = () => {
   const loadPatients = async () => {
     setIsLoading(true);
     try {
-      // Filter out empty values
+      // Filter out empty values and "all" values
       const filteredParams = Object.fromEntries(
         Object.entries(filters).filter(([_, value]) => 
-          value !== '' && value !== undefined && value !== null
+          value !== '' && value !== 'all' && value !== undefined && value !== null
         )
       );
 
@@ -178,9 +182,9 @@ const PatientManagementTab: React.FC = () => {
         adminPatientApi.getPatientNotes(patientId)
       ]);
       
-      setPatientMedicalRecords(records.results || []);
-      setPatientDocuments(documents.results || []);
-      setPatientNotes(notes.results || []);
+      setPatientMedicalRecords(records || []);
+      setPatientDocuments(documents || []);
+      setPatientNotes(notes || []);
     } catch (error: any) {
       console.error('Error loading patient details:', error);
       toast({
@@ -193,13 +197,31 @@ const PatientManagementTab: React.FC = () => {
     }
   };
 
-  const handlePatientCreated = (newPatient: { patient_profile: PatientProfile; user_account: { name: string } }) => {
-    setPatients(prev => [newPatient.patient_profile, ...prev]);
-    loadPatientStats();
-    toast({
-      title: "Success",
-      description: `Patient ${newPatient.user_account.name} created successfully!`,
-    });
+  const handlePatientCreated = async (newPatient: {
+    user_id: string;
+    phone: string;
+    name: string;
+    email: string;
+    role: string;
+    password: string;
+    patient_profile: string | null;
+  }) => {
+    try {
+      // Get the full patient profile data
+      const patientProfile = await adminPatientApi.getPatient(newPatient.user_id);
+      setPatients(prev => [patientProfile, ...prev]);
+      loadPatientStats();
+      toast({
+        title: "Success",
+        description: `Patient ${newPatient.name} created successfully!`,
+      });
+    } catch (error) {
+      console.error('Error loading created patient:', error);
+      toast({
+        title: "Success",
+        description: `Patient ${newPatient.name} created successfully!`,
+      });
+    }
   };
 
   const handlePatientUpdated = (updatedPatient: PatientProfile) => {
@@ -247,8 +269,8 @@ const PatientManagementTab: React.FC = () => {
 
   const clearFilters = () => {
     setFilters({
-      gender: '',
-      blood_group: '',
+      gender: 'all',
+      blood_group: 'all',
       city: '',
       state: '',
       age_min: '',
@@ -299,7 +321,11 @@ const PatientManagementTab: React.FC = () => {
   // Patient Detail View
   if (selectedPatient) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className={`min-h-screen transition-colors duration-300 ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
+          : 'bg-gradient-to-br from-gray-50 to-white'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -307,14 +333,20 @@ const PatientManagementTab: React.FC = () => {
               <Button
                 onClick={handleBackToList}
                 variant="outline"
-                className="flex items-center gap-2"
+                className={`flex items-center gap-2 transition-colors duration-300 ${
+                  isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+                }`}
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Patients
               </Button>
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">{selectedPatient.user_name}</h2>
-                <p className="text-gray-600 mt-1">Patient ID: {selectedPatient.id}</p>
+                <h2 className={`text-3xl font-bold transition-colors duration-300 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{selectedPatient.user_name}</h2>
+                <p className={`transition-colors duration-300 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                } mt-1`}>Patient ID: {selectedPatient.id}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -684,19 +716,38 @@ const PatientManagementTab: React.FC = () => {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Patient Edit Form */}
+        <PatientEditForm
+          open={showEditForm}
+          onOpenChange={(open) => {
+            setShowEditForm(open);
+            if (!open) setEditingPatient(null);
+          }}
+          patient={editingPatient}
+          onPatientUpdated={handlePatientUpdated}
+        />
       </div>
     );
   }
 
   // Main Patient List View
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
+        : 'bg-gradient-to-br from-gray-50 to-white'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">Patient Management</h2>
-            <p className="text-gray-600 mt-2">Manage patient accounts and their information</p>
+            <h2 className={`text-3xl font-bold transition-colors duration-300 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Patient Management</h2>
+            <p className={`transition-colors duration-300 ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-600'
+            } mt-2`}>Manage patient accounts and their information</p>
           </div>
           <Button
             onClick={() => setShowCreateForm(true)}
@@ -710,12 +761,18 @@ const PatientManagementTab: React.FC = () => {
         {/* Statistics Cards */}
         {patientStats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+            <Card className={`border-0 shadow-lg rounded-2xl backdrop-blur-sm transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+            }`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Total Patients</p>
-                    <p className="text-2xl font-bold text-gray-900">{patientStats.total_patients}</p>
+                    <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>Total Patients</p>
+                    <p className={`text-2xl font-bold transition-colors duration-300 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>{patientStats.total_patients}</p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
                     <Users className="w-6 h-6 text-[#E17726]" />
@@ -724,12 +781,18 @@ const PatientManagementTab: React.FC = () => {
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+            <Card className={`border-0 shadow-lg rounded-2xl backdrop-blur-sm transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+            }`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Active Patients</p>
-                    <p className="text-2xl font-bold text-gray-900">{patientStats.active_patients}</p>
+                    <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>Active Patients</p>
+                    <p className={`text-2xl font-bold transition-colors duration-300 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>{patientStats.active_patients}</p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
                     <UserCheck className="w-6 h-6 text-green-600" />
@@ -738,12 +801,18 @@ const PatientManagementTab: React.FC = () => {
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+            <Card className={`border-0 shadow-lg rounded-2xl backdrop-blur-sm transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+            }`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">New This Month</p>
-                    <p className="text-2xl font-bold text-gray-900">{patientStats.new_patients_this_month}</p>
+                    <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>New This Month</p>
+                    <p className={`text-2xl font-bold transition-colors duration-300 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>{patientStats.new_patients_this_month}</p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center">
                     <UserPlus className="w-6 h-6 text-blue-600" />
@@ -752,12 +821,18 @@ const PatientManagementTab: React.FC = () => {
               </CardContent>
             </Card>
             
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+            <Card className={`border-0 shadow-lg rounded-2xl backdrop-blur-sm transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+            }`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Top City</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className={`text-sm font-medium mb-2 transition-colors duration-300 ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>Top City</p>
+                    <p className={`text-2xl font-bold transition-colors duration-300 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
                       {patientStats.top_cities.length > 0 ? patientStats.top_cities[0].city : 'N/A'}
                     </p>
                   </div>
@@ -771,18 +846,24 @@ const PatientManagementTab: React.FC = () => {
         )}
 
         {/* Search and Filters */}
-        <Card className="mb-6">
+        <Card className={`mb-6 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800/90 border-gray-700' : ''
+        }`}>
           <CardContent className="p-6">
             <div className="flex flex-col gap-4">
               {/* Search Bar */}
               <div className="flex gap-4">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-400'
+                  }`} />
                   <Input
                     placeholder="Search patients by name, phone, email, or ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 transition-colors duration-300 ${
+                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''
+                    }`}
                   />
                 </div>
                 <Button
@@ -813,7 +894,7 @@ const PatientManagementTab: React.FC = () => {
                         <SelectValue placeholder="All genders" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All genders</SelectItem>
+                        <SelectItem value="all">All genders</SelectItem>
                         <SelectItem value="male">Male</SelectItem>
                         <SelectItem value="female">Female</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
@@ -827,7 +908,7 @@ const PatientManagementTab: React.FC = () => {
                         <SelectValue placeholder="All blood groups" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All blood groups</SelectItem>
+                        <SelectItem value="all">All blood groups</SelectItem>
                         <SelectItem value="A+">A+</SelectItem>
                         <SelectItem value="A-">A-</SelectItem>
                         <SelectItem value="B+">B+</SelectItem>
@@ -926,9 +1007,9 @@ const PatientManagementTab: React.FC = () => {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarFallback>
-                                {patient.user_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                              </AvatarFallback>
+                                                          <AvatarFallback>
+                              {patient.user_name ? patient.user_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'N/A'}
+                            </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-semibold">{patient.user_name}</p>

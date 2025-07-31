@@ -18,6 +18,8 @@ import AdminDashboardPage from "./pages/AdminDashboard";
 import DoctorDashboardPage from "./pages/DoctorDashboard";
 import PatientDashboardPage from "./pages/PatientDashboard";
 import ConsultationMeeting from "./pages/ConsultationMeeting";
+import SlotManagementPage from "./pages/SlotManagementPage";
+import ConsultationDetailPage from "./pages/ConsultationDetailPage";
 
 // Import all workflow components
 import AppointmentBooking from "@/components/workflow/AppointmentBooking";
@@ -66,6 +68,16 @@ const App = () => (
                 <AdminDashboardPage />
               </ProtectedRoute>
             } />
+            <Route path="/slot-management" element={
+              <ProtectedRoute requiredRole="admin">
+                <SlotManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/consultations/:consultationId" element={
+              <ProtectedRoute requiredRole="admin">
+                <ConsultationDetailPage />
+              </ProtectedRoute>
+            } />
             <Route path="/doctor/dashboard" element={
               <ProtectedRoute requiredRole="doctor">
                 <DoctorDashboardPage />
@@ -87,7 +99,11 @@ const App = () => (
             <Route path="/workflow/doctor-schedule" element={<DoctorSchedule />} />
             <Route path="/workflow/analytics" element={<AnalyticsDashboard />} />
             <Route path="/prescriptions/new/:consultationId" element={<PrescriptionWriterPage />} />
-            <Route path="/consultation-meeting" element={<ConsultationMeeting />} />
+            <Route path="/consultation/:consultationId/meeting" element={
+              <ProtectedRoute requiredRole="doctor">
+                <ConsultationMeeting />
+              </ProtectedRoute>
+            } />
             
             {/* Catch-all route - must be last */}
             <Route path="*" element={<NotFound />} />

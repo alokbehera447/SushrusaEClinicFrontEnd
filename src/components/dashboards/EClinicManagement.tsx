@@ -54,14 +54,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const EClinicManagement = () => {
+interface EClinicManagementProps {
+  isDarkMode?: boolean;
+}
+
+const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = false }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [clinics, setClinics] = useState<EClinic[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     is_active: undefined as boolean | undefined,
-    is_verified: undefined as boolean | undefined,
     city: '',
     state: '',
   });
@@ -73,7 +76,6 @@ const EClinicManagement = () => {
   const [clinicStats, setClinicStats] = useState({
     total_clinics: 0,
     active_clinics: 0,
-    verified_clinics: 0,
     online_consultations: 0
   });
   
@@ -105,6 +107,7 @@ const EClinicManagement = () => {
     facilities: [] as string[],
     is_active: true,
     accepts_online_consultations: true,
+    consultation_duration: 15,
     admin: '',
   });
 
@@ -133,7 +136,6 @@ const EClinicManagement = () => {
         city: filters.city || undefined,
         state: filters.state || undefined,
         is_active: filters.is_active?.toString(),
-        is_verified: filters.is_verified?.toString(),
       });
       console.log('Fetched clinics response:', response);
       setClinics(response.results);
@@ -167,7 +169,6 @@ const EClinicManagement = () => {
       setClinicStats({
         total_clinics: stats.total_clinics.value,
         active_clinics: stats.active_clinics.value,
-        verified_clinics: stats.total_clinics.value, // Assuming all are verified for now
         online_consultations: stats.online_consultations.value
       });
     } catch (error) {
@@ -253,6 +254,14 @@ const EClinicManagement = () => {
       });
       return false;
     }
+    if (!clinicForm.admin.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Admin assignment is required",
+        variant: "destructive",
+      });
+      return false;
+    }
     return true;
   };
 
@@ -269,75 +278,74 @@ const EClinicManagement = () => {
       }
     } catch (error) {
       console.error('Failed to submit clinic form:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
+      
+      // Extract error message
+      let errorMessage = "An unexpected error occurred";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Show specific error for admin assignment
+      if (errorMessage.includes('admin') && errorMessage.includes('assigned')) {
+        toast({
+          title: "Admin Assignment Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateClinic = async () => {
-    try {
-      const formData = new FormData();
-      
-      // Add all form fields to FormData
-      Object.entries(clinicForm).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          // Send arrays as JSON strings
-          formData.append(key, JSON.stringify(value));
-        } else if (value !== undefined && value !== '') {
-          formData.append(key, value.toString());
-        }
-      });
-
-      // Ensure boolean values are properly handled
-      formData.append('is_active', clinicForm.is_active.toString());
-      formData.append('accepts_online_consultations', clinicForm.accepts_online_consultations.toString());
-
-      if (coverImage) {
-        formData.append('cover_image', coverImage);
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    Object.entries(clinicForm).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        // Send arrays as JSON strings
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== undefined && value !== '') {
+        formData.append(key, value.toString());
       }
+    });
 
-      console.log('Submitting form data:', Object.fromEntries(formData));
-      let newClinic;
-      try {
-        const response = await superAdminApi.createEClinic(formData);
-        console.log('API Response:', response);
-        
-        if (!response) {
-          throw new Error('No response received from API');
-        }
-        
-        newClinic = response;
-        console.log('Clinic created successfully:', newClinic);
-      } catch (apiError) {
-        console.error('API Error details:', apiError);
-        throw apiError;
-      }
-      
-      toast({
-        title: "Success",
-        description: "Clinic created successfully",
-      });
-      
-      resetForm();
-      setShowAddForm(false);
-      
-      // Refresh the clinics list from server
-      await fetchClinics(1);
-      fetchClinicStats(); // Refresh stats
-    } catch (error) {
-      console.error('Failed to create clinic:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create clinic",
-        variant: "destructive",
-      });
-      throw error; // Re-throw to be caught by handleFormSubmit
+    // Ensure boolean values are properly handled
+    formData.append('is_active', clinicForm.is_active.toString());
+    formData.append('accepts_online_consultations', clinicForm.accepts_online_consultations.toString());
+
+    if (coverImage) {
+      formData.append('cover_image', coverImage);
     }
+
+    console.log('Submitting form data:', Object.fromEntries(formData));
+    const response = await superAdminApi.createEClinic(formData);
+    console.log('API Response:', response);
+    
+    if (!response) {
+      throw new Error('No response received from API');
+    }
+    
+    console.log('Clinic created successfully:', response);
+    
+    toast({
+      title: "Success",
+      description: "Clinic created successfully",
+    });
+    
+    resetForm();
+    setShowAddForm(false);
+    
+    // Refresh the clinics list from server
+    await fetchClinics(1);
+    fetchClinicStats(); // Refresh stats
   };
 
   const loadClinicForEdit = (clinic: EClinic) => {
@@ -360,6 +368,7 @@ const EClinicManagement = () => {
       facilities: clinic.facilities || [],
       is_active: clinic.is_active,
       accepts_online_consultations: clinic.accepts_online_consultations,
+      consultation_duration: clinic.consultation_duration,
       admin: clinic.admin || '',
     });
     setEditingClinic(clinic);
@@ -369,65 +378,48 @@ const EClinicManagement = () => {
   const handleUpdateClinic = async () => {
     if (!editingClinic) return;
 
-    try {
-      const formData = new FormData();
-      
-      // Add all form fields to FormData
-      Object.entries(clinicForm).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          // Send arrays as JSON strings
-          formData.append(key, JSON.stringify(value));
-        } else if (value !== undefined && value !== '') {
-          formData.append(key, value.toString());
-        }
-      });
-
-      // Ensure boolean values are properly handled
-      formData.append('is_active', clinicForm.is_active.toString());
-      formData.append('accepts_online_consultations', clinicForm.accepts_online_consultations.toString());
-
-      if (coverImage) {
-        formData.append('cover_image', coverImage);
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    Object.entries(clinicForm).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        // Send arrays as JSON strings
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== undefined && value !== '') {
+        formData.append(key, value.toString());
       }
+    });
 
-      console.log('Updating clinic with data:', Object.fromEntries(formData));
-      let updatedClinic;
-      try {
-        const response = await superAdminApi.updateEClinic(editingClinic.id, formData);
-        console.log('API Response:', response);
-        
-        if (!response) {
-          throw new Error('No response received from API');
-        }
-        
-        updatedClinic = response;
-        console.log('Clinic updated successfully:', updatedClinic);
-      } catch (apiError) {
-        console.error('API Error details:', apiError);
-        throw apiError;
-      }
-      
-      toast({
-        title: "Success",
-        description: "Clinic updated successfully",
-      });
-      
-      resetForm();
-      setShowAddForm(false);
-      setEditingClinic(null);
-      
-      // Refresh the clinics list from server
-      await fetchClinics(1);
-      fetchClinicStats(); // Refresh stats
-    } catch (error) {
-      console.error('Failed to update clinic:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update clinic",
-        variant: "destructive",
-      });
-      throw error; // Re-throw to be caught by handleFormSubmit
+    // Ensure boolean values are properly handled
+    formData.append('is_active', clinicForm.is_active.toString());
+    formData.append('accepts_online_consultations', clinicForm.accepts_online_consultations.toString());
+
+    if (coverImage) {
+      formData.append('cover_image', coverImage);
     }
+
+    console.log('Updating clinic with data:', Object.fromEntries(formData));
+    const response = await superAdminApi.updateEClinic(editingClinic.id, formData);
+    console.log('API Response:', response);
+    
+    if (!response) {
+      throw new Error('No response received from API');
+    }
+    
+    console.log('Clinic updated successfully:', response);
+    
+    toast({
+      title: "Success",
+      description: "Clinic updated successfully",
+    });
+    
+    resetForm();
+    setShowAddForm(false);
+    setEditingClinic(null);
+    
+    // Refresh the clinics list from server
+    await fetchClinics(1);
+    fetchClinicStats(); // Refresh stats
   };
 
   const handleDeleteClinic = async () => {
@@ -476,6 +468,7 @@ const EClinicManagement = () => {
       facilities: [],
       is_active: true,
       accepts_online_consultations: true,
+      consultation_duration: 15,
       admin: '',
     });
     setCoverImage(null);
@@ -485,7 +478,7 @@ const EClinicManagement = () => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -516,20 +509,7 @@ const EClinicManagement = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 mb-2">Verified Clinics</p>
-                <p className="text-2xl font-bold text-purple-900">{clinicStats.verified_clinics}</p>
-                <p className="text-sm text-purple-600 font-medium mt-1">Quality assured</p>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100">
           <CardContent className="p-6">
@@ -550,8 +530,12 @@ const EClinicManagement = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">E-Clinic Management</h2>
-          <p className="text-gray-600">Manage all e-clinics in the platform</p>
+          <h2 className={`text-2xl font-bold transition-colors duration-300 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>E-Clinic Management</h2>
+          <p className={`transition-colors duration-300 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>Manage all e-clinics in the platform</p>
         </div>
         <Button onClick={() => setShowAddForm(true)} className="bg-[#E17726] hover:bg-[#E17726]/90">
           <Plus className="w-4 h-4 mr-2" />
@@ -562,23 +546,31 @@ const EClinicManagement = () => {
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-300 ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-400'
+          }`} />
           <Input
             placeholder="Search clinics by name, city, or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className={`pl-10 transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''
+            }`}
           />
         </div>
         <Button
           variant="outline"
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2"
+          className={`flex items-center gap-2 transition-colors duration-300 ${
+            isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+          }`}
         >
           <Filter className="w-4 h-4" />
           Filters
         </Button>
-        <Button onClick={() => fetchClinics(1)} variant="outline">
+        <Button onClick={() => fetchClinics(1)} variant="outline" className={`transition-colors duration-300 ${
+          isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+        }`}>
           <RefreshCw className="w-4 h-4" />
         </Button>
       </div>
@@ -587,7 +579,7 @@ const EClinicManagement = () => {
       {showFilters && (
         <Card className="border-0 shadow-lg">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Status</Label>
                 <select
@@ -603,21 +595,7 @@ const EClinicManagement = () => {
                   <option value="false">Inactive</option>
                 </select>
               </div>
-              <div>
-                <Label>Verification</Label>
-                <select
-                  value={filters.is_verified?.toString() || ''}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    is_verified: e.target.value === '' ? undefined : e.target.value === 'true'
-                  }))}
-                  className="w-full mt-1 p-2 border rounded-md"
-                >
-                  <option value="">All Verification</option>
-                  <option value="true">Verified</option>
-                  <option value="false">Unverified</option>
-                </select>
-              </div>
+
               <div>
                 <Label>City</Label>
                 <Input
@@ -686,12 +664,6 @@ const EClinicManagement = () => {
                     <Badge variant={clinic.is_active ? "default" : "secondary"} className="text-xs">
                       {clinic.is_active ? "Active" : "Inactive"}
                     </Badge>
-                    {clinic.is_verified && (
-                      <Badge variant="outline" className="text-xs bg-white/90 text-green-600 border-green-600">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Verified
-                      </Badge>
-                    )}
                   </div>
 
                   {/* Action Menu */}
@@ -745,6 +717,10 @@ const EClinicManagement = () => {
                         <Mail className="w-4 h-4 mr-2 text-gray-400" />
                         <span className="truncate">{clinic.email || 'N/A'}</span>
                       </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{clinic.consultation_duration || 15} min consultation</span>
+                      </div>
                     </div>
 
                     {/* Assigned Admin */}
@@ -754,7 +730,9 @@ const EClinicManagement = () => {
                           <UserCheck className="w-3 h-3 text-blue-600" />
                           <span className="text-xs font-medium text-blue-700">Assigned Admin</span>
                         </div>
-                        <p className="text-sm text-blue-800 truncate">{clinic.admin}</p>
+                        <p className="text-sm text-blue-800 truncate">
+                          {clinic.admin_name || 'Unknown Admin'} ({clinic.admin_phone || 'No phone'})
+                        </p>
                       </div>
                     )}
 
@@ -894,7 +872,9 @@ const EClinicManagement = () => {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">Clinic Name *</Label>
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  Clinic Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="name"
                   value={clinicForm.name}
@@ -917,8 +897,10 @@ const EClinicManagement = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number *</Label>
+                              <div>
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                  Phone Number <span className="text-red-500">*</span>
+                </Label>
                   <Input
                     id="phone"
                     value={clinicForm.phone}
@@ -929,7 +911,9 @@ const EClinicManagement = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email *</Label>
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -966,7 +950,7 @@ const EClinicManagement = () => {
             <div>
               <Label htmlFor="specialties" className="text-sm font-medium text-gray-700">Select Specialties</Label>
               <div className="border rounded-lg p-4 bg-gradient-to-br from-blue-50 to-blue-100 mt-2">
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-32 overflow-y-auto">
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-32 overflow-y-auto">
                   {[
                     "Cardiology", "Neurology", "Orthopedics", "Pediatrics", "Dermatology",
                     "Ophthalmology", "ENT", "General Medicine", "Gynecology", "Urology",
@@ -1015,7 +999,7 @@ const EClinicManagement = () => {
             <div>
               <Label htmlFor="facilities" className="text-sm font-medium text-gray-700">Select Facilities</Label>
               <div className="border rounded-lg p-4 bg-gradient-to-br from-green-50 to-green-100 mt-2">
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-32 overflow-y-auto">
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-32 overflow-y-auto">
                   {[
                     "X-Ray", "MRI", "CT Scan", "Ultrasound", "Laboratory",
                     "Pharmacy", "Emergency Room", "ICU", "Operation Theater", "Blood Bank",
@@ -1064,7 +1048,7 @@ const EClinicManagement = () => {
             <div>
               <Label htmlFor="services" className="text-sm font-medium text-gray-700">Select Services</Label>
               <div className="border rounded-lg p-4 bg-gradient-to-br from-purple-50 to-purple-100 mt-2">
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-32 overflow-y-auto">
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-32 overflow-y-auto">
                   {[
                     "General Consultation", "Specialist Consultation", "Emergency Care", "Diagnostic Tests", "Surgery",
                     "Vaccination", "Health Checkup", "Preventive Care", "Chronic Disease Management", "Mental Health Services",
@@ -1112,7 +1096,9 @@ const EClinicManagement = () => {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="street" className="text-sm font-medium text-gray-700">Street Address *</Label>
+                <Label htmlFor="street" className="text-sm font-medium text-gray-700">
+                  Street Address <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="street"
                   value={clinicForm.street}
@@ -1124,7 +1110,9 @@ const EClinicManagement = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">City *</Label>
+                  <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                    City <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="city"
                     value={clinicForm.city}
@@ -1134,7 +1122,9 @@ const EClinicManagement = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="state" className="text-sm font-medium text-gray-700">State *</Label>
+                  <Label htmlFor="state" className="text-sm font-medium text-gray-700">
+                    State <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="state"
                     value={clinicForm.state}
@@ -1144,7 +1134,9 @@ const EClinicManagement = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="pincode" className="text-sm font-medium text-gray-700">Pincode *</Label>
+                  <Label htmlFor="pincode" className="text-sm font-medium text-gray-700">
+                    Pincode <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="pincode"
                     value={clinicForm.pincode}
@@ -1179,7 +1171,9 @@ const EClinicManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="registration_number" className="text-sm font-medium text-gray-700">Registration Number *</Label>
+                <Label htmlFor="registration_number" className="text-sm font-medium text-gray-700">
+                  Registration Number <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="registration_number"
                   value={clinicForm.registration_number}
@@ -1223,20 +1217,28 @@ const EClinicManagement = () => {
             </div>
 
             <div>
-              <Label htmlFor="admin" className="text-sm font-medium text-gray-700">Assign Admin</Label>
+              <Label htmlFor="admin" className="text-sm font-medium text-gray-700">
+                Assign Admin <span className="text-red-500">*</span>
+              </Label>
               <select
                 id="admin"
                 value={clinicForm.admin}
                 onChange={(e) => setClinicForm({...clinicForm, admin: e.target.value})}
-                className="w-full mt-1 h-11 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full mt-1 h-11 p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  !clinicForm.admin.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                required
               >
-                <option value="">Select an admin</option>
+                <option value="">Select an admin *</option>
                 {adminUsers.map((admin) => (
                   <option key={admin.id} value={admin.id}>
                     {admin.name} ({admin.phone})
                   </option>
                 ))}
               </select>
+              {!clinicForm.admin.trim() && (
+                <p className="text-sm text-red-600 mt-1">Please select an admin for this clinic</p>
+              )}
             </div>
           </div>
 
@@ -1316,6 +1318,24 @@ const EClinicManagement = () => {
                   checked={clinicForm.accepts_online_consultations}
                   onCheckedChange={(checked) => setClinicForm({...clinicForm, accepts_online_consultations: checked})}
                 />
+              </div>
+            </div>
+            
+            {/* Consultation Duration */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="consultation_duration" className="text-sm font-medium text-gray-700">Consultation Duration (minutes)</Label>
+                <Input
+                  id="consultation_duration"
+                  type="number"
+                  min="5"
+                  max="120"
+                  value={clinicForm.consultation_duration}
+                  onChange={(e) => setClinicForm({...clinicForm, consultation_duration: parseInt(e.target.value) || 15})}
+                  placeholder="15"
+                  className="mt-1 h-11 w-full md:w-1/3"
+                />
+                <p className="text-sm text-gray-600 mt-1">Duration of each consultation slot in minutes (5-120 minutes)</p>
               </div>
             </div>
           </div>
@@ -1410,12 +1430,6 @@ const EClinicManagement = () => {
                       <Badge variant={viewingClinic.is_active ? "default" : "secondary"} className="text-xs">
                         {viewingClinic.is_active ? "Active" : "Inactive"}
                       </Badge>
-                      {viewingClinic.is_verified && (
-                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Verified
-                        </Badge>
-                      )}
                       {viewingClinic.accepts_online_consultations && (
                         <Badge variant="outline" className="text-xs text-blue-600 border-blue-600">
                           <Globe className="w-3 h-3 mr-1" />
@@ -1463,6 +1477,30 @@ const EClinicManagement = () => {
                               </div>
                             </div>
                           )}
+                        </div>
+                      </div>
+
+                      {/* Consultation Settings */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          Consultation Settings
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                            <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-gray-900">{viewingClinic.consultation_duration || 15} minutes</p>
+                              <p className="text-sm text-gray-600">Consultation Duration</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                            <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-gray-900">{viewingClinic.accepts_online_consultations ? 'Enabled' : 'Disabled'}</p>
+                              <p className="text-sm text-gray-600">Online Consultations</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1525,8 +1563,8 @@ const EClinicManagement = () => {
                             <div className="flex items-center gap-3">
                               <UserCheck className="w-4 h-4 text-blue-600" />
                               <div>
-                                <p className="font-medium text-blue-900">{viewingClinic.admin}</p>
-                                <p className="text-sm text-blue-700">Administrator</p>
+                                <p className="font-medium text-blue-900">{viewingClinic.admin_name || 'Unknown Admin'}</p>
+                                <p className="text-sm text-blue-700">{viewingClinic.admin_phone || 'No phone'}</p>
                               </div>
                             </div>
                           </div>

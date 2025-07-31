@@ -34,7 +34,11 @@ import {
 import { superAdminApi, SuperAdminAnalytics as AnalyticsData } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
 
-const SuperAdminAnalytics = () => {
+interface SuperAdminAnalyticsProps {
+  isDarkMode?: boolean;
+}
+
+const SuperAdminAnalytics: React.FC<SuperAdminAnalyticsProps> = ({ isDarkMode = false }) => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -164,7 +168,9 @@ const SuperAdminAnalytics = () => {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-[#E17726] mx-auto mb-4" />
-          <p className="text-gray-600">Loading analytics data...</p>
+          <p className={`transition-colors duration-300 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            Loading analytics data...
+          </p>
         </div>
       </div>
     );
@@ -175,25 +181,38 @@ const SuperAdminAnalytics = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-midnight mb-2">Platform Analytics</h2>
-          <p className="text-gray-600">Comprehensive insights and performance metrics</p>
+          <h2 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${
+            isDarkMode ? 'text-white' : 'text-midnight'
+          }`}>
+            Platform Analytics
+          </h2>
+          <p className={`transition-colors duration-300 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            Comprehensive insights and performance metrics
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className={`w-32 transition-colors duration-300 ${
+              isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : ''
+            }`}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="3m">Last 3 months</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
+            <SelectContent className={isDarkMode ? 'bg-gray-800 border-gray-600' : ''}>
+              <SelectItem value="7d" className={isDarkMode ? 'text-white hover:bg-gray-700' : ''}>Last 7 days</SelectItem>
+              <SelectItem value="30d" className={isDarkMode ? 'text-white hover:bg-gray-700' : ''}>Last 30 days</SelectItem>
+              <SelectItem value="3m" className={isDarkMode ? 'text-white hover:bg-gray-700' : ''}>Last 3 months</SelectItem>
+              <SelectItem value="1y" className={isDarkMode ? 'text-white hover:bg-gray-700' : ''}>Last year</SelectItem>
             </SelectContent>
           </Select>
           <Button
             onClick={() => setShowCharts(!showCharts)}
             variant="outline"
             size="sm"
+            className={`transition-colors duration-300 ${
+              isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+            }`}
           >
             {showCharts ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </Button>
@@ -202,6 +221,9 @@ const SuperAdminAnalytics = () => {
             disabled={refreshing}
             variant="outline"
             size="sm"
+            className={`transition-colors duration-300 ${
+              isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+            }`}
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -213,7 +235,9 @@ const SuperAdminAnalytics = () => {
         {kpiData.map((kpi, index) => {
           const Icon = kpi.icon;
           return (
-            <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+            <Card key={index} className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm rounded-2xl ${
+              isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+            }`}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-12 h-12 rounded-xl ${kpi.bgColor} flex items-center justify-center`}>
@@ -227,8 +251,16 @@ const SuperAdminAnalytics = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-midnight mb-1">{kpi.value}</p>
-                  <p className="text-sm text-gray-600">{kpi.title}</p>
+                  <p className={`text-2xl font-bold mb-1 transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : 'text-midnight'
+                  }`}>
+                    {kpi.value}
+                  </p>
+                  <p className={`text-sm transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {kpi.title}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -240,38 +272,62 @@ const SuperAdminAnalytics = () => {
       {showCharts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue Chart */}
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl">
+          <Card className={`border-0 shadow-lg backdrop-blur-sm rounded-2xl transition-colors duration-300 ${
+            isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+          }`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+                isDarkMode ? 'text-white' : ''
+              }`}>
                 <DollarSign className="w-5 h-5 text-[#E17726]" />
                 Revenue Trend
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+              <div className={`h-64 flex items-center justify-center rounded-lg transition-colors duration-300 ${
+                isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
+              }`}>
                 <div className="text-center">
-                  <BarChart className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">Revenue chart will be displayed here</p>
-                  <p className="text-sm text-gray-400">Chart component integration needed</p>
+                  <BarChart className={`w-12 h-12 mx-auto mb-2 transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                  <p className={`transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                  }`}>Revenue chart will be displayed here</p>
+                  <p className={`text-sm transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-400'
+                  }`}>Chart component integration needed</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Consultations Chart */}
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm rounded-2xl">
+          <Card className={`border-0 shadow-lg backdrop-blur-sm rounded-2xl transition-colors duration-300 ${
+            isDarkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90'
+          }`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+                isDarkMode ? 'text-white' : ''
+              }`}>
                 <Video className="w-5 h-5 text-blue-600" />
                 Consultation Volume
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+              <div className={`h-64 flex items-center justify-center rounded-lg transition-colors duration-300 ${
+                isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
+              }`}>
                 <div className="text-center">
-                  <LineChart className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">Consultation chart will be displayed here</p>
-                  <p className="text-sm text-gray-400">Chart component integration needed</p>
+                  <LineChart className={`w-12 h-12 mx-auto mb-2 transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                  <p className={`transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                  }`}>Consultation chart will be displayed here</p>
+                  <p className={`text-sm transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-400'
+                  }`}>Chart component integration needed</p>
                 </div>
               </div>
             </CardContent>
