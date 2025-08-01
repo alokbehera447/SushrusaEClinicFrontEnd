@@ -324,8 +324,16 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       }
       formData.append('license_number', doctorForm.license_number.trim());
       formData.append('qualification', doctorForm.qualification.trim());
-      formData.append('specialization', doctorForm.specialization);
-      if (doctorForm.sub_specialization.trim()) formData.append('sub_specialization', doctorForm.sub_specialization.trim());
+      
+      // Handle specializations: first one as primary, rest as sub-specializations
+      if (doctorForm.specializations.length > 0) {
+        formData.append('specialization', doctorForm.specializations[0]);
+        if (doctorForm.specializations.length > 1) {
+          const additionalSpecializations = doctorForm.specializations.slice(1).join(', ');
+          formData.append('sub_specialization', additionalSpecializations);
+        }
+      }
+      
       formData.append('consultation_fee', consultationFee.toString());
       formData.append('experience_years', experienceYears.toString());
       if (doctorForm.clinic_name.trim()) formData.append('clinic_name', doctorForm.clinic_name.trim());
@@ -366,7 +374,9 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       license_number: doctor.license_number || '',
       qualification: doctor.qualification || '',
       specialization: doctor.specialization || '',
-      specializations: doctor.specialization ? [doctor.specialization] : [],
+      specializations: doctor.sub_specialization 
+        ? [doctor.specialization, ...doctor.sub_specialization.split(', ').filter(s => s.trim())]
+        : doctor.specialization ? [doctor.specialization] : [],
       sub_specialization: doctor.sub_specialization || '',
       consultation_fee: doctor.consultation_fee?.toString() || '',
       experience_years: doctor.experience_years?.toString() || '',
@@ -413,8 +423,16 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       }
       formData.append('license_number', doctorForm.license_number.trim());
       formData.append('qualification', doctorForm.qualification.trim());
-      formData.append('specialization', doctorForm.specialization);
-      if (doctorForm.sub_specialization.trim()) formData.append('sub_specialization', doctorForm.sub_specialization.trim());
+      
+      // Handle specializations: first one as primary, rest as sub-specializations
+      if (doctorForm.specializations.length > 0) {
+        formData.append('specialization', doctorForm.specializations[0]);
+        if (doctorForm.specializations.length > 1) {
+          const additionalSpecializations = doctorForm.specializations.slice(1).join(', ');
+          formData.append('sub_specialization', additionalSpecializations);
+        }
+      }
+      
       formData.append('consultation_fee', consultationFee.toString());
       formData.append('experience_years', experienceYears.toString());
       if (doctorForm.clinic_name.trim()) formData.append('clinic_name', doctorForm.clinic_name.trim());
@@ -977,24 +995,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="specialization">Specialization *</Label>
-                  <Input
-                    id="specialization"
-                    value={doctorForm.specialization}
-                    onChange={(e) => setDoctorForm({...doctorForm, specialization: e.target.value})}
-                    placeholder="Cardiology"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sub_specialization">Sub-Specialization</Label>
-                  <Input
-                    id="sub_specialization"
-                    value={doctorForm.sub_specialization}
-                    onChange={(e) => setDoctorForm({...doctorForm, sub_specialization: e.target.value})}
-                    placeholder="Interventional Cardiology"
-                  />
-                </div>
-                <div>
                   <Label htmlFor="experience">Experience (Years) *</Label>
                   <Input
                     id="experience"
@@ -1046,6 +1046,9 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                     Add Specialization
                   </Button>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  First specialization will be the primary one, others will be stored as sub-specializations
+                </p>
               </div>
 
               {/* Fees and Duration */}
