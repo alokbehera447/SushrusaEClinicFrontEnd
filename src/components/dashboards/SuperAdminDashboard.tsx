@@ -127,9 +127,9 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
     license_number: '',
     qualification: '',
     specialization: '',
+    specializations: [] as string[],
     sub_specialization: '',
     consultation_fee: '',
-    online_consultation_fee: '',
     experience_years: '',
     clinic_name: '',
     clinic_address: '',
@@ -142,12 +142,17 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
     date_of_anniversary: '',
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalDoctors, setTotalDoctors] = useState(0);
+
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDoctors();
-  }, [searchTerm, filters]);
+  }, [searchTerm, filters, currentPage, pageSize]);
 
   const fetchDoctors = async () => {
     setLoading(true);
@@ -156,9 +161,20 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
         is_active: filters.is_active, 
         search: searchTerm,
         is_verified: filters.is_verified,
-        specialization: filters.specialization
+        specialization: filters.specialization,
+        page: currentPage,
+        page_size: pageSize
       });
-      setDoctors(response);
+      if (Array.isArray(response)) {
+        setDoctors(response);
+        setTotalDoctors(response.length);
+      } else if (response && typeof response === 'object' && 'results' in response) {
+        setDoctors(response.results);
+        setTotalDoctors(response.count || response.results.length);
+      } else {
+        setDoctors([]);
+        setTotalDoctors(0);
+      }
     } catch (error) {
       console.error('Failed to fetch doctors:', error);
       toast({
@@ -242,7 +258,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       return false;
     }
     const consultationFee = parseFloat(doctorForm.consultation_fee);
-    const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
     const experienceYears = parseInt(doctorForm.experience_years);
     const consultationDuration = parseInt(doctorForm.consultation_duration);
     
@@ -255,14 +270,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       return false;
     }
     
-    if (isNaN(onlineConsultationFee) || onlineConsultationFee < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid online consultation fee",
-        variant: "destructive",
-      });
-      return false;
-    }
+
     
     if (isNaN(experienceYears) || experienceYears < 0 || experienceYears > 50) {
       toast({
@@ -304,7 +312,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
   const handleCreateDoctor = async () => {
     try {
       const consultationFee = parseFloat(doctorForm.consultation_fee);
-      const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
       const experienceYears = parseInt(doctorForm.experience_years);
       const consultationDuration = parseInt(doctorForm.consultation_duration);
 
@@ -320,7 +327,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       formData.append('specialization', doctorForm.specialization);
       if (doctorForm.sub_specialization.trim()) formData.append('sub_specialization', doctorForm.sub_specialization.trim());
       formData.append('consultation_fee', consultationFee.toString());
-      formData.append('online_consultation_fee', onlineConsultationFee.toString());
       formData.append('experience_years', experienceYears.toString());
       if (doctorForm.clinic_name.trim()) formData.append('clinic_name', doctorForm.clinic_name.trim());
       if (doctorForm.clinic_address.trim()) formData.append('clinic_address', doctorForm.clinic_address.trim());
@@ -360,9 +366,9 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       license_number: doctor.license_number || '',
       qualification: doctor.qualification || '',
       specialization: doctor.specialization || '',
+      specializations: doctor.specialization ? [doctor.specialization] : [],
       sub_specialization: doctor.sub_specialization || '',
       consultation_fee: doctor.consultation_fee?.toString() || '',
-      online_consultation_fee: doctor.online_consultation_fee?.toString() || '',
       experience_years: doctor.experience_years?.toString() || '',
       clinic_name: doctor.clinic_name || '',
       clinic_address: doctor.clinic_address || '',
@@ -394,7 +400,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
 
     try {
       const consultationFee = parseFloat(doctorForm.consultation_fee);
-      const onlineConsultationFee = parseFloat(doctorForm.online_consultation_fee);
       const experienceYears = parseInt(doctorForm.experience_years);
       const consultationDuration = parseInt(doctorForm.consultation_duration);
 
@@ -411,7 +416,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       formData.append('specialization', doctorForm.specialization);
       if (doctorForm.sub_specialization.trim()) formData.append('sub_specialization', doctorForm.sub_specialization.trim());
       formData.append('consultation_fee', consultationFee.toString());
-      formData.append('online_consultation_fee', onlineConsultationFee.toString());
       formData.append('experience_years', experienceYears.toString());
       if (doctorForm.clinic_name.trim()) formData.append('clinic_name', doctorForm.clinic_name.trim());
       if (doctorForm.clinic_address.trim()) formData.append('clinic_address', doctorForm.clinic_address.trim());
@@ -477,9 +481,9 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       license_number: '',
       qualification: '',
       specialization: '',
+      specializations: [],
       sub_specialization: '',
       consultation_fee: '',
-      online_consultation_fee: '',
       experience_years: '',
       clinic_name: '',
       clinic_address: '',
@@ -629,154 +633,215 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
               <p>No doctors found</p>
             </div>
           ) : (
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {doctors.map((doctor) => (
-                  <div
-                    key={doctor.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg transition-colors duration-300 ${
-                      isDarkMode 
-                        ? 'border-gray-600 hover:bg-gray-700' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <Avatar className="h-12 w-12">
-                        {doctor.profile_picture ? (
-                          <img 
-                            src={doctor.profile_picture} 
-                            alt={doctor.user_name} 
-                            className="h-12 w-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <AvatarFallback className="bg-[#E17726] text-white">
-                            {doctor.user_name?.charAt(0) || 'D'}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className={`font-semibold truncate transition-colors duration-300 ${
-                            isDarkMode ? 'text-white' : 'text-midnight'
+            <>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {doctors.map((doctor) => (
+                    <div
+                      key={doctor.id}
+                      className={`flex items-center justify-between p-4 border rounded-lg transition-colors duration-300 ${
+                        isDarkMode 
+                          ? 'border-gray-600 hover:bg-gray-700' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <Avatar className="h-12 w-12">
+                          {doctor.profile_picture ? (
+                            <img 
+                              src={doctor.profile_picture} 
+                              alt={doctor.user_name} 
+                              className="h-12 w-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <AvatarFallback className="bg-[#E17726] text-white">
+                              {doctor.user_name?.charAt(0) || 'D'}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className={`font-semibold truncate transition-colors duration-300 ${
+                              isDarkMode ? 'text-white' : 'text-midnight'
+                            }`}>
+                              Dr. {doctor.user_name}
+                            </h3>
+                            <Badge className={doctor.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                              {doctor.is_verified ? 'Verified' : 'Pending'}
+                            </Badge>
+                            <Badge className={doctor.is_active ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}>
+                              {doctor.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          <div className={`flex items-center gap-4 text-sm transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-300' : 'text-gray-600'
                           }`}>
-                            Dr. {doctor.user_name}
-                          </h3>
-                          <Badge className={doctor.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                            {doctor.is_verified ? 'Verified' : 'Pending'}
-                          </Badge>
-                          <Badge className={doctor.is_active ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}>
-                            {doctor.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </div>
-                        <div className={`flex items-center gap-4 text-sm transition-colors duration-300 ${
-                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                        }`}>
-                          <span className="flex items-center gap-1">
-                            <GraduationCap className="w-3 h-3" />
-                            {doctor.specialization}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Award className="w-3 h-3" />
-                            {doctor.experience_years} years
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
-                            ₹{doctor.consultation_fee}
-                          </span>
-                          {doctor.rating > 0 && (
                             <span className="flex items-center gap-1">
-                              <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                              {doctor.rating}/5
+                              <GraduationCap className="w-3 h-3" />
+                              {doctor.specialization}
                             </span>
-                          )}
-                        </div>
-                        <div className={`flex items-center gap-4 text-xs mt-1 transition-colors duration-300 ${
-                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
-                          <span className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {doctor.user_phone}
-                          </span>
-                          {doctor.user_email && (
                             <span className="flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {doctor.user_email}
+                              <Award className="w-3 h-3" />
+                              {doctor.experience_years} years
                             </span>
-                          )}
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              ₹{doctor.consultation_fee}
+                            </span>
+                            {doctor.rating > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                {doctor.rating}/5
+                              </span>
+                            )}
+                          </div>
+                          <div className={`flex items-center gap-4 text-xs mt-1 transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              {doctor.user_phone}
+                            </span>
+                            {doctor.user_email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="w-3 h-3" />
+                                {doctor.user_email}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setViewingDoctor(doctor)}
+                          className={`border-blue-300 text-blue-600 transition-colors duration-300 ${
+                            isDarkMode ? 'hover:bg-blue-900/20' : 'hover:bg-blue-50'
+                          }`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => loadDoctorForEdit(doctor)}
+                          className={`border-green-300 text-green-600 transition-colors duration-300 ${
+                            isDarkMode ? 'hover:bg-green-900/20' : 'hover:bg-green-50'
+                          }`}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline" className={`transition-colors duration-300 ${
+                              isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
+                            }`}>
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className={`transition-colors duration-300 ${
+                            isDarkMode ? 'bg-gray-800 border-gray-700' : ''
+                          }`}>
+                            <DropdownMenuLabel className={`transition-colors duration-300 ${
+                              isDarkMode ? 'text-gray-200' : ''
+                            }`}>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator className={`transition-colors duration-300 ${
+                              isDarkMode ? 'bg-gray-700' : ''
+                            }`} />
+                            <DropdownMenuItem onClick={() => setViewingDoctor(doctor)} className={`transition-colors duration-300 ${
+                              isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
+                            }`}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => loadDoctorForEdit(doctor)} className={`transition-colors duration-300 ${
+                              isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
+                            }`}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Doctor
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className={`transition-colors duration-300 ${
+                              isDarkMode ? 'bg-gray-700' : ''
+                            }`} />
+                            <DropdownMenuItem 
+                              onClick={() => setDeletingDoctor(doctor)}
+                              className={`text-red-600 transition-colors duration-300 ${
+                                isDarkMode ? 'hover:bg-gray-700' : ''
+                              }`}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Doctor
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setViewingDoctor(doctor)}
-                        className={`border-blue-300 text-blue-600 transition-colors duration-300 ${
-                          isDarkMode ? 'hover:bg-blue-900/20' : 'hover:bg-blue-50'
-                        }`}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => loadDoctorForEdit(doctor)}
-                        className={`border-green-300 text-green-600 transition-colors duration-300 ${
-                          isDarkMode ? 'hover:bg-green-900/20' : 'hover:bg-green-50'
-                        }`}
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline" className={`transition-colors duration-300 ${
-                            isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-gray-700' : ''
-                          }`}>
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className={`transition-colors duration-300 ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : ''
-                        }`}>
-                          <DropdownMenuLabel className={`transition-colors duration-300 ${
-                            isDarkMode ? 'text-gray-200' : ''
-                          }`}>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator className={`transition-colors duration-300 ${
-                            isDarkMode ? 'bg-gray-700' : ''
-                          }`} />
-                          <DropdownMenuItem onClick={() => setViewingDoctor(doctor)} className={`transition-colors duration-300 ${
-                            isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
-                          }`}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => loadDoctorForEdit(doctor)} className={`transition-colors duration-300 ${
-                            isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
-                          }`}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Doctor
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className={`transition-colors duration-300 ${
-                            isDarkMode ? 'bg-gray-700' : ''
-                          }`} />
-                          <DropdownMenuItem 
-                            onClick={() => setDeletingDoctor(doctor)}
-                            className={`text-red-600 transition-colors duration-300 ${
-                              isDarkMode ? 'hover:bg-gray-700' : ''
-                            }`}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Doctor
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              
+              {/* Pagination */}
+              {totalDoctors > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <div className="text-sm text-gray-700">
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalDoctors)} of {totalDoctors} doctors
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, Math.ceil(totalDoctors / pageSize)) }, (_, i) => {
+                        const page = i + 1;
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage >= Math.ceil(totalDoctors / pageSize)}
+                    >
+                      Next
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.ceil(totalDoctors / pageSize))}
+                      disabled={currentPage >= Math.ceil(totalDoctors / pageSize)}
+                    >
+                      Last
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -943,8 +1008,48 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                 </div>
               </div>
 
+              {/* Specializations */}
+              <div>
+                <Label>Specializations *</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {doctorForm.specializations.map((spec, index) => (
+                    <Badge key={index} variant="outline" className="flex items-center gap-1">
+                      {spec}
+                      <button
+                        type="button"
+                        onClick={() => setDoctorForm({
+                          ...doctorForm, 
+                          specializations: doctorForm.specializations.filter((_, i) => i !== index)
+                        })}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newSpecialization = prompt('Enter specialization:');
+                      if (newSpecialization && newSpecialization.trim()) {
+                        setDoctorForm({
+                          ...doctorForm,
+                          specializations: [...doctorForm.specializations, newSpecialization.trim()]
+                        });
+                      }
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Specialization
+                  </Button>
+                </div>
+              </div>
+
               {/* Fees and Duration */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="consultation_fee">Consultation Fee (₹) *</Label>
                   <Input
@@ -953,17 +1058,6 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                     value={doctorForm.consultation_fee}
                     onChange={(e) => setDoctorForm({...doctorForm, consultation_fee: e.target.value})}
                     placeholder="1000"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="online_fee">Online Fee (₹) *</Label>
-                  <Input
-                    id="online_fee"
-                    type="number"
-                    value={doctorForm.online_consultation_fee}
-                    onChange={(e) => setDoctorForm({...doctorForm, online_consultation_fee: e.target.value})}
-                    placeholder="800"
                     min="0"
                   />
                 </div>
@@ -977,6 +1071,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                     placeholder="30"
                     min="15"
                     max="120"
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                 </div>
               </div>
