@@ -98,6 +98,7 @@ import EClinicManagement from './EClinicManagement';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import SuperAdminOverview from './SuperAdminOverview';
 import SuperAdminAnalytics from './SuperAdminAnalytics';
+import DoctorStatusDashboard from './DoctorStatusDashboard';
 import PatientManagement from './PatientManagement';
 
 
@@ -1262,6 +1263,7 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },
+    { id: 'doctor-status', label: 'Doctor Status', icon: Activity },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'admins', label: 'Admins', icon: UserCog },
     { id: 'clinics', label: 'E-Clinics', icon: Building2 },
@@ -1274,6 +1276,8 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
         return <SuperAdminOverview isDarkMode={isDarkMode} />;
       case 'doctors':
         return <DoctorsManagement isDarkMode={isDarkMode} />;
+      case 'doctor-status':
+        return <DoctorStatusDashboard isDarkMode={isDarkMode} />;
       case 'patients':
         return <PatientManagement isDarkMode={isDarkMode} />;
       case 'admins':

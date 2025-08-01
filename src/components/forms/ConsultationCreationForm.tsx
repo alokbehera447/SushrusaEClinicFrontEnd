@@ -1,45 +1,52 @@
 import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from "date-fns";
-import { 
-  Video, 
-  Phone, 
-  User, 
-  CalendarIcon, 
-  Clock, 
-  DollarSign, 
-  FileText, 
-  AlertTriangle, 
-  Save,
-  Search,
-  Plus,
-  X
-} from 'lucide-react';
+import { CalendarIcon, Clock, User, Stethoscope, Building2, Calendar as CalendarIcon2, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { adminPatientApi, doctorApi, doctorSlotApi, DoctorSlotFrontend, PatientProfile, DoctorProfile, createConsultation, getAvailableSlots } from '@/lib/api';
+import { adminPatientApi, doctorApi, superAdminApi, PatientProfile, DoctorProfile, EClinic, createConsultation, calculateAvailableSlots } from '@/lib/api';
 import { debounce } from 'lodash';
+import { toast } from 'sonner';
+
+interface CalculatedSlot {
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  clinic_name: string;
+  doctor_name: string;
+  is_available: boolean;
+}
+
+interface DoctorSlotFrontend {
+  id: number;
+  doctor: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  created_at: string;
+  updated_at: string;
+  type: 'available' | 'booked';
+}
 
 const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Basic Consultation Info
     patientId: '',
     doctorId: '',
-    consultationType: 'video', // video, phone, in-person
+    clinicId: '',
+    consultationType: 'video_call', // video_call only
     consultationDate: undefined as Date | undefined,
-    consultationTime: '',
+    selectedSlot: null as DoctorSlotFrontend | null,
     duration: '30', // minutes
-    priority: 'normal', // low, normal, high, emergency
     
     // Consultation Details
     chiefComplaint: '',
@@ -68,21 +75,19 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
+  const [selectedClinic, setSelectedClinic] = useState<EClinic | null>(null);
   const [patientSearch, setPatientSearch] = useState('');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [patientOptions, setPatientOptions] = useState<PatientProfile[]>([]);
   const [doctorOptions, setDoctorOptions] = useState<DoctorProfile[]>([]);
+  const [clinicOptions, setClinicOptions] = useState<EClinic[]>([]);
   const [doctorSlots, setDoctorSlots] = useState<DoctorSlotFrontend[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<DoctorSlotFrontend | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedClinic, setSelectedClinic] = useState<string | null>(null);
-  const [clinicOptions, setClinicOptions] = useState<{ id: string; name: string }[]>([]);
+  const [slotError, setSlotError] = useState<string | null>(null);
 
   // Debounced patient search
   const debouncedPatientSearch = React.useMemo(() => debounce(async (query: string) => {
     if (!query) {
-      // Fetch default patient list
       try {
         const res = await adminPatientApi.getPatients({ page: 1, page_size: 8 });
         setPatientOptions(Array.isArray(res?.results) ? res.results : []);
@@ -99,51 +104,9 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
     }
   }, 400), []);
 
-  // Function to fetch available slots
-  const fetchAvailableSlots = async (date: Date) => {
-    if (!selectedDoctor || !selectedClinic) {
-      setDoctorSlots([]);
-      return;
-    }
-
-    setSlotLoading(true);
-    try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const slots = await getAvailableSlots({
-        doctor_id: selectedDoctor.user,
-        clinic_id: selectedClinic,
-        date: formattedDate
-      });
-      
-      // Convert to frontend format
-      const frontendSlots: DoctorSlotFrontend[] = slots.map(slot => ({
-        id: slot.id,
-        doctor: slot.doctor,
-        date: slot.date,
-        startTime: slot.start_time.slice(0, 5),
-        endTime: slot.end_time.slice(0, 5),
-        isAvailable: slot.is_available && !slot.is_booked,
-        created_at: slot.created_at,
-        updated_at: slot.updated_at,
-        type: slot.is_available && !slot.is_booked ? 'available' : 'booked',
-      }));
-      
-      setDoctorSlots(frontendSlots);
-    } catch (error) {
-      console.error('Error fetching available slots:', error);
-      setDoctorSlots([]);
-    } finally {
-      setSlotLoading(false);
-    }
-  };
-  React.useEffect(() => {
-    debouncedPatientSearch(patientSearch);
-  }, [patientSearch]);
-
   // Debounced doctor search
   const debouncedDoctorSearch = React.useMemo(() => debounce(async (query: string) => {
     if (!query) {
-      // Fetch default doctor list
       try {
         const res = await doctorApi.getDoctors({ is_active: true, is_verified: true });
         setDoctorOptions(Array.isArray(res) ? res.slice(0, 8) : []);
@@ -155,24 +118,70 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
     const results = await doctorApi.getDoctors({ search: query });
     setDoctorOptions(Array.isArray(results) ? results : []);
   }, 400), []);
-  React.useEffect(() => {
-    debouncedDoctorSearch(doctorSearch);
-  }, [doctorSearch]);
-  // Fetch available slots for selected doctor, clinic, and date
-  React.useEffect(() => {
-    if (!selectedDoctor || !selectedDate || !selectedClinic) {
+
+  // Function to fetch available slots
+  const fetchAvailableSlots = async (date: Date) => {
+    if (!selectedDoctor || !selectedClinic) {
       setDoctorSlots([]);
       return;
     }
-    fetchAvailableSlots(selectedDate);
-  }, [selectedDoctor, selectedDate, selectedClinic]);
 
-  // Fetch clinics for dropdown (you can filter by admin, etc. as needed)
+    setSlotLoading(true);
+    try {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const result = await calculateAvailableSlots({
+        doctor_id: selectedDoctor.user,
+        clinic_id: selectedClinic.id,
+        date: formattedDate
+      });
+      
+      // Convert to frontend format
+      const frontendSlots: DoctorSlotFrontend[] = result.slots.map(slot => ({
+        id: -1, // Temporary ID for calculated slots
+        doctor: Number(selectedDoctor.user),
+        date: formattedDate,
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+        isAvailable: slot.is_available,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        type: slot.is_available ? 'available' : 'booked',
+      }));
+      
+      setDoctorSlots(frontendSlots);
+      
+      // Update duration based on clinic
+      setFormData(prev => ({ ...prev, duration: result.clinic_duration.toString() }));
+    } catch (error) {
+      console.error('Error calculating available slots:', error);
+      setDoctorSlots([]);
+    } finally {
+      setSlotLoading(false);
+    }
+  };
+
+  // Effects
+  React.useEffect(() => {
+    debouncedPatientSearch(patientSearch);
+  }, [patientSearch]);
+
+  React.useEffect(() => {
+    debouncedDoctorSearch(doctorSearch);
+  }, [doctorSearch]);
+
+  // Calculate slots when doctor, clinic, or date changes
+  React.useEffect(() => {
+    if (selectedDoctor && selectedClinic && formData.consultationDate) {
+      fetchAvailableSlots(formData.consultationDate);
+    }
+  }, [selectedDoctor, selectedClinic, formData.consultationDate]);
+
+  // Fetch clinics
   React.useEffect(() => {
     async function fetchClinics() {
       try {
-        const res = await import('@/lib/api').then(m => m.superAdminApi.getEClinics());
-        setClinicOptions(Array.isArray(res.results) ? res.results.map((c: any) => ({ id: c.id, name: c.name })) : []);
+        const res = await superAdminApi.getEClinics();
+        setClinicOptions(Array.isArray(res.results) ? res.results : []);
       } catch {
         setClinicOptions([]);
       }
@@ -181,505 +190,428 @@ const ConsultationCreationForm = ({ onClose }: { onClose: () => void }) => {
   }, []);
 
   const handleInputChange = (field: string, value: string | number | boolean | Date | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePatientSelect = (patient: PatientProfile) => {
+    setSelectedPatient(patient);
+    setFormData(prev => ({ ...prev, patientId: patient.user }));
+    setPatientSearch(patient.user_name);
+  };
+
+  const handleDoctorSelect = (doctor: DoctorProfile) => {
+    setSelectedDoctor(doctor);
+    setFormData(prev => ({ ...prev, doctorId: doctor.user }));
+    setDoctorSearch(doctor.user_name);
+  };
+
+  const handleClinicSelect = (clinic: EClinic) => {
+    console.log('Clinic selected:', clinic);
+    console.log('Clinic ID:', clinic.id, 'Type:', typeof clinic.id);
+    setSelectedClinic(clinic);
+    setFormData(prev => ({ ...prev, clinicId: clinic.id }));
+  };
+
+  const handleSlotSelect = (slot: DoctorSlotFrontend) => {
+    setFormData(prev => ({ ...prev, selectedSlot: slot }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.selectedSlot) {
+      alert('Please select a time slot');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (!selectedPatient || !selectedDoctor || !selectedSlot) {
-        alert('Please select patient, doctor, and slot.');
-        setIsSubmitting(false);
-        return;
-      }
-      if (!selectedClinic) {
-        alert('Please select a clinic.');
-        setIsSubmitting(false);
-        return;
-      }
-      const payload = {
-        patient: selectedPatient.user, // user code (e.g., PAT001)
-        doctor: selectedDoctor.user,   // user code (e.g., DOC001)
-        consultation_type: 'video_call',
-        scheduled_date: selectedSlot.date,
-        scheduled_time: selectedSlot.startTime,
-        duration: Number(formData.duration),
+      console.log('Form data before submission:', formData);
+      console.log('Selected clinic:', selectedClinic);
+      const consultationData = {
+        patient: formData.patientId,
+        doctor: formData.doctorId,
+        consultation_type: formData.consultationType,
+        scheduled_date: format(formData.consultationDate!, 'yyyy-MM-dd'),
+        scheduled_time: formData.selectedSlot.startTime,
+        duration: parseInt(formData.duration),
         chief_complaint: formData.chiefComplaint,
         symptoms: formData.symptoms,
-        consultation_fee: Number(getConsultationFee()),
-        slot_id: selectedSlot.id, // New field for slot-based booking
+        consultation_fee: parseFloat(formData.consultationFee) || 0,
+        clinic_id: parseInt(formData.clinicId) || undefined
       };
-      const result = await createConsultation(payload);
-      alert('Consultation created successfully!');
+
+      console.log('Sending consultation data:', consultationData);
+      console.log('Clinic ID type:', typeof consultationData.clinic_id, 'Value:', consultationData.clinic_id);
+      await createConsultation(consultationData);
+      toast.success('Consultation created successfully!');
       onClose();
     } catch (error) {
       console.error('Error creating consultation:', error);
-      alert('Failed to create consultation. Please try again.');
+      alert('Failed to create consultation');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getConsultationFee = () => {
-    const baseFee = formData.consultationType === 'video' ? 800 : 
-                   formData.consultationType === 'phone' ? 600 : 1000;
-    return baseFee;
+  const nextStep = () => {
+    if (currentStep < 4) setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div>
+        <Label htmlFor="patient-search">Search Patient</Label>
+        <Input
+          id="patient-search"
+          placeholder="Search by name, phone, or email..."
+          value={patientSearch}
+          onChange={(e) => setPatientSearch(e.target.value)}
+        />
+        {patientOptions.length > 0 && (
+          <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+            {patientOptions.map((patient) => (
+              <div
+                key={patient.id}
+                className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                onClick={() => handlePatientSelect(patient)}
+              >
+                <div className="font-medium">{patient.user_name}</div>
+                <div className="text-sm text-gray-600">{patient.user_phone}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {selectedPatient && (
+          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="font-medium">Selected: {selectedPatient.user_name}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div>
+        <Label htmlFor="doctor-search">Search Doctor</Label>
+        <Input
+          id="doctor-search"
+          placeholder="Search by name or specialization..."
+          value={doctorSearch}
+          onChange={(e) => setDoctorSearch(e.target.value)}
+        />
+        {doctorOptions.length > 0 && (
+          <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+            {doctorOptions.map((doctor) => (
+              <div
+                key={doctor.user}
+                className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                onClick={() => handleDoctorSelect(doctor)}
+              >
+                <div className="font-medium">{doctor.user_name}</div>
+                <div className="text-sm text-gray-600">{doctor.specialization}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {selectedDoctor && (
+          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="font-medium">Selected: {selectedDoctor.user_name}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="clinic-select">Select Clinic</Label>
+        <Select onValueChange={(value) => {
+          const clinic = clinicOptions.find(c => c.id === value);
+          if (clinic) handleClinicSelect(clinic);
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a clinic" />
+          </SelectTrigger>
+          <SelectContent>
+            {clinicOptions.map((clinic) => (
+              <SelectItem key={clinic.id} value={clinic.id}>
+                {clinic.name} ({clinic.consultation_duration} min)
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedClinic && (
+          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="font-medium">Selected: {selectedClinic.name}</span>
+              <span className="text-sm text-gray-600">({selectedClinic.consultation_duration} min duration)</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div>
+        <Label>Select Date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !formData.consultationDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon2 className="mr-2 h-4 w-4" />
+              {formData.consultationDate ? format(formData.consultationDate, "PPP") : "Pick a date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={formData.consultationDate}
+              onSelect={(date) => handleInputChange('consultationDate', date)}
+              initialFocus
+              disabled={(date) => date < new Date()}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {slotLoading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Calculating available slots...</p>
+        </div>
+      )}
+
+      {slotError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">{slotError}</p>
+        </div>
+      )}
+
+      {doctorSlots.length > 0 && (
+        <div>
+          <Label>Available Time Slots</Label>
+          <div className="mt-2 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+            {doctorSlots.map((slot, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "p-3 border rounded-lg cursor-pointer text-center",
+                  formData.selectedSlot === slot
+                    ? "bg-blue-50 border-blue-300"
+                    : "hover:bg-gray-50"
+                )}
+                onClick={() => handleSlotSelect(slot)}
+              >
+                <div className="font-medium">{slot.startTime}</div>
+                <div className="text-sm text-gray-600">{slot.isAvailable ? 'Available' : 'Booked'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {doctorSlots.length === 0 && !slotLoading && formData.consultationDate && (
+        <div className="text-center py-8 text-gray-500">
+          <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <p>No available slots for this date</p>
+          <p className="text-sm">The doctor may not have set availability for this date</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <div>
+        <Label htmlFor="duration">Duration (minutes)</Label>
+        <Input
+          id="duration"
+          type="number"
+          value={formData.duration}
+          onChange={(e) => handleInputChange('duration', e.target.value)}
+          disabled
+        />
+        <p className="text-sm text-gray-500 mt-1">Video consultation duration based on clinic settings</p>
+      </div>
+
+      <div>
+        <Label htmlFor="chief-complaint">Chief Complaint *</Label>
+        <Textarea
+          id="chief-complaint"
+          placeholder="Primary reason for consultation..."
+          value={formData.chiefComplaint}
+          onChange={(e) => handleInputChange('chiefComplaint', e.target.value)}
+          required
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="symptoms">Symptoms</Label>
+        <Textarea
+          id="symptoms"
+          placeholder="Describe symptoms..."
+          value={formData.symptoms}
+          onChange={(e) => handleInputChange('symptoms', e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="consultation-fee">Consultation Fee</Label>
+          <Input
+            id="consultation-fee"
+            type="number"
+            placeholder="0.00"
+            value={formData.consultationFee}
+            onChange={(e) => handleInputChange('consultationFee', e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="payment-method">Payment Method</Label>
+          <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="card">Card</SelectItem>
+              <SelectItem value="online">Online</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="notes">Additional Notes</Label>
+        <Textarea
+          id="notes"
+          placeholder="Any additional information..."
+          value={formData.notes}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
+        />
+      </div>
+    </div>
+  );
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return renderStep1();
+      case 2:
+        return renderStep2();
+      case 3:
+        return renderStep3();
+      case 4:
+        return renderStep4();
+      default:
+        return null;
+    }
+  };
+
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return selectedPatient !== null;
+      case 2:
+        return selectedDoctor !== null && selectedClinic !== null;
+      case 3:
+        return formData.consultationDate !== undefined && formData.selectedSlot !== null;
+      case 4:
+        return formData.chiefComplaint.trim() !== '';
+      default:
+        return false;
+    }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-midnight mb-2">Create New Consultation</h2>
-          <p className="text-gray-600">Schedule a consultation with patient and doctor</p>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg p-6 shadow-lg">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">Create New Consultation</h2>
+          <Button variant="outline" onClick={onClose}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
         </div>
-        <Button variant="outline" onClick={onClose}>
-          <X className="w-4 h-4 mr-2" />
-          Cancel
-        </Button>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Patient & Doctor Selection */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-[#E17726]/10 to-transparent">
-            <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <User className="w-5 h-5 mr-2 text-[#E17726]" />
-              Patient & Doctor Selection
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            {/* Patient Selection */}
-            <div className="space-y-4">
-              <Label className="text-sm font-medium">Select Patient *</Label>
-              <Input
-                placeholder="Search patient by name, phone, or email"
-                value={patientSearch}
-                onChange={e => setPatientSearch(e.target.value)}
-                className="mb-2"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(patientOptions || []).map((patient) => (
-                  <div
-                    key={patient.id}
-                    onClick={() => {
-                      setSelectedPatient(patient);
-                      handleInputChange('patientId', patient.id);
-                    }}
-                    className={cn(
-                      "p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md",
-                      selectedPatient?.id === patient.id
-                        ? "border-[#E17726] bg-[#E17726]/5"
-                        : "border-gray-200 hover:border-[#E17726]/50"
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-[#E17726]/10 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-[#E17726]" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-midnight">{patient.user_name}</p>
-                        <p className="text-sm text-gray-600">{patient.user_phone}</p>
-                        <p className="text-xs text-gray-500">{patient.age ? `${patient.age} years, ` : ''}{patient.gender}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        {/* Step Indicator */}
+        <div className="flex items-center justify-between mb-6">
+          {[1, 2, 3, 4].map((step) => (
+            <div key={step} className="flex items-center">
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+                currentStep >= step ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
+              )}>
+                {step}
               </div>
-              <Button variant="outline" className="border-dashed border-2 border-gray-300 text-gray-600 hover:border-[#E17726] hover:text-[#E17726]">
-                <Plus className="w-4 h-4 mr-2" />
-                Register New Patient
+              {step < 4 && (
+                <div className={cn(
+                  "w-16 h-1 mx-2",
+                  currentStep > step ? "bg-blue-600" : "bg-gray-200"
+                )} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Step Labels */}
+        <div className="flex justify-between mb-6 text-sm text-gray-600">
+          <span>Select Patient</span>
+          <span>Select Doctor & Clinic</span>
+          <span>Choose Time Slot</span>
+          <span>Consultation Details</span>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {renderStepContent()}
+
+          <div className="flex justify-between mt-8">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+
+            {currentStep < 4 ? (
+              <Button
+                type="button"
+                onClick={nextStep}
+                disabled={!canProceedToNext()}
+              >
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            </div>
-
-            <Separator />
-
-            {/* Doctor Selection */}
-            <div className="space-y-4">
-              <Label className="text-sm font-medium">Select Doctor *</Label>
-              <Input
-                placeholder="Search doctor by name, specialization, etc."
-                value={doctorSearch}
-                onChange={e => setDoctorSearch(e.target.value)}
-                className="mb-2"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {doctorOptions.map((doctor) => (
-                  <div
-                    key={doctor.id}
-                    onClick={() => {
-                      setSelectedDoctor(doctor);
-                      handleInputChange('doctorId', doctor.id);
-                    }}
-                    className={cn(
-                      "p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md",
-                      selectedDoctor?.id === doctor.id
-                        ? "border-aqua bg-aqua/5"
-                        : "border-gray-200 hover:border-aqua/50"
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        "bg-aqua/10"
-                      )}>
-                        <User className={cn("w-5 h-5", "text-aqua")} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-midnight">{doctor.user_name}</p>
-                        <p className="text-sm text-gray-600">{doctor.specialization}</p>
-                        <Badge className={doctor.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                          {doctor.is_active ? "Available" : "Unavailable"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Consultation Details */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-500/10 to-transparent">
-            <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <CalendarIcon className="w-5 h-5 mr-2 text-blue-600" />
-              Consultation Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            {/* Consultation Type: Only Video Call (hidden, default) */}
-            <input type="hidden" value="video" />
-
-            {/* Redesigned slot picker: show date picker, then slot list for that date */}
-            {selectedDoctor && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Select Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full h-11 justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate ?? undefined}
-                      onSelect={date => setSelectedDate(date)}
-                      disabled={date => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                {selectedDate && (
-                  <div className="mt-4">
-                    <Label className="text-sm font-medium">Select Slot *</Label>
-                    {slotLoading ? (
-                      <div className="text-gray-500 text-xs py-4">Loading slots...</div>
-                    ) : doctorSlots.length === 0 ? (
-                      <div className="text-gray-500 text-xs py-4">No available slots for this date.</div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
-                        {doctorSlots.map(slot => (
-                          <Button
-                            key={slot.id}
-                            type="button"
-                            size="sm"
-                            variant={selectedSlot?.id === slot.id ? 'default' : 'outline'}
-                            className={selectedSlot?.id === slot.id ? 'bg-[#E17726] text-white border-[#E17726] shadow-lg' : 'border-gray-300 bg-white hover:bg-[#E17726]/10'}
-                            style={{ minWidth: 0, fontWeight: 500, fontSize: 16, padding: '18px 0' }}
-                            onClick={() => {
-                              setSelectedSlot(slot);
-                              handleInputChange('consultationTime', slot.startTime);
-                              handleInputChange('consultationDate', selectedDate);
-                            }}
-                          >
-                            {slot.startTime} - {slot.endTime}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Duration</Label>
-              <Select value={formData.duration} onValueChange={(value) => handleInputChange('duration', value)}>
-                <SelectTrigger className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 minutes</SelectItem>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="45">45 minutes</SelectItem>
-                  <SelectItem value="60">1 hour</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Medical Information */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-green-500/10 to-transparent">
-            <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <FileText className="w-5 h-5 mr-2 text-green-600" />
-              Medical Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="chiefComplaint" className="text-sm font-medium">Chief Complaint *</Label>
-              <Textarea
-                id="chiefComplaint"
-                value={formData.chiefComplaint}
-                onChange={(e) => handleInputChange('chiefComplaint', e.target.value)}
-                placeholder="Describe the main reason for consultation..."
-                className="min-h-[80px]"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="symptoms" className="text-sm font-medium">Symptoms</Label>
-              <Textarea
-                id="symptoms"
-                value={formData.symptoms}
-                onChange={(e) => handleInputChange('symptoms', e.target.value)}
-                placeholder="List any symptoms..."
-                className="min-h-[80px]"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Information */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-yellow-500/10 to-transparent">
-            <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <DollarSign className="w-5 h-5 mr-2 text-yellow-600" />
-              Financial Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="consultationFee" className="text-sm font-medium">Consultation Fee</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
-                  <Input
-                    id="consultationFee"
-                    value={getConsultationFee()}
-                    onChange={(e) => handleInputChange('consultationFee', e.target.value)}
-                    className="h-11 pl-8"
-                    readOnly
-                  />
-                </div>
-                <p className="text-xs text-gray-500">Base fee for {formData.consultationType} consultation</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Payment Method</Label>
-                <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="insurance">Insurance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Follow-up & Additional Info */}
-        {/* 
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-purple-500/10 to-transparent">
-            <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <Clock className="w-5 h-5 mr-2 text-purple-600" />
-              Follow-up & Additional Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="followUpRequired" 
-                  checked={formData.followUpRequired}
-                  onCheckedChange={(checked) => handleInputChange('followUpRequired', checked)}
-                />
-                <Label htmlFor="followUpRequired">Follow-up Required</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="referralRequired" 
-                  checked={formData.referralRequired}
-                  onCheckedChange={(checked) => handleInputChange('referralRequired', checked)}
-                />
-                <Label htmlFor="referralRequired">Referral Required</Label>
-              </div>
-            </div>
-
-            {formData.followUpRequired && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Follow-up Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full h-11 justify-start text-left font-normal",
-                        !formData.followUpDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.followUpDate ? format(formData.followUpDate, "PPP") : "Pick follow-up date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.followUpDate}
-                      onSelect={(date) => handleInputChange('followUpDate', date)}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
-            {formData.referralRequired && (
-              <div className="space-y-2">
-                <Label htmlFor="referralTo" className="text-sm font-medium">Refer to Specialist</Label>
-                <Input
-                  id="referralTo"
-                  value={formData.referralTo}
-                  onChange={(e) => handleInputChange('referralTo', e.target.value)}
-                  placeholder="Specialist name or department"
-                  className="h-11"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                placeholder="Any additional notes or special instructions..."
-                className="min-h-[100px]"
-              />
-            </div>
-          </CardContent>
-        </Card>
-        */}
-
-        {/* Emergency Contact (if emergency) */}
-        {formData.isEmergency && (
-          <Card className="border-0 shadow-lg border-red-200">
-            <CardHeader className="bg-gradient-to-r from-red-500/10 to-transparent">
-              <CardTitle className="flex items-center text-xl font-bold text-red-600">
-                <AlertTriangle className="w-5 h-5 mr-2" />
-                Emergency Contact Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContact" className="text-sm font-medium">Emergency Contact Name</Label>
-                  <Input
-                    id="emergencyContact"
-                    value={formData.emergencyContact}
-                    onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
-                    placeholder="Emergency contact person name"
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyPhone" className="text-sm font-medium">Emergency Contact Phone</Label>
-                  <Input
-                    id="emergencyPhone"
-                    value={formData.emergencyPhone}
-                    onChange={(e) => handleInputChange('emergencyPhone', e.target.value)}
-                    placeholder="Emergency contact phone number"
-                    className="h-11"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Clinic Selection */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-indigo-500/10 to-transparent">
-            <CardTitle className="flex items-center text-xl font-bold text-midnight">
-              <Search className="w-5 h-5 mr-2 text-indigo-600" />
-              Clinic Selection
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="space-y-4">
-              <Label className="text-sm font-medium">Select Clinic *</Label>
-              <Select value={selectedClinic || ''} onValueChange={setSelectedClinic} required>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a clinic" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clinicOptions.map(clinic => (
-                    <SelectItem key={clinic.id} value={clinic.id}>{clinic.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4 pt-6 border-t">
-          <Button variant="outline" onClick={onClose} type="button">
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || !selectedPatient || !selectedDoctor || !formData.consultationDate || !formData.consultationTime}
-            className="bg-[#E17726] hover:bg-[#c9651e] text-white"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Creating...
-              </>
             ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Create Consultation
-              </>
+              <Button
+                type="submit"
+                disabled={!canProceedToNext() || isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Consultation'}
+              </Button>
             )}
-          </Button>
-        </div>
-      </form>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

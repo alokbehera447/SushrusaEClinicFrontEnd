@@ -45,10 +45,9 @@ api.interceptors.response.use(
           }
         }
       } catch (refreshError) {
-        // Refresh failed, logout but don't reload page
-        localStorage.clear();
-        // Instead of reloading, redirect to login page
+        // Refresh failed, only logout if we're not already on login page
         if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+          localStorage.clear();
           window.location.href = '/login';
         }
       }

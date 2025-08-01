@@ -4,6 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import { 
   Calendar, 
   Video, 
@@ -22,7 +31,19 @@ import {
   AlertCircle,
   PlayCircle,
   Plus,
-  Eye
+  Eye,
+  RefreshCw,
+  UserCheck,
+  TrendingUp,
+  BarChart3,
+  User,
+  Bell,
+  Moon,
+  Sun,
+  HelpCircle,
+  MoreVertical,
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import DoctorAvailabilitySlots from '@/components/workflow/DoctorAvailabilitySlots';
 import PrescriptionWriter from '@/components/workflow/PrescriptionWriter';
@@ -30,6 +51,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation, DoctorProfile } from '@/lib/api';
+import { useDoctorSuperAdminWebSocket } from '@/hooks/useDoctorSuperAdminWebSocket';
 
 // Define Slot type
 interface Slot {
@@ -65,13 +87,37 @@ const DoctorDashboard = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loadingConsultations, setLoadingConsultations] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | DoctorProfile | null>(null);
+
+  // WebSocket connection for doctor status updates
+  console.log('🔍 DoctorDashboard - User object:', user);
+  console.log('🔍 DoctorDashboard - Access token available:', !!user);
+  
+  const { isConnected, isConnecting, error: wsError, userRole } = useDoctorSuperAdminWebSocket(
+    (status) => {
+      console.log('🔄 Doctor status update received:', status);
+    },
+    undefined, // onSuperAdminRequest
+    undefined, // onDoctorResponse
+    () => {
+      console.log('🎉 Doctor WebSocket connected to SuperAdmin dashboard!');
+      console.log('👨‍⚕️ Doctor is now online and visible to SuperAdmin');
+    },
+    () => {
+      console.log('❌ Doctor WebSocket disconnected from SuperAdmin dashboard');
+    }
+  );
   useEffect(() => {
     async function fetchProfile() {
       if (user && user.role === 'doctor') {
+        console.log('👨‍⚕️ Doctor logged in, initializing dashboard...');
+        console.log('🔗 WebSocket connection will be established automatically');
         setLoadingProfile(true);
         try {
           // Try to get doctor profile first, fallback to user profile
@@ -80,8 +126,33 @@ const DoctorDashboard = () => {
             setProfile(data);
           } catch (doctorError) {
             console.log('Doctor profile not found, trying user profile:', doctorError);
-            const data = await patientApi.getCurrentUserProfile();
-            setProfile(data);
+            try {
+              const data = await patientApi.getCurrentUserProfile();
+              setProfile(data);
+            } catch (userError) {
+              console.log('User profile also not found, using basic user info:', userError);
+              // Create a basic profile from user info
+              setProfile({
+                id: parseInt(user.id),
+                user: user.id,
+                user_name: user.name,
+                user_phone: user.phone,
+                user_email: '',
+                license_number: '',
+                qualification: '',
+                specialization: '',
+                experience_years: 0,
+                consultation_fee: 0,
+                languages_spoken: [],
+                is_verified: false,
+                is_active: true,
+                is_accepting_patients: true,
+                rating: 0,
+                total_reviews: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              } as DoctorProfile);
+            }
           }
         } catch (error) {
           console.error('Error fetching doctor profile:', error);
@@ -95,18 +166,7 @@ const DoctorDashboard = () => {
     }
     fetchProfile();
   }, [user]);
-  useEffect(() => {
-    // Also call on mount to ensure profile is fetched after login/navigation
-    if (!profile) {
-      if (user && user.role === 'doctor') {
-        patientApi.getCurrentUserProfile().then((data) => {
-          setProfile(data);
-        }).catch((error) => {
-          console.error('Error fetching doctor profile on mount:', error);
-        });
-      }
-    }
-  }, []);
+
 
   useEffect(() => {
     async function fetchStats() {
@@ -191,10 +251,42 @@ const DoctorDashboard = () => {
 
   // Dynamic stats for today
   const todayStats = [
-    { label: "Today's Consultations", value: loadingStats ? '...' : stats?.total_consultations ?? 0, icon: Video, color: 'text-[#E17726]' },
-    { label: 'Scheduled Appointments', value: '-', icon: Calendar, color: 'text-aqua' }, // Not available in API yet
-    { label: 'Completed Today', value: loadingStats ? '...' : stats?.completed_consultations ?? 0, icon: CheckCircle, color: 'text-green-600' },
-    { label: "Today's Earnings", value: loadingStats ? '...' : (stats ? `₹${stats.total_revenue}` : '₹0'), icon: DollarSign, color: 'text-[#E17726]' },
+    { 
+      label: "Today's Consultations", 
+      value: loadingStats ? '...' : stats?.total_consultations ?? 0, 
+      icon: Video, 
+      color: 'text-[#E17726]',
+      bgColor: 'bg-[#E17726]/10',
+      change: '+12%',
+      changeType: 'positive' as const
+    },
+    { 
+      label: 'Scheduled Appointments', 
+      value: '-', 
+      icon: Calendar, 
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
+      change: '+8%',
+      changeType: 'positive' as const
+    }, // Not available in API yet
+    { 
+      label: 'Completed Today', 
+      value: loadingStats ? '...' : stats?.completed_consultations ?? 0, 
+      icon: CheckCircle, 
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+      change: '+15%',
+      changeType: 'positive' as const
+    },
+    { 
+      label: "Today's Earnings", 
+      value: loadingStats ? '...' : (stats ? `₹${stats.total_revenue}` : '₹0'), 
+      icon: DollarSign, 
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
+      change: '+5%',
+      changeType: 'positive' as const
+    },
   ];
 
   const scheduleSlots = [
@@ -358,44 +450,108 @@ const DoctorDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 border-b border-emerald-500 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <img 
-                src="/doctor-avatar-1.svg" 
-                alt="Doctor" 
-                className="w-10 h-10 rounded-full"
-              />
-              <div>
-                <h1 className="text-xl font-bold text-midnight">
-                  {getDisplayName(profile)}
-                </h1>
-                <p className="text-sm text-gray-600">
-                  {getProfileDetails(profile)}
-                </p>
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
               </div>
-              <Badge className="bg-green-100 text-green-800">
+              <div>
+                <h1 className="text-lg font-bold text-white">{getDisplayName(profile)}</h1>
+                <p className="text-xs text-blue-100">{user?.phone || 'No contact available'}</p>
+              </div>
+              <Badge className="bg-green-100 text-green-800 border-green-200">
                 Available
               </Badge>
-              {getMeetingLink(profile) && (
-                <a href={getMeetingLink(profile)!} target="_blank" rel="noopener noreferrer">
-                  <Button className="ml-4 bg-blue-600 hover:bg-blue-700 text-white" size="sm">
-                    <Video className="w-4 h-4 mr-2" />
-                    Join My Room
-                  </Button>
-                </a>
-              )}
+              {/* WebSocket Connection Status */}
+              <div className="flex items-center space-x-2 ml-4">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+                <span className="text-xs text-blue-100">
+                  {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Disconnected'}
+                </span>
+                {wsError && (
+                  <span className="text-xs text-red-200">({wsError})</span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" className="border-aqua text-aqua hover:bg-aqua hover:text-white">
-                <Calendar className="w-4 h-4 mr-2" />
-                Set Schedule
+            <div className="flex items-center space-x-3">
+              {/* Theme Toggle */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="text-white hover:bg-white/20 transition-colors duration-300"
+              >
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
-              <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                <Settings className="w-4 h-4 mr-2" />
-                Profile Settings
+
+              {/* Help Button */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:bg-white/20 transition-colors duration-300"
+              >
+                <HelpCircle className="w-4 h-4" />
               </Button>
+
+              {/* Notifications */}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowNotifications(true)}
+                className="relative text-white hover:bg-white/20 transition-colors duration-300"
+              >
+                <Bell className="w-4 h-4" />
+                {notificationCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-red-500 border border-white">
+                    {notificationCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* User Profile */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/20 transition-colors duration-300">
+                    <Avatar className="h-8 w-8 border-2 border-white/20">
+                      <AvatarFallback className="bg-white/20 text-white font-semibold">
+                        {getDisplayName(profile).charAt(0) || 'D'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-white">
+                        {getDisplayName(profile)}
+                      </p>
+                      <p className="text-xs text-blue-100">
+                        {user?.phone || 'No contact available'}
+                      </p>
+                    </div>
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="w-4 h-4 mr-2" />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Support
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -403,30 +559,33 @@ const DoctorDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
-        <div className="flex space-x-1 mb-8 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? 'bg-[#E17726] text-white shadow-md'
-                  : 'text-gray-600 hover:text-[#E17726] hover:bg-[#E17726]/5'
-              }`}
-            >
-              <tab.icon className="w-4 h-4 mr-2" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <Activity className="w-4 h-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <Video className="w-4 h-4 mr-2" />
+              Consultations
+            </TabsTrigger>
+            <TabsTrigger value="slot-booking" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <Clock className="w-4 h-4 mr-2" />
+              Slot Booking
+            </TabsTrigger>
+            <TabsTrigger value="earnings" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <DollarSign className="w-4 h-4 mr-2" />
+              Earnings
+            </TabsTrigger>
+                    </TabsList>
 
-        {/* Slot Booking Tab */}
-        {activeTab === 'slot-booking' && (
-          <DoctorAvailabilitySlots />
-        )}
+          {/* Slot Booking Tab */}
+          <TabsContent value="slot-booking">
+            <DoctorAvailabilitySlots />
+          </TabsContent>
 
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
+          {/* Overview Tab */}
+          <TabsContent value="overview">
           <div className="space-y-8">
             {/* Today's Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -436,9 +595,12 @@ const DoctorDashboard = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
-                        <p className="text-2xl font-bold text-midnight">{stat.value}</p>
+                        <p className="text-3xl font-bold text-midnight">{stat.value}</p>
+                        <p className={`text-sm mt-1 ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                          {stat.change} this month
+                        </p>
                       </div>
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color === 'text-[#E17726]' ? 'from-[#E17726]/10 to-[#E17726]/5' : stat.color === 'text-aqua' ? 'from-aqua/10 to-aqua/5' : 'from-green-500/10 to-green-500/5'} flex items-center justify-center`}>
+                      <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
                         <stat.icon className={`w-6 h-6 ${stat.color}`} />
                       </div>
                     </div>
@@ -453,7 +615,7 @@ const DoctorDashboard = () => {
               <div className="lg:col-span-2">
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-xl font-bold text-midnight">Next Consultations</CardTitle>
+                    <CardTitle className="text-xl font-bold text-gray-900">Next Consultations</CardTitle>
                     <Badge className="bg-[#E17726]/10 text-[#E17726]">
                       {consultations.filter(c => c.status === 'scheduled').length} Pending
                     </Badge>
@@ -508,7 +670,7 @@ const DoctorDashboard = () => {
               <div className="space-y-6">
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-xl font-bold text-midnight">This Week</CardTitle>
+                    <CardTitle className="text-xl font-bold text-gray-900">This Week</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -535,7 +697,7 @@ const DoctorDashboard = () => {
 
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-xl font-bold text-midnight">Quick Actions</CardTitle>
+                    <CardTitle className="text-xl font-bold text-gray-900">Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <Button className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white justify-start h-12 rounded-xl">
@@ -555,10 +717,10 @@ const DoctorDashboard = () => {
               </div>
             </div>
           </div>
-        )}
+          </TabsContent>
 
-        {/* Consultations Tab */}
-        {activeTab === 'consultations' && (
+          {/* Consultations Tab */}
+          <TabsContent value="consultations">
           <div className="space-y-6">
             {/* Search and Filter Bar */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
@@ -636,7 +798,7 @@ const DoctorDashboard = () => {
             {/* Consultations List */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">
+                <CardTitle className="text-xl font-bold text-gray-900">
                   {consultationFilter === 'all' && 'All Consultations'}
                   {consultationFilter === 'upcoming' && 'Upcoming Consultations'}
                   {consultationFilter === 'completed' && 'Completed Consultations'}
@@ -827,15 +989,15 @@ const DoctorDashboard = () => {
               </CardContent>
             </Card>
           </div>
-        )}
+          </TabsContent>
 
-        {/* Schedule Tab */}
-        {activeTab === 'schedule' && (
+          {/* Schedule Tab */}
+          <TabsContent value="schedule">
           <div className="space-y-8">
             {/* Schedule Management Header */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold text-midnight">Schedule Management</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-900">Schedule Management</CardTitle>
                 <div className="flex space-x-2">
                   <Button 
                     className="bg-[#E17726] hover:bg-[#c9651e] text-white"
@@ -862,7 +1024,7 @@ const DoctorDashboard = () => {
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <CardTitle className="text-xl font-bold text-midnight">Schedule</CardTitle>
+                  <CardTitle className="text-xl font-bold text-gray-900">Schedule</CardTitle>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
                       <Button 
@@ -1197,10 +1359,10 @@ const DoctorDashboard = () => {
               </div>
             )}
           </div>
-        )}
+          </TabsContent>
 
-        {/* Earnings Tab */}
-        {activeTab === 'earnings' && (
+          {/* Earnings Tab */}
+          <TabsContent value="earnings">
           <div className="space-y-8">
             {/* Earnings Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1254,7 +1416,7 @@ const DoctorDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold text-midnight">Monthly Breakdown</CardTitle>
+                  <CardTitle className="text-xl font-bold text-gray-900">Monthly Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
@@ -1292,7 +1454,7 @@ const DoctorDashboard = () => {
 
               <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold text-midnight">Payment Details</CardTitle>
+                  <CardTitle className="text-xl font-bold text-gray-900">Payment Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
@@ -1331,9 +1493,8 @@ const DoctorDashboard = () => {
               </Card>
             </div>
           </div>
-        )}
-
-        {/* Other tabs placeholder */}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

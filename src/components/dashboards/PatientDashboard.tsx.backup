@@ -4,14 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
 import {
   Calendar,
   FileText,
@@ -58,6 +50,15 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface EditProfileForm {
   name: string;
@@ -76,6 +77,9 @@ interface EditProfileForm {
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const { user } = useAuth();
 
   // State for data
@@ -84,11 +88,6 @@ const PatientDashboard = () => {
   // Loading states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Header state
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
 
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
@@ -166,11 +165,6 @@ const PatientDashboard = () => {
     }
   };
 
-  // Helper function to get display name
-  const getDisplayName = (profile: UserProfile | null): string => {
-    return profile?.name || 'Patient';
-  };
-
   // Get patient info from user profile
   const getPatientInfo = () => {
     if (userProfile) {
@@ -243,7 +237,7 @@ const PatientDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 border-b border-blue-400 sticky top-16 z-40">
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 border-b border-blue-500 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -251,7 +245,7 @@ const PatientDashboard = () => {
                 <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">{getDisplayName(userProfile)}</h1>
+                <h1 className="text-lg font-bold text-white">{patientInfo.name}</h1>
                 <p className="text-xs text-blue-100">{user?.phone || 'No contact available'}</p>
               </div>
               <Badge className="bg-green-100 text-green-800 border-green-200">
@@ -299,12 +293,12 @@ const PatientDashboard = () => {
                   <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/20 transition-colors duration-300">
                     <Avatar className="h-8 w-8 border-2 border-white/20">
                       <AvatarFallback className="bg-white/20 text-white font-semibold">
-                        {getDisplayName(userProfile).charAt(0) || 'P'}
+                        {patientInfo.name.charAt(0) || 'P'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden md:block text-left">
                       <p className="text-sm font-medium text-white">
-                        {getDisplayName(userProfile)}
+                        {patientInfo.name}
                       </p>
                       <p className="text-xs text-blue-100">
                         {user?.phone || 'No contact available'}
@@ -319,10 +313,6 @@ const PatientDashboard = () => {
                   <DropdownMenuItem>
                     <User className="w-4 h-4 mr-2" />
                     View Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings className="w-4 h-4 mr-2" />
@@ -343,9 +333,6 @@ const PatientDashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Edit Profile Modal */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Edit Profile</DialogTitle>
@@ -418,32 +405,31 @@ const PatientDashboard = () => {
                   </form>
                 </DialogContent>
               </Dialog>
-
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-[#E17726] text-[#E17726]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="w-4 h-4 inline mr-2" />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'overview' && (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <Activity className="w-4 h-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <Calendar className="w-4 h-4 mr-2" />
+              Consultations
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <User className="w-4 h-4 mr-2" />
+              Profile
+            </TabsTrigger>
+          </TabsList>
+
+                {/* Overview Tab */}
+          <TabsContent value="overview">
           <div className="space-y-6">
             {/* Welcome Section */}
             <Card className="bg-gradient-to-r from-[#E17726] to-[#f7931e] text-white">
@@ -522,9 +508,10 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </div>
-        )}
+          </TabsContent>
 
-        {activeTab === 'consultations' && (
+          {/* Consultations Tab */}
+          <TabsContent value="consultations">
           <div className="space-y-6">
             {/* Consultations Header */}
             <div className="flex items-center justify-between">
@@ -760,9 +747,10 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </div>
-        )}
+          </TabsContent>
 
-        {activeTab === 'profile' && (
+          {/* Profile Tab */}
+          <TabsContent value="profile">
           <div className="space-y-6">
             {/* Profile Details */}
             <Card>
@@ -1025,7 +1013,8 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

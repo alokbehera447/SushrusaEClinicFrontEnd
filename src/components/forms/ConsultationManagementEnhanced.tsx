@@ -107,6 +107,9 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [consultationToDelete, setConsultationToDelete] = useState<Consultation | null>(null);
 
+  // Calculate total pages
+  const totalPages = Math.ceil(totalConsultations / pageSize);
+
   // Fetch consultations with pagination and filters
   const fetchConsultations = useCallback(async () => {
     try {
@@ -136,7 +139,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
     } finally {
       setLoadingConsultations(false);
     }
-  }, []); // Remove dependencies to prevent infinite loops, handle them in useEffect
+  }, [currentPage, pageSize, searchQuery, statusFilter, typeFilter, dateFilter]);
 
   // Fetch consultation statistics
   const fetchConsultationStats = useCallback(async () => {
@@ -176,14 +179,14 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
       fetchConsultations();
       fetchConsultationStats();
     }
-  }, [isAssignedToClinic]); // Only depend on isAssignedToClinic to prevent infinite loops
+  }, [isAssignedToClinic, fetchConsultations, fetchConsultationStats]);
 
-  // Handle filter changes
+  // Reset to first page when filters change
   useEffect(() => {
-    if (isAssignedToClinic) {
-      fetchConsultations();
+    if (isAssignedToClinic && currentPage !== 1) {
+      setCurrentPage(1);
     }
-  }, [currentPage, pageSize, searchQuery, statusFilter, dateFilter, typeFilter, isAssignedToClinic]);
+  }, [searchQuery, statusFilter, dateFilter, typeFilter, isAssignedToClinic]);
 
   // Handle consultation actions
   const handleConsultationAction = async (action: string, consultation: Consultation) => {
@@ -250,9 +253,6 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
   const getPaymentStatusColor = (isPaid: boolean) => {
     return isPaid ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800';
   };
-
-  // Calculate total pages
-  const totalPages = Math.ceil(totalConsultations / pageSize);
 
   // Stats cards data
   const statsCards = [
@@ -407,6 +407,17 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
                 <SelectItem value="tomorrow">Tomorrow</SelectItem>
                 <SelectItem value="this-week">This Week</SelectItem>
                 <SelectItem value="this-month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(parseInt(value))} disabled={!isAssignedToClinic}>
+              <SelectTrigger className="w-full lg:w-32 h-11 rounded-xl">
+                <SelectValue placeholder="Page Size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 per page</SelectItem>
+                <SelectItem value="10">10 per page</SelectItem>
+                <SelectItem value="20">20 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
               </SelectContent>
             </Select>
             <Button 
@@ -572,12 +583,22 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && (
+              {totalConsultations > 0 && !loadingConsultations && (
                 <div className="flex items-center justify-between mt-6">
                   <div className="text-sm text-gray-700">
-                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalConsultations)} of {totalConsultations} consultations
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalConsultations)} of {totalConsultations} consultations ({pageSize} per page)
                   </div>
+                  {totalPages > 1 && (
                   <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      First
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -588,20 +609,77 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
                       Previous
                     </Button>
                     <div className="flex items-center space-x-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const page = i + 1;
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="w-8 h-8 p-0"
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
+                      {(() => {
+                        const pages = [];
+                        const maxVisiblePages = 7;
+                        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                        
+                        if (endPage - startPage + 1 < maxVisiblePages) {
+                          startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                        }
+                        
+                        // Add first page and ellipsis if needed
+                        if (startPage > 1) {
+                          pages.push(
+                            <Button
+                              key={1}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(1)}
+                              className="w-8 h-8 p-0"
+                            >
+                              1
+                            </Button>
+                          );
+                          if (startPage > 2) {
+                            pages.push(
+                              <span key="ellipsis1" className="px-2 text-gray-500">
+                                ...
+                              </span>
+                            );
+                          }
+                        }
+                        
+                        // Add visible pages
+                        for (let i = startPage; i <= endPage; i++) {
+                          pages.push(
+                            <Button
+                              key={i}
+                              variant={currentPage === i ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(i)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {i}
+                            </Button>
+                          );
+                        }
+                        
+                        // Add last page and ellipsis if needed
+                        if (endPage < totalPages) {
+                          if (endPage < totalPages - 1) {
+                            pages.push(
+                              <span key="ellipsis2" className="px-2 text-gray-500">
+                                ...
+                              </span>
+                            );
+                          }
+                          pages.push(
+                            <Button
+                              key={totalPages}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {totalPages}
+                            </Button>
+                          );
+                        }
+                        
+                        return pages;
+                      })()}
                     </div>
                     <Button
                       variant="outline"
@@ -612,7 +690,17 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
                       Next
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Last
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </div>
+                  )}
                 </div>
               )}
             </>

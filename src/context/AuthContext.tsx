@@ -12,6 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   accessToken: string | null;
+  access_token: string | null; // Add this for compatibility
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -42,18 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setAccessToken(storedAccess);
           setRefreshToken(storedRefresh);
           
-          // Verify token is still valid by making a profile request
-          try {
-            await api.get('/api/auth/profile/', {
-              headers: { Authorization: `Bearer ${storedAccess}` }
-            });
-          } catch (error) {
-            // Token is invalid, clear storage
-            localStorage.clear();
-            setUser(null);
-            setAccessToken(null);
-            setRefreshToken(null);
-          }
+          // Skip token verification for now to avoid issues with doctors without profiles
+          // The token will be validated when making actual API calls
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -99,16 +90,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return null;
   };
 
-  return (
+    return (
     <AuthContext.Provider value={{ 
       user, 
       accessToken, 
+      access_token: accessToken, // Add this for compatibility
       refreshToken, 
-      isAuthenticated: !!user && !!accessToken, 
+      isAuthenticated: !!user && !!accessToken,
       isLoading,
-      login, 
-      logout, 
-      refreshAccessToken 
+      login,
+      logout,
+      refreshAccessToken
     }}>
       {children}
     </AuthContext.Provider>

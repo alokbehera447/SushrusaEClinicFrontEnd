@@ -11,20 +11,21 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/utils';
 import { 
-  User, 
-  Phone, 
+  User,
+  Phone,
+  Video,
+  Activity,
   Mail, 
   Calendar, 
   Clock, 
-  Video, 
   FileText, 
   Pill, 
-  Activity,
   Plus,
   Trash2,
   Save,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 
 interface Consultation {
@@ -39,6 +40,7 @@ interface Consultation {
   consultation_fee: number;
   patient: string;
   doctor: string;
+  doctor_meeting_link?: string;
 }
 
 interface PatientInfo {
@@ -139,6 +141,7 @@ export default function ConsultationMeeting() {
       console.log('Loading consultation:', consultationId);
       const response = await api.get(`/api/consultations/${consultationId}/`);
       console.log('Consultation data:', response.data);
+      console.log('Meeting link:', response.data.data?.doctor_meeting_link);
       setConsultation(response.data.data);
       
       // Load patient info
@@ -232,10 +235,10 @@ export default function ConsultationMeeting() {
       fluid_intake: '',
       diet_instructions: '',
       lifestyle_advice: '',
-      is_draft: true,
-      is_finalized: false,
       next_visit: '',
       follow_up_notes: '',
+      is_draft: true,
+      is_finalized: false,
     };
 
     setPrescription(newPrescription);
@@ -251,8 +254,8 @@ export default function ConsultationMeeting() {
       morning_dose: 0,
       afternoon_dose: 0,
       evening_dose: 0,
-      frequency: 'once_daily',
-      timing: 'after_breakfast',
+      frequency: '',
+      timing: '',
       custom_timing: '',
       duration_days: null,
       duration_weeks: null,
@@ -297,35 +300,21 @@ export default function ConsultationMeeting() {
   const updatePrescription = (field: keyof Prescription, value: string | number) => {
     if (!prescription) return;
 
-    // Convert numeric fields
-    const numericFields = ['pulse', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'temperature', 'weight', 'height'];
-    const processedValue = numericFields.includes(field) 
-      ? (value === '' ? null : Number(value))
-      : value;
-
     setPrescription({
       ...prescription,
-      [field]: processedValue,
-      updated_at: new Date().toISOString(),
+      [field]: value,
     });
   };
 
   const updateVitalSigns = (field: keyof Prescription['vital_signs'], value: string) => {
-    if (!prescription) return;
-
-    // Convert numeric fields
-    const numericFields = ['pulse', 'blood_pressure_systolic', 'blood_pressure_diastolic', 'temperature', 'weight', 'height', 'respiratory_rate', 'oxygen_saturation', 'blood_sugar_fasting', 'blood_sugar_postprandial', 'hba1c'];
-    const processedValue = numericFields.includes(field) 
-      ? (value === '' ? null : Number(value))
-      : value;
+    if (!prescription || !prescription.vital_signs) return;
 
     setPrescription({
       ...prescription,
       vital_signs: {
         ...prescription.vital_signs,
-        [field]: processedValue,
+        [field]: value === '' ? null : parseFloat(value),
       },
-      updated_at: new Date().toISOString(),
     });
   };
 
@@ -334,74 +323,15 @@ export default function ConsultationMeeting() {
 
     setSaving(true);
     try {
-      // Prepare data for API - only include fields that exist in the backend model
-      const prescriptionData = {
-        consultation: prescription.consultation,
-        patient: prescription.patient,
-        primary_diagnosis: prescription.primary_diagnosis,
-        secondary_diagnosis: prescription.secondary_diagnosis,
-        clinical_classification: prescription.clinical_classification,
-        pulse: prescription.pulse || null,
-        blood_pressure_systolic: prescription.blood_pressure_systolic || null,
-        blood_pressure_diastolic: prescription.blood_pressure_diastolic || null,
-        temperature: prescription.temperature || null,
-        weight: prescription.weight || null,
-        height: prescription.height || null,
-        general_instructions: prescription.general_instructions,
-        fluid_intake: prescription.fluid_intake,
-        diet_instructions: prescription.diet_instructions,
-        lifestyle_advice: prescription.lifestyle_advice,
-        next_visit: prescription.next_visit,
-        follow_up_notes: prescription.follow_up_notes,
-        is_draft: prescription.is_draft,
-        is_finalized: prescription.is_finalized,
-        medications: prescription.medications.map(med => ({
-          medicine_name: med.medicine_name,
-          composition: med.composition,
-          dosage_form: med.dosage_form,
-          morning_dose: med.morning_dose,
-          afternoon_dose: med.afternoon_dose,
-          evening_dose: med.evening_dose,
-          frequency: med.frequency,
-          timing: med.timing,
-          custom_timing: med.custom_timing,
-          duration_days: med.duration_days,
-          duration_weeks: med.duration_weeks,
-          duration_months: med.duration_months,
-          is_continuous: med.is_continuous,
-          special_instructions: med.special_instructions,
-          notes: med.notes,
-          order: med.order,
-        })),
-        vital_signs: prescription.vital_signs ? {
-          pulse: prescription.vital_signs.pulse || null,
-          blood_pressure_systolic: prescription.vital_signs.blood_pressure_systolic || null,
-          blood_pressure_diastolic: prescription.vital_signs.blood_pressure_diastolic || null,
-          temperature: prescription.vital_signs.temperature || null,
-          weight: prescription.vital_signs.weight || null,
-          height: prescription.vital_signs.height || null,
-          respiratory_rate: prescription.vital_signs.respiratory_rate || null,
-          oxygen_saturation: prescription.vital_signs.oxygen_saturation || null,
-          blood_sugar_fasting: prescription.vital_signs.blood_sugar_fasting || null,
-          blood_sugar_postprandial: prescription.vital_signs.blood_sugar_postprandial || null,
-          hba1c: prescription.vital_signs.hba1c || null,
-          notes: prescription.vital_signs.notes,
-        } : undefined,
-      };
-
-      let response;
-      
       if (prescription.id) {
         // Update existing prescription
-        response = await api.patch(`/api/prescriptions/${prescription.id}/`, prescriptionData);
+        await api.put(`/api/prescriptions/${prescription.id}/`, prescription);
       } else {
         // Create new prescription
-        response = await api.post('/api/prescriptions/', prescriptionData);
-        if (response.data && response.data.success && response.data.data) {
-          setPrescription(response.data.data);
-        }
+        const response = await api.post('/api/prescriptions/', prescription);
+        setPrescription(response.data.data);
       }
-      
+
       toast({
         title: "Success",
         description: "Prescription saved successfully",
@@ -423,71 +353,20 @@ export default function ConsultationMeeting() {
 
     setSaving(true);
     try {
-      // Prepare data for API - only include fields that exist in the backend model
       const finalizedPrescription = {
-        consultation: prescription.consultation,
-        patient: prescription.patient,
-        primary_diagnosis: prescription.primary_diagnosis,
-        secondary_diagnosis: prescription.secondary_diagnosis,
-        clinical_classification: prescription.clinical_classification,
-        pulse: prescription.pulse || null,
-        blood_pressure_systolic: prescription.blood_pressure_systolic || null,
-        blood_pressure_diastolic: prescription.blood_pressure_diastolic || null,
-        temperature: prescription.temperature || null,
-        weight: prescription.weight || null,
-        height: prescription.height || null,
-        general_instructions: prescription.general_instructions,
-        fluid_intake: prescription.fluid_intake,
-        diet_instructions: prescription.diet_instructions,
-        lifestyle_advice: prescription.lifestyle_advice,
-        next_visit: prescription.next_visit,
-        follow_up_notes: prescription.follow_up_notes,
-        is_draft: false,
+        ...prescription,
         is_finalized: true,
-        medications: prescription.medications.map(med => ({
-          medicine_name: med.medicine_name,
-          composition: med.composition,
-          dosage_form: med.dosage_form,
-          morning_dose: med.morning_dose,
-          afternoon_dose: med.afternoon_dose,
-          evening_dose: med.evening_dose,
-          frequency: med.frequency,
-          timing: med.timing,
-          custom_timing: med.custom_timing,
-          duration_days: med.duration_days,
-          duration_weeks: med.duration_weeks,
-          duration_months: med.duration_months,
-          is_continuous: med.is_continuous,
-          special_instructions: med.special_instructions,
-          notes: med.notes,
-          order: med.order,
-        })),
-        vital_signs: prescription.vital_signs ? {
-          pulse: prescription.vital_signs.pulse || null,
-          blood_pressure_systolic: prescription.vital_signs.blood_pressure_systolic || null,
-          blood_pressure_diastolic: prescription.vital_signs.blood_pressure_diastolic || null,
-          temperature: prescription.vital_signs.temperature || null,
-          weight: prescription.vital_signs.weight || null,
-          height: prescription.vital_signs.height || null,
-          respiratory_rate: prescription.vital_signs.respiratory_rate || null,
-          oxygen_saturation: prescription.vital_signs.oxygen_saturation || null,
-          blood_sugar_fasting: prescription.vital_signs.blood_sugar_fasting || null,
-          blood_sugar_postprandial: prescription.vital_signs.blood_sugar_postprandial || null,
-          hba1c: prescription.vital_signs.hba1c || null,
-          notes: prescription.vital_signs.notes,
-        } : undefined,
+        is_draft: false,
       };
 
-      let response;
       if (prescription.id) {
-        response = await api.patch(`/api/prescriptions/${prescription.id}/`, finalizedPrescription);
+        await api.put(`/api/prescriptions/${prescription.id}/`, finalizedPrescription);
       } else {
-        response = await api.post('/api/prescriptions/', finalizedPrescription);
-      }
-      
-      if (response.data && response.data.success && response.data.data) {
+        const response = await api.post('/api/prescriptions/', finalizedPrescription);
         setPrescription(response.data.data);
       }
+
+      setPrescription(finalizedPrescription);
       toast({
         title: "Success",
         description: "Prescription finalized successfully",
@@ -542,463 +421,472 @@ export default function ConsultationMeeting() {
             <Badge variant={consultation.status === 'completed' ? 'default' : 'secondary'}>
               {consultation.status}
             </Badge>
-            <Button variant="outline" size="sm">
-              <Video className="h-4 w-4 mr-2" />
-              Start Video Call
-            </Button>
+            {consultation.doctor_meeting_link && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.open(consultation.doctor_meeting_link, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open Meeting
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex">
-        {/* Left Panel - Patient Info */}
-        <div className="w-80 bg-white border-r border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h2>
-          
-          {patientInfo ? (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <User className="h-5 w-5 text-gray-400" />
+        {/* Left Panel - Consultation Details (40%) */}
+        <div className="w-2/5 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+          {/* Patient Information */}
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h2>
+            
+            {patientInfo ? (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{patientInfo.user_name}</p>
+                    <p className="text-sm text-gray-600">Patient</p>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center space-x-3">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-700">{patientInfo.user_phone}</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-700">{patientInfo.user_email}</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-700">
+                      {patientInfo.age ? `${patientInfo.age} years` : 'Age not specified'}
+                    </span>
+                  </div>
+                </div>
+                
+                <Separator />
+                
                 <div>
-                  <p className="font-medium">{patientInfo.user_name}</p>
-                  <p className="text-sm text-gray-600">Patient</p>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{patientInfo.user_phone}</span>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{patientInfo.user_email}</span>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">
-                    {patientInfo.age ? `${patientInfo.age} years` : 'Age not specified'}
-                  </span>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="font-medium text-gray-900 mb-2">Medical Information</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Blood Group:</span> {patientInfo.blood_group}
-                  </div>
-                  <div>
-                    <span className="font-medium">Allergies:</span> {patientInfo.allergies}
-                  </div>
-                  <div>
-                    <span className="font-medium">Medical History:</span> {patientInfo.medical_history}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Patient information not available</p>
-            </div>
-          )}
-        </div>
-
-        {/* Right Panel - Main Content */}
-        <div className="flex-1 flex flex-col">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <div className="border-b border-gray-200 px-6">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="consultation">Consultation</TabsTrigger>
-                <TabsTrigger value="prescription">Prescription</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="consultation" className="flex-1 p-6">
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Consultation Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Date</Label>
-                        <p className="text-sm text-gray-900">{consultation.scheduled_date}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Time</Label>
-                        <p className="text-sm text-gray-900">{consultation.scheduled_time}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Duration</Label>
-                        <p className="text-sm text-gray-900">{consultation.duration} minutes</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Fee</Label>
-                        <p className="text-sm text-gray-900">₹{consultation.consultation_fee}</p>
-                      </div>
+                  <h3 className="font-medium text-gray-900 mb-2">Medical Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Blood Group:</span>
+                      <span className="font-medium">{patientInfo.blood_group}</span>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Consultation Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea 
-                      placeholder="Enter consultation notes here..."
-                      className="min-h-[200px]"
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-                        <TabsContent value="prescription" className="flex-1 p-6 space-y-6">
-              {prescription ? (
-                <div className="space-y-6">
-                  {/* Header Actions */}
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">Prescription</h2>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        onClick={savePrescription} 
-                        disabled={saving || prescription.is_finalized}
-                        variant="outline"
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        Save
-                      </Button>
-                      <Button 
-                        onClick={finalizePrescription} 
-                        disabled={saving || prescription.is_finalized}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Finalize
-                      </Button>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Allergies:</span>
+                      <span className="font-medium">{patientInfo.allergies}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Medical History:</span>
+                      <span className="font-medium">{patientInfo.medical_history}</span>
                     </div>
                   </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Patient information not available</p>
+              </div>
+            )}
+          </div>
 
-                  {/* Diagnosis */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <FileText className="h-5 w-5" />
-                        <span>Diagnosis</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="primary_diagnosis">Primary Diagnosis</Label>
-                        <Input
-                          id="primary_diagnosis"
-                          value={prescription.primary_diagnosis}
-                          onChange={(e) => updatePrescription('primary_diagnosis', e.target.value)}
-                          placeholder="Enter primary diagnosis"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="secondary_diagnosis">Secondary Diagnosis</Label>
-                        <Input
-                          id="secondary_diagnosis"
-                          value={prescription.secondary_diagnosis}
-                          onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
-                          placeholder="Enter secondary diagnosis (optional)"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="clinical_classification">Clinical Classification</Label>
-                        <Input
-                          id="clinical_classification"
-                          value={prescription.clinical_classification}
-                          onChange={(e) => updatePrescription('clinical_classification', e.target.value)}
-                          placeholder="Enter clinical classification"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+          {/* Consultation & Prescription Tabs */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <div className="border-b border-gray-200 px-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="consultation">Consultation</TabsTrigger>
+                  <TabsTrigger value="prescription">Prescription</TabsTrigger>
+                </TabsList>
+              </div>
 
-                  {/* Vital Signs */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Activity className="h-5 w-5" />
-                        <span>Vital Signs</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="pulse">Pulse (bpm)</Label>
-                          <Input
-                            id="pulse"
-                            value={prescription.vital_signs.pulse || ''}
-                            onChange={(e) => updateVitalSigns('pulse', e.target.value)}
-                            placeholder="e.g., 72"
-                          />
+              <div className="flex-1 overflow-y-auto">
+                <TabsContent value="consultation" className="p-4 h-full">
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Consultation Details</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Date:</span>
+                          <span className="text-sm font-medium">{consultation.scheduled_date}</span>
                         </div>
-                        <div>
-                          <Label htmlFor="bp_systolic">BP Systolic (mmHg)</Label>
-                          <Input
-                            id="bp_systolic"
-                            value={prescription.vital_signs.blood_pressure_systolic || ''}
-                            onChange={(e) => updateVitalSigns('blood_pressure_systolic', e.target.value)}
-                            placeholder="e.g., 120"
-                          />
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Time:</span>
+                          <span className="text-sm font-medium">{consultation.scheduled_time}</span>
                         </div>
-                        <div>
-                          <Label htmlFor="bp_diastolic">BP Diastolic (mmHg)</Label>
-                          <Input
-                            id="bp_diastolic"
-                            value={prescription.vital_signs.blood_pressure_diastolic || ''}
-                            onChange={(e) => updateVitalSigns('blood_pressure_diastolic', e.target.value)}
-                            placeholder="e.g., 80"
-                          />
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Duration:</span>
+                          <span className="text-sm font-medium">{consultation.duration} min</span>
                         </div>
-                        <div>
-                          <Label htmlFor="temperature">Temperature (°F)</Label>
-                          <Input
-                            id="temperature"
-                            value={prescription.vital_signs.temperature || ''}
-                            onChange={(e) => updateVitalSigns('temperature', e.target.value)}
-                            placeholder="e.g., 98.6"
-                          />
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Fee:</span>
+                          <span className="text-sm font-medium">₹{consultation.consultation_fee}</span>
                         </div>
-                        <div>
-                          <Label htmlFor="weight">Weight (kg)</Label>
-                          <Input
-                            id="weight"
-                            value={prescription.vital_signs.weight || ''}
-                            onChange={(e) => updateVitalSigns('weight', e.target.value)}
-                            placeholder="e.g., 70"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="height">Height (cm)</Label>
-                          <Input
-                            id="height"
-                            value={prescription.vital_signs.height || ''}
-                            onChange={(e) => updateVitalSigns('height', e.target.value)}
-                            placeholder="e.g., 170"
-                          />
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Quick Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Textarea 
+                          placeholder="Enter consultation notes here..."
+                          className="min-h-[120px] text-sm"
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="prescription" className="p-4 h-full">
+                  {prescription ? (
+                    <div className="space-y-4">
+                      {/* Header Actions */}
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-gray-900">Prescription</h2>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            onClick={savePrescription} 
+                            disabled={saving || prescription.is_finalized}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Save className="h-3 w-3 mr-1" />
+                            Save
+                          </Button>
+                          <Button 
+                            onClick={finalizePrescription} 
+                            disabled={saving || prescription.is_finalized}
+                            size="sm"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Finalize
+                          </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
 
-                  {/* Medications */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Pill className="h-5 w-5" />
-                        <span>Medications</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {prescription.medications.map((medication, index) => (
-                          <div key={medication.id || `med-${index}`} className="border rounded-lg p-4 space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-medium">Medication {index + 1}</h4>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeMedication(index)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label>Medication Name</Label>
-                                <Input
-                                  value={medication.medicine_name}
-                                  onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
-                                  placeholder="e.g., Paracetamol"
-                                />
-                              </div>
-                              <div>
-                                <Label>Composition</Label>
-                                <Input
-                                  value={medication.composition}
-                                  onChange={(e) => updateMedication(index, 'composition', e.target.value)}
-                                  placeholder="e.g., Paracetamol 500mg"
-                                />
-                              </div>
-                              <div>
-                                <Label>Dosage Form</Label>
-                                <Input
-                                  value={medication.dosage_form}
-                                  onChange={(e) => updateMedication(index, 'dosage_form', e.target.value)}
-                                  placeholder="e.g., Tablet"
-                                />
-                              </div>
-                              <div>
-                                <Label>Frequency</Label>
-                                <Input
-                                  value={medication.frequency}
-                                  onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
-                                  placeholder="e.g., once_daily"
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
-                                <Label>Morning Dose</Label>
-                                <Input
-                                  type="number"
-                                  value={medication.morning_dose}
-                                  onChange={(e) => updateMedication(index, 'morning_dose', parseInt(e.target.value) || 0)}
-                                  placeholder="0"
-                                />
-                              </div>
-                              <div>
-                                <Label>Afternoon Dose</Label>
-                                <Input
-                                  type="number"
-                                  value={medication.afternoon_dose}
-                                  onChange={(e) => updateMedication(index, 'afternoon_dose', parseInt(e.target.value) || 0)}
-                                  placeholder="0"
-                                />
-                              </div>
-                              <div>
-                                <Label>Evening Dose</Label>
-                                <Input
-                                  type="number"
-                                  value={medication.evening_dose}
-                                  onChange={(e) => updateMedication(index, 'evening_dose', parseInt(e.target.value) || 0)}
-                                  placeholder="0"
-                                />
-                              </div>
+                      {/* Diagnosis */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center space-x-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Diagnosis</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <Label htmlFor="primary_diagnosis" className="text-sm">Primary Diagnosis</Label>
+                            <Input
+                              id="primary_diagnosis"
+                              value={prescription.primary_diagnosis}
+                              onChange={(e) => updatePrescription('primary_diagnosis', e.target.value)}
+                              placeholder="Enter primary diagnosis"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="secondary_diagnosis" className="text-sm">Secondary Diagnosis</Label>
+                            <Input
+                              id="secondary_diagnosis"
+                              value={prescription.secondary_diagnosis}
+                              onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
+                              placeholder="Enter secondary diagnosis"
+                              className="text-sm"
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Vital Signs */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center space-x-2">
+                            <Activity className="h-5 w-5" />
+                            <span>Vital Signs</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="pulse">Pulse (bpm)</Label>
+                              <Input
+                                id="pulse"
+                                value={prescription.vital_signs.pulse || ''}
+                                onChange={(e) => updateVitalSigns('pulse', e.target.value)}
+                                placeholder="e.g., 72"
+                              />
                             </div>
                             <div>
-                              <Label>Special Instructions</Label>
-                              <Textarea
-                                value={medication.special_instructions}
-                                onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
-                                placeholder="Special instructions for this medication"
-                                rows={2}
+                              <Label htmlFor="bp_systolic">BP Systolic (mmHg)</Label>
+                              <Input
+                                id="bp_systolic"
+                                value={prescription.vital_signs.blood_pressure_systolic || ''}
+                                onChange={(e) => updateVitalSigns('blood_pressure_systolic', e.target.value)}
+                                placeholder="e.g., 120"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="bp_diastolic">BP Diastolic (mmHg)</Label>
+                              <Input
+                                id="bp_diastolic"
+                                value={prescription.vital_signs.blood_pressure_diastolic || ''}
+                                onChange={(e) => updateVitalSigns('blood_pressure_diastolic', e.target.value)}
+                                placeholder="e.g., 80"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="temperature">Temperature (°F)</Label>
+                              <Input
+                                id="temperature"
+                                value={prescription.vital_signs.temperature || ''}
+                                onChange={(e) => updateVitalSigns('temperature', e.target.value)}
+                                placeholder="e.g., 98.6"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="weight">Weight (kg)</Label>
+                              <Input
+                                id="weight"
+                                value={prescription.vital_signs.weight || ''}
+                                onChange={(e) => updateVitalSigns('weight', e.target.value)}
+                                placeholder="e.g., 70"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="height">Height (cm)</Label>
+                              <Input
+                                id="height"
+                                value={prescription.vital_signs.height || ''}
+                                onChange={(e) => updateVitalSigns('height', e.target.value)}
+                                placeholder="e.g., 170"
                               />
                             </div>
                           </div>
-                        ))}
-                        <Button
-                          onClick={addMedication}
-                          variant="outline"
-                          className="w-full"
-                        >
+                        </CardContent>
+                      </Card>
+
+                      {/* Medications */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center space-x-2">
+                            <Pill className="h-5 w-5" />
+                            <span>Medications</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {prescription.medications.map((medication, index) => (
+                              <div key={medication.id || `med-${index}`} className="border rounded-lg p-4 space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium">Medication {index + 1}</h4>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeMedication(index)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label>Medication Name</Label>
+                                    <Input
+                                      value={medication.medicine_name}
+                                      onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
+                                      placeholder="e.g., Paracetamol"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Dosage Form</Label>
+                                    <Input
+                                      value={medication.dosage_form}
+                                      onChange={(e) => updateMedication(index, 'dosage_form', e.target.value)}
+                                      placeholder="e.g., Tablet"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div>
+                                    <Label>Morning</Label>
+                                    <Input
+                                      type="number"
+                                      value={medication.morning_dose}
+                                      onChange={(e) => updateMedication(index, 'morning_dose', parseInt(e.target.value) || 0)}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Afternoon</Label>
+                                    <Input
+                                      type="number"
+                                      value={medication.afternoon_dose}
+                                      onChange={(e) => updateMedication(index, 'afternoon_dose', parseInt(e.target.value) || 0)}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Evening</Label>
+                                    <Input
+                                      type="number"
+                                      value={medication.evening_dose}
+                                      onChange={(e) => updateMedication(index, 'evening_dose', parseInt(e.target.value) || 0)}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label>Special Instructions</Label>
+                                  <Textarea
+                                    value={medication.special_instructions}
+                                    onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
+                                    placeholder="Special instructions for this medication"
+                                    rows={2}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                            <Button onClick={addMedication} variant="outline" className="w-full">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Medication
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Instructions */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Instructions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <Label htmlFor="general_instructions">General Instructions</Label>
+                            <Textarea
+                              id="general_instructions"
+                              value={prescription.general_instructions}
+                              onChange={(e) => updatePrescription('general_instructions', e.target.value)}
+                              placeholder="General instructions for the patient"
+                              rows={3}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="fluid_intake">Fluid Intake</Label>
+                              <Input
+                                id="fluid_intake"
+                                value={prescription.fluid_intake}
+                                onChange={(e) => updatePrescription('fluid_intake', e.target.value)}
+                                placeholder="e.g., 8-10 glasses of water daily"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="diet_instructions">Diet Instructions</Label>
+                              <Input
+                                id="diet_instructions"
+                                value={prescription.diet_instructions}
+                                onChange={(e) => updatePrescription('diet_instructions', e.target.value)}
+                                placeholder="e.g., Low sodium diet"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="lifestyle_advice">Lifestyle Advice</Label>
+                            <Textarea
+                              id="lifestyle_advice"
+                              value={prescription.lifestyle_advice}
+                              onChange={(e) => updatePrescription('lifestyle_advice', e.target.value)}
+                              placeholder="Lifestyle recommendations"
+                              rows={3}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Follow-up */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Follow-up</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <Label htmlFor="next_visit">Next Visit</Label>
+                            <Input
+                              id="next_visit"
+                              type="date"
+                              value={prescription.next_visit}
+                              onChange={(e) => updatePrescription('next_visit', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="follow_up_notes">Follow-up Notes</Label>
+                            <Textarea
+                              id="follow_up_notes"
+                              value={prescription.follow_up_notes}
+                              onChange={(e) => updatePrescription('follow_up_notes', e.target.value)}
+                              placeholder="Notes for follow-up visit"
+                              rows={3}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                      <div className="text-center">
+                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Prescription Found</h3>
+                        <p className="text-gray-600 mb-4">Create a new prescription for this consultation</p>
+                        <Button onClick={initializePrescription} disabled={saving}>
                           <Plus className="h-4 w-4 mr-2" />
-                          Add Medication
+                          Create Prescription
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  )}
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </div>
 
-                  {/* Instructions */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Instructions & Advice</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="general_instructions">General Instructions</Label>
-                        <Textarea
-                          id="general_instructions"
-                          value={prescription.general_instructions}
-                          onChange={(e) => updatePrescription('general_instructions', e.target.value)}
-                          placeholder="General instructions for the patient"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="fluid_intake">Fluid Intake</Label>
-                          <Input
-                            id="fluid_intake"
-                            value={prescription.fluid_intake}
-                            onChange={(e) => updatePrescription('fluid_intake', e.target.value)}
-                            placeholder="e.g., 8-10 glasses of water daily"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="diet_instructions">Diet Instructions</Label>
-                          <Input
-                            id="diet_instructions"
-                            value={prescription.diet_instructions}
-                            onChange={(e) => updatePrescription('diet_instructions', e.target.value)}
-                            placeholder="e.g., Low sodium diet"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="lifestyle_advice">Lifestyle Advice</Label>
-                        <Textarea
-                          id="lifestyle_advice"
-                          value={prescription.lifestyle_advice}
-                          onChange={(e) => updatePrescription('lifestyle_advice', e.target.value)}
-                          placeholder="Lifestyle recommendations"
-                          rows={3}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Follow-up */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Follow-up</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="next_visit">Next Visit</Label>
-                        <Input
-                          id="next_visit"
-                          type="date"
-                          value={prescription.next_visit}
-                          onChange={(e) => updatePrescription('next_visit', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="follow_up_notes">Follow-up Notes</Label>
-                        <Textarea
-                          id="follow_up_notes"
-                          value={prescription.follow_up_notes}
-                          onChange={(e) => updatePrescription('follow_up_notes', e.target.value)}
-                          placeholder="Notes for follow-up visit"
-                          rows={3}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Prescription Found</h3>
-                    <p className="text-gray-600 mb-4">Create a new prescription for this consultation</p>
-                    <Button onClick={initializePrescription} disabled={saving}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Prescription
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-
-          </Tabs>
+        {/* Right Panel - Meeting Iframe (60%) */}
+        <div className="w-3/5 bg-gray-900 flex flex-col">
+          {consultation.doctor_meeting_link ? (
+            <iframe
+              src={consultation.doctor_meeting_link}
+              className="w-full h-full border-0"
+              allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+              allowFullScreen
+              title="Video Meeting"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-camera allow-microphone allow-display-capture"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+              <div className="text-center">
+                <Video className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-300 text-lg mb-2">No Meeting Link Available</p>
+                <p className="text-gray-500 text-sm">Meeting link not found for this consultation</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

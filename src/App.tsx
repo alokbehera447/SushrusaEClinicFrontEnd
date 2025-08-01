@@ -30,6 +30,7 @@ import QueueManagement from "@/components/workflow/QueueManagement";
 import VideoConsultation from "@/components/workflow/VideoConsultation";
 import DoctorSchedule from "@/components/workflow/DoctorSchedule";
 import AnalyticsDashboard from "@/components/workflow/AnalyticsDashboard";
+import ConsultationCreationPage from "./pages/ConsultationCreationPage";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -76,6 +77,11 @@ const App = () => (
             <Route path="/admin/consultations/:consultationId" element={
               <ProtectedRoute requiredRole="admin">
                 <ConsultationDetailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/consultations/new" element={
+              <ProtectedRoute requiredRole="admin">
+                <ConsultationCreationPage />
               </ProtectedRoute>
             } />
             <Route path="/doctor/dashboard" element={

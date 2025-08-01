@@ -1449,6 +1449,30 @@ export interface CreateDoctorProfileData {
   date_of_anniversary?: string;
 }
 
+export interface DoctorStatus {
+  id: number;
+  doctor: number;
+  doctor_name: string;
+  doctor_email: string;
+  doctor_specialization: string;
+  doctor_profile_picture: string;
+  is_online: boolean;
+  is_logged_in: boolean;
+  is_available: boolean;
+  current_status: 'available' | 'consulting' | 'busy' | 'away' | 'offline' | 'break' | 'unavailable';
+  status_display: string;
+  is_active: boolean;
+  last_activity: string;
+  last_activity_formatted: string;
+  last_login: string;
+  last_login_formatted: string;
+  current_consultation: any;
+  current_consultation_info: any;
+  status_updated_at: string;
+  status_note: string;
+  auto_away_threshold: number;
+}
+
 export interface DoctorProfile {
   id: number;
   user: string;
@@ -1664,9 +1688,12 @@ export const createConsultation = async (data: {
   chief_complaint: string;
   symptoms?: string;
   consultation_fee?: number | string;
-  slot_id: number; // New field for slot-based booking
+  clinic_id?: number;
+  slot_id?: number; // Optional field for slot-based booking
 }): Promise<Consultation> => {
-  const response = await api.post<ApiResponse<Consultation>>('/api/consultations/', data);
+  // Remove slot_id for dynamic slot consultations
+  const { slot_id, ...consultationData } = data;
+  const response = await api.post<ApiResponse<Consultation>>('/api/consultations/create-dynamic/', consultationData);
   return response.data.data;
 };
 
@@ -1682,6 +1709,46 @@ export const getAvailableSlots = async (params: {
   });
   
   const response = await api.get<ApiResponse<DoctorSlot[]>>(`/api/consultations/available_slots/?${queryParams.toString()}`);
+  return response.data.data;
+};
+
+export const calculateAvailableSlots = async (params: {
+  doctor_id: string | number;
+  clinic_id: string | number;
+  date: string; // YYYY-MM-DD
+}): Promise<{
+  slots: Array<{
+    start_time: string;
+    end_time: string;
+    duration_minutes: number;
+    clinic_name: string;
+    doctor_name: string;
+    is_available: boolean;
+  }>;
+  clinic_duration: number;
+  date: string;
+  doctor_name: string;
+  clinic_name: string;
+}> => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    queryParams.append(key, value.toString());
+  });
+  
+  const response = await api.get<ApiResponse<{
+    slots: Array<{
+      start_time: string;
+      end_time: string;
+      duration_minutes: number;
+      clinic_name: string;
+      doctor_name: string;
+      is_available: boolean;
+    }>;
+    clinic_duration: number;
+    date: string;
+    doctor_name: string;
+    clinic_name: string;
+  }>>(`/api/consultations/calculate_available_slots/?${queryParams.toString()}`);
   return response.data.data;
 };
 
@@ -1880,6 +1947,64 @@ export const paymentApi = {
   getPaymentStatus: async ({ consultation_id }: { consultation_id: string }) => {
     // Placeholder endpoint, update as per backend
     const response = await api.get(`/api/payments/status/?consultation_id=${consultation_id}`);
+    return response.data;
+  },
+}; 
+
+// Doctor Status API functions
+export const doctorStatusApi = {
+  // Get all doctor statuses
+  getDoctorStatuses: async (params?: {
+    status?: string;
+    online?: boolean;
+    available?: boolean;
+  }): Promise<ApiResponse<DoctorStatus[]>> => {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.online !== undefined) queryParams.append('online', params.online.toString());
+    if (params?.available !== undefined) queryParams.append('available', params.available.toString());
+    
+    const url = queryParams.toString() ? `/api/doctors/status/?${queryParams}` : '/api/doctors/status/';
+    const response = await api.get<ApiResponse<DoctorStatus[]>>(url);
+    return response.data;
+  },
+
+  // Get specific doctor status
+  getDoctorStatus: async (doctorId: string): Promise<ApiResponse<DoctorStatus>> => {
+    const response = await api.get<ApiResponse<DoctorStatus>>(`/api/doctors/status/${doctorId}/`);
+    return response.data;
+  },
+
+  // Update doctor status (for doctors to update their own status)
+  updateDoctorStatus: async (data: {
+    current_status?: string;
+    status_note?: string;
+    is_available?: boolean;
+  }): Promise<ApiResponse<DoctorStatus>> => {
+    const response = await api.put<ApiResponse<DoctorStatus>>('/api/doctors/status/update/', data);
+    return response.data;
+  },
+
+  // Get doctor status statistics
+  getDoctorStatusStats: async (): Promise<ApiResponse<{
+    total_doctors: number;
+    online_doctors: number;
+    available_doctors: number;
+    consulting_doctors: number;
+    away_doctors: number;
+    offline_doctors: number;
+    recent_activity: number;
+    status_breakdown: Record<string, number>;
+    online_percentage: number;
+    available_percentage: number;
+  }>> => {
+    const response = await api.get<ApiResponse<any>>('/api/doctors/status/stats/');
+    return response.data;
+  },
+
+  // Mark doctor as offline
+  markOffline: async (): Promise<ApiResponse<any>> => {
+    const response = await api.post<ApiResponse<any>>('/api/doctors/status/offline/');
     return response.data;
   },
 }; 
