@@ -1116,18 +1116,25 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6">
-                    <p className="text-sm text-gray-600">
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <div className="text-sm text-gray-700">
                       Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalPatients)} of {totalPatients} patients
-                    </p>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
                         variant="outline"
                         size="sm"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        First
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
                         Previous
                       </Button>
                       <div className="flex items-center gap-1">
@@ -1136,9 +1143,9 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                           return (
                             <Button
                               key={page}
-                              onClick={() => setCurrentPage(page)}
                               variant={currentPage === page ? "default" : "outline"}
                               size="sm"
+                              onClick={() => setCurrentPage(page)}
                               className="w-8 h-8 p-0"
                             >
                               {page}
@@ -1147,13 +1154,20 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                         })}
                       </div>
                       <Button
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
                         variant="outline"
                         size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
                       >
                         Next
-                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Last
                       </Button>
                     </div>
                   </div>
