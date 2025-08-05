@@ -66,6 +66,8 @@ import {
   patientApi,
   UserProfile,
   Consultation,
+  Prescription,
+  HealthMetric,
   formatDate,
   formatDateTime
 } from '@/lib/api';
@@ -130,17 +132,17 @@ const PatientDashboard = () => {
 
   // State for data - Real API Integration without dummy fallbacks
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [patientProfile, setPatientProfile] = useState<Record<string, unknown> | null>(null);
+  const [patientProfile, setPatientProfile] = useState<any | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Record<string, unknown>[]>([]);
-  const [medicalRecords, setMedicalRecords] = useState<Record<string, unknown>[]>([]);
-  const [documents, setDocuments] = useState<Record<string, unknown>[]>([]);
-  const [notes, setNotes] = useState<Record<string, unknown>[]>([]);
-  const [payments, setPayments] = useState<Record<string, unknown>[]>([]);
-  const [notifications, setNotifications] = useState<Record<string, unknown>[]>([]);
-  const [analytics, setAnalytics] = useState<Record<string, unknown> | null>(null);
-  const [sessions, setSessions] = useState<Record<string, unknown>[]>([]);
-  const [healthMetrics, setHealthMetrics] = useState<Record<string, unknown>[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [medicalRecords, setMedicalRecords] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -429,7 +431,7 @@ const PatientDashboard = () => {
         age: userProfile.age?.toString() || '',
         gender: userProfile.gender || '',
         blood_group: userProfile.blood_group || '',
-        address: userProfile.street || '',
+        address: userProfile.address || '',
         city: userProfile.city || '',
         state: userProfile.state || '',
         pincode: userProfile.pincode || '',
@@ -956,193 +958,6 @@ const PatientDashboard = () => {
               Close
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Profile Modal */}
-      <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <User className="w-5 h-5 mr-2" />
-              Edit Profile
-            </DialogTitle>
-            <DialogDescription>
-              Update your personal information and health details
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {/* Personal Information */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Personal Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Full Name</label>
-                  <Input
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    placeholder="Enter your full name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <Input
-                    type="email"
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    placeholder="Enter your email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Phone Number</label>
-                  <Input
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    placeholder="Enter your phone number"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Age</label>
-                  <Input
-                    type="number"
-                    value={editForm.age}
-                    onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
-                    placeholder="Enter your age"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Gender</label>
-                  <Select value={editForm.gender} onValueChange={(value) => setEditForm({ ...editForm, gender: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Blood Group</label>
-                  <Select value={editForm.blood_group} onValueChange={(value) => setEditForm({ ...editForm, blood_group: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select blood group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A+">A+</SelectItem>
-                      <SelectItem value="A-">A-</SelectItem>
-                      <SelectItem value="B+">B+</SelectItem>
-                      <SelectItem value="B-">B-</SelectItem>
-                      <SelectItem value="AB+">AB+</SelectItem>
-                      <SelectItem value="AB-">AB-</SelectItem>
-                      <SelectItem value="O+">O+</SelectItem>
-                      <SelectItem value="O-">O-</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Address Information */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">Address Information</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Street Address</label>
-                  <Input
-                    value={editForm.address}
-                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    placeholder="Enter your street address"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">City</label>
-                    <Input
-                      value={editForm.city}
-                      onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                      placeholder="Enter your city"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">State</label>
-                    <Input
-                      value={editForm.state}
-                      onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
-                      placeholder="Enter your state"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Pincode</label>
-                    <Input
-                      value={editForm.pincode}
-                      onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
-                      placeholder="Enter your pincode"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Country</label>
-                  <Input
-                    value={editForm.country}
-                    onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                    placeholder="Enter your country"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setEditProfileOpen(false)}
-              disabled={editLoading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={async () => {
-                try {
-                  setEditLoading(true);
-                  // Here you would call the API to update the profile
-                  // await patientApi.updateUserProfile(editForm);
-                  toast({ 
-                    title: 'Profile Updated', 
-                    description: 'Your profile has been updated successfully!' 
-                  });
-                  setEditProfileOpen(false);
-                  // Refresh user profile data
-                  await fetchUserProfile();
-                } catch (error) {
-                  toast({ 
-                    title: 'Error', 
-                    description: 'Failed to update profile. Please try again.', 
-                    variant: 'destructive' 
-                  });
-                } finally {
-                  setEditLoading(false);
-                }
-              }}
-              disabled={editLoading}
-              className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white"
-            >
-              {editLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Update Profile
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
