@@ -46,15 +46,15 @@ const articles = [
 ];
 
 const BlogResources = () => (
+  // HEALTH RESOURCES SECTION - COMMENTED OUT
+  /*
   <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
-    {/* Background Elements */}
     <div className="absolute inset-0">
       <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-[#E17726]/5 to-transparent rounded-full blur-3xl"></div>
       <div className="absolute bottom-20 right-10 w-80 h-80 bg-gradient-to-br from-cyan-400/5 to-transparent rounded-full blur-3xl"></div>
     </div>
 
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="text-center mb-8 sm:mb-12 lg:mb-16">
         <div className="inline-flex items-center space-x-3 glass px-6 py-3 rounded-full border border-[#E17726]/20 mb-6">
           <div className="relative">
@@ -77,12 +77,10 @@ const BlogResources = () => (
         </p>
       </div>
 
-      {/* Articles Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-12">
         {articles.map((article, index) => (
           <div key={index} className="group">
             <div className="bg-white rounded-3xl shadow-modern p-6 flex flex-col h-full hover:shadow-xl-colored transition-all duration-500 hover:-translate-y-3 border border-gray-100/50">
-              {/* Image */}
               <div className="aspect-[4/3] rounded-2xl overflow-hidden mb-4 group-hover:scale-105 transition-transform duration-300">
                 <img 
                   src={article.image} 
@@ -91,22 +89,18 @@ const BlogResources = () => (
                 />
               </div>
               
-              {/* Category Badge */}
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-[#E17726]/10 to-[#E17726]/5 text-[#E17726] text-xs font-semibold mb-3 self-start">
                 {article.category}
               </div>
               
-              {/* Title */}
               <h3 className="text-lg sm:text-xl font-bold text-midnight mb-3 group-hover:text-[#E17726] transition-colors duration-300 flex-grow">
                 {article.title}
               </h3>
               
-              {/* Description */}
               <p className="text-gray-600 text-sm leading-relaxed mb-4 flex-grow">
                 {article.description}
               </p>
               
-              {/* Meta Info */}
               <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
                 <div className="flex items-center">
                   <User className="w-3 h-3 mr-1" />
@@ -118,7 +112,6 @@ const BlogResources = () => (
                 </div>
               </div>
               
-              {/* Read More Button */}
               <Button 
                 variant="outline" 
                 className="w-full bg-white/80 backdrop-blur-sm border-2 border-[#E17726]/30 text-[#E17726] hover:bg-gradient-to-r hover:from-[#E17726] hover:to-[#FF8A56] hover:text-white hover:border-[#E17726] px-4 py-2 rounded-xl font-semibold transition-all duration-500 group/btn"
@@ -131,7 +124,6 @@ const BlogResources = () => (
         ))}
       </div>
 
-      {/* View All Articles CTA */}
       <div className="text-center">
         <Button 
           variant="outline" 
@@ -147,6 +139,8 @@ const BlogResources = () => (
       </div>
     </div>
   </section>
+  */
+  null
 );
 
 export default BlogResources;
