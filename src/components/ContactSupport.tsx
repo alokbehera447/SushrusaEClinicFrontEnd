@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Mail, HelpCircle, Sparkles, Clock, Users } from 'lucide-react';
+import LiveChatModal from '@/components/detail-pages/LiveChatModal';
 
-const ContactSupport = () => (
+const ContactSupport = () => {
+  const [showLiveChatModal, setShowLiveChatModal] = useState(false);
+
+  return (
+  <>
   <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
     {/* Background Elements */}
     <div className="absolute inset-0">
@@ -74,7 +79,10 @@ const ContactSupport = () => (
 
           {/* Action Buttons */}
           <div className="space-y-4">
-            <Button className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:shadow-xl-colored text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-500 hover:scale-105 hover:-translate-y-1">
+            <Button 
+              onClick={() => setShowLiveChatModal(true)}
+              className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:shadow-xl-colored text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-500 hover:scale-105 hover:-translate-y-1"
+            >
               <MessageCircle className="w-6 h-6 mr-3" />
               Start Live Chat
             </Button>
@@ -115,6 +123,14 @@ const ContactSupport = () => (
       </div>
     </div>
   </section>
-);
+  
+  {/* Modals */}
+  <LiveChatModal 
+    isOpen={showLiveChatModal} 
+    onClose={() => setShowLiveChatModal(false)} 
+  />
+  </>
+  );
+};
 
 export default ContactSupport;

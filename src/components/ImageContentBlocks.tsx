@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Heart, Users, Award, Clock, Sparkles, Star, Shield } from 'lucide-react';
+import WhyChooseSushrusaModal from '@/components/detail-pages/WhyChooseSushrusaModal';
+import TechnologyShowcaseModal from '@/components/detail-pages/TechnologyShowcaseModal';
 
 const ImageContentBlocks = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
+  const [showWhyChooseModal, setShowWhyChooseModal] = useState(false);
+  const [showTechnologyModal, setShowTechnologyModal] = useState(false);
 
   const contentBlocks = [
     {
@@ -85,6 +89,7 @@ const ImageContentBlocks = () => {
   }, []);
 
   return (
+    <>
     <section ref={sectionRef} className="py-8 sm:py-12 lg:py-16 bg-white relative overflow-hidden">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {contentBlocks.map((block, index) => (
@@ -141,6 +146,13 @@ const ImageContentBlocks = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
+                onClick={() => {
+                  if (block.buttonText === "Why choose SUSHRUSA") {
+                    setShowWhyChooseModal(true);
+                  } else if (block.buttonText === "Explore our technology") {
+                    setShowTechnologyModal(true);
+                  }
+                }}
                 className={`${
                   isMobile 
                     ? 'bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700'
@@ -250,6 +262,17 @@ const ImageContentBlocks = () => {
         ))}
       </div>
     </section>
+    
+    {/* Modals */}
+    <WhyChooseSushrusaModal 
+      isOpen={showWhyChooseModal} 
+      onClose={() => setShowWhyChooseModal(false)} 
+    />
+    <TechnologyShowcaseModal 
+      isOpen={showTechnologyModal} 
+      onClose={() => setShowTechnologyModal(false)} 
+    />
+  </>
   );
 };
 
