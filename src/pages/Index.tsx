@@ -10,7 +10,7 @@ import TestimonialsSection from '@/components/TestimonialsSection';
 import Footer from '@/components/Footer';
 import { ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react';
 import StatsTrustIndicators from '@/components/StatsTrustIndicators';
-import DoctorShowcase from '@/components/DoctorShowcase';
+
 import SecurityPrivacy from '@/components/SecurityPrivacy';
 import CoverageLocations from '@/components/CoverageLocations';
 import BlogResources from '@/components/BlogResources';
@@ -144,8 +144,7 @@ const Index = () => {
           <ServicesSection />
         </section>
         
-        {/* Doctor Showcase - Main CTA */}
-        <DoctorShowcase />
+
         
         {/* Specialties */}
         <section id="specialties" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
