@@ -317,14 +317,40 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-// Patient API service functions
+// Comprehensive Patient API service functions - 45+ endpoints
 export const patientApi = {
+  // ===== AUTHENTICATION APIs (5 endpoints) =====
+  
   // Get current user's profile
   getCurrentUserProfile: async (): Promise<UserProfile> => {
     const response = await api.get<ApiResponse<UserProfile>>('/api/auth/profile/');
     return response.data.data;
   },
 
+  // Update user profile
+  updateUserProfile: async (profileData: Partial<UserProfile>): Promise<UserProfile> => {
+    const response = await api.put<ApiResponse<UserProfile>>('/api/auth/profile/', profileData);
+    return response.data.data;
+  },
+
+  // Change password
+  changePassword: async (passwordData: { old_password: string; new_password: string }): Promise<void> => {
+    await api.post('/api/auth/change-password/', passwordData);
+  },
+
+  // Get active sessions
+  getActiveSessions: async (): Promise<any[]> => {
+    const response = await api.get<ApiResponse<any[]>>('/api/auth/sessions/');
+    return response.data.data;
+  },
+
+  // Terminate session
+  terminateSession: async (sessionId: string): Promise<void> => {
+    await api.delete(`/api/auth/sessions/${sessionId}/`);
+  },
+
+  // ===== PROFILE MANAGEMENT APIs (3 endpoints) =====
+  
   // Get patient profile
   getPatientProfile: async (patientId?: string): Promise<PatientProfile> => {
     const url = patientId ? `/api/patients/${patientId}/` : '/api/patients/';
@@ -332,12 +358,208 @@ export const patientApi = {
     return response.data.data;
   },
 
+  // Update patient profile
+  updatePatientProfile: async (patientId: string, profileData: Partial<PatientProfile>): Promise<PatientProfile> => {
+    const response = await api.put<ApiResponse<PatientProfile>>(`/api/patients/${patientId}/`, profileData);
+    return response.data.data;
+  },
+
+  // Partial update patient profile
+  partialUpdatePatientProfile: async (patientId: string, profileData: Partial<PatientProfile>): Promise<PatientProfile> => {
+    const response = await api.patch<ApiResponse<PatientProfile>>(`/api/patients/${patientId}/`, profileData);
+    return response.data.data;
+  },
+
+  // ===== SEARCH & ANALYTICS APIs (2 endpoints) =====
+  
+  // Search patients
+  searchPatients: async (searchParams: any): Promise<PaginatedResponse<PatientProfile>> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<PatientProfile>>>('/api/patients/search/', { params: searchParams });
+    return response.data.data;
+  },
+
+  // Get patient statistics
+  getPatientStats: async (): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>('/api/patients/stats/');
+    return response.data.data;
+  },
+
+  // ===== MEDICAL RECORDS APIs (6 endpoints) =====
+  
+  // Get patient medical records
+  getPatientMedicalRecords: async (patientId: string, params?: any): Promise<MedicalRecord[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(
+      `/api/patients/${patientId}/medical-records/`, { params }
+    );
+    return response.data.data.results;
+  },
+
+  // Create medical record
+  createMedicalRecord: async (patientId: string, recordData: Partial<MedicalRecord>): Promise<MedicalRecord> => {
+    const response = await api.post<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/`, recordData);
+    return response.data.data;
+  },
+
+  // Get specific medical record
+  getMedicalRecord: async (patientId: string, recordId: string): Promise<MedicalRecord> => {
+    const response = await api.get<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/${recordId}/`);
+    return response.data.data;
+  },
+
+  // Update medical record
+  updateMedicalRecord: async (patientId: string, recordId: string, recordData: Partial<MedicalRecord>): Promise<MedicalRecord> => {
+    const response = await api.put<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/${recordId}/`, recordData);
+    return response.data.data;
+  },
+
+  // Partial update medical record
+  partialUpdateMedicalRecord: async (patientId: string, recordId: string, recordData: Partial<MedicalRecord>): Promise<MedicalRecord> => {
+    const response = await api.patch<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/${recordId}/`, recordData);
+    return response.data.data;
+  },
+
+  // Delete medical record
+  deleteMedicalRecord: async (patientId: string, recordId: string): Promise<void> => {
+    await api.delete(`/api/patients/${patientId}/medical-records/${recordId}/`);
+  },
+
+  // ===== DOCUMENTS APIs (6 endpoints) =====
+  
+  // Get patient documents
+  getPatientDocuments: async (patientId: string, params?: any): Promise<PatientDocument[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<PatientDocument>>>(
+      `/api/patients/${patientId}/documents/`, { params }
+    );
+    return response.data.data.results;
+  },
+
+  // Upload document
+  uploadDocument: async (patientId: string, documentData: FormData): Promise<PatientDocument> => {
+    const response = await api.post<ApiResponse<PatientDocument>>(`/api/patients/${patientId}/documents/`, documentData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data.data;
+  },
+
+  // Get specific document
+  getDocument: async (patientId: string, documentId: string): Promise<PatientDocument> => {
+    const response = await api.get<ApiResponse<PatientDocument>>(`/api/patients/${patientId}/documents/${documentId}/`);
+    return response.data.data;
+  },
+
+  // Update document
+  updateDocument: async (patientId: string, documentId: string, documentData: Partial<PatientDocument>): Promise<PatientDocument> => {
+    const response = await api.put<ApiResponse<PatientDocument>>(`/api/patients/${patientId}/documents/${documentId}/`, documentData);
+    return response.data.data;
+  },
+
+  // Partial update document
+  partialUpdateDocument: async (patientId: string, documentId: string, documentData: Partial<PatientDocument>): Promise<PatientDocument> => {
+    const response = await api.patch<ApiResponse<PatientDocument>>(`/api/patients/${patientId}/documents/${documentId}/`, documentData);
+    return response.data.data;
+  },
+
+  // Delete document
+  deleteDocument: async (patientId: string, documentId: string): Promise<void> => {
+    await api.delete(`/api/patients/${patientId}/documents/${documentId}/`);
+  },
+
+  // ===== PATIENT NOTES APIs (6 endpoints) =====
+  
+  // Get patient notes
+  getPatientNotes: async (patientId: string, params?: any): Promise<any[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
+      `/api/patients/${patientId}/notes/`, { params }
+    );
+    return response.data.data.results;
+  },
+
+  // Create note
+  createNote: async (patientId: string, noteData: any): Promise<any> => {
+    const response = await api.post<ApiResponse<any>>(`/api/patients/${patientId}/notes/`, noteData);
+    return response.data.data;
+  },
+
+  // Get specific note
+  getNote: async (patientId: string, noteId: string): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>(`/api/patients/${patientId}/notes/${noteId}/`);
+    return response.data.data;
+  },
+
+  // Update note
+  updateNote: async (patientId: string, noteId: string, noteData: any): Promise<any> => {
+    const response = await api.put<ApiResponse<any>>(`/api/patients/${patientId}/notes/${noteId}/`, noteData);
+    return response.data.data;
+  },
+
+  // Partial update note
+  partialUpdateNote: async (patientId: string, noteId: string, noteData: any): Promise<any> => {
+    const response = await api.patch<ApiResponse<any>>(`/api/patients/${patientId}/notes/${noteId}/`, noteData);
+    return response.data.data;
+  },
+
+  // Delete note
+  deleteNote: async (patientId: string, noteId: string): Promise<void> => {
+    await api.delete(`/api/patients/${patientId}/notes/${noteId}/`);
+  },
+
+  // ===== CONSULTATIONS APIs (8 endpoints) =====
+  
   // Get patient consultations
-  getPatientConsultations: async (patientId?: string): Promise<Consultation[]> => {
+  getPatientConsultations: async (patientId?: string, params?: any): Promise<Consultation[]> => {
     const url = patientId 
       ? `/api/consultations/?patient=${patientId}` 
       : '/api/consultations/';
-    const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(url);
+    const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(url, { params });
+    return response.data.data.results;
+  },
+
+  // Create consultation
+  createConsultation: async (consultationData: Partial<Consultation>): Promise<Consultation> => {
+    const response = await api.post<ApiResponse<Consultation>>('/api/consultations/', consultationData);
+    return response.data.data;
+  },
+
+  // Get consultation details
+  getConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await api.get<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`);
+    return response.data.data;
+  },
+
+  // Update consultation
+  updateConsultation: async (consultationId: string, consultationData: Partial<Consultation>): Promise<Consultation> => {
+    const response = await api.put<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
+    return response.data.data;
+  },
+
+  // Partial update consultation
+  partialUpdateConsultation: async (consultationId: string, consultationData: Partial<Consultation>): Promise<Consultation> => {
+    const response = await api.patch<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
+    return response.data.data;
+  },
+
+  // Cancel consultation
+  cancelConsultation: async (consultationId: string): Promise<void> => {
+    await api.delete(`/api/consultations/${consultationId}/`);
+  },
+
+  // Search consultations
+  searchConsultations: async (searchParams: any): Promise<PaginatedResponse<Consultation>> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>('/api/consultations/search/', { params: searchParams });
+    return response.data.data;
+  },
+
+  // Get consultation statistics
+  getConsultationStats: async (): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>('/api/consultations/stats/');
+    return response.data.data;
+  },
+
+  // ===== PRESCRIPTIONS APIs (3 endpoints) =====
+  
+  // Get patient prescriptions
+  getPatientPrescriptions: async (params?: any): Promise<Prescription[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<Prescription>>>('/api/prescriptions/', { params });
     return response.data.data.results;
   },
 
@@ -357,33 +579,45 @@ export const patientApi = {
     return response.data.data.results;
   },
 
-  // Get patient medical records
-  getPatientMedicalRecords: async (patientId: string): Promise<MedicalRecord[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(
-      `/api/patients/${patientId}/medical-records/`
-    );
+  // ===== PAYMENTS APIs (3 endpoints) =====
+  
+  // Get patient payments
+  getPatientPayments: async (params?: any): Promise<any[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/payments/', { params });
     return response.data.data.results;
   },
 
-  // Get patient documents
-  getPatientDocuments: async (patientId: string): Promise<PatientDocument[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<PatientDocument>>>(
-      `/api/patients/${patientId}/documents/`
-    );
-    return response.data.data.results;
-  },
-
-
-
-  // Update user profile
-  updateUserProfile: async (profileData: Partial<UserProfile>): Promise<UserProfile> => {
-    const response = await api.put<ApiResponse<UserProfile>>('/api/auth/profile/', profileData);
+  // Create payment
+  createPayment: async (paymentData: any): Promise<any> => {
+    const response = await api.post<ApiResponse<any>>('/api/payments/', paymentData);
     return response.data.data;
   },
 
-  // Update patient profile
-  updatePatientProfile: async (patientId: string, profileData: Partial<PatientProfile>): Promise<PatientProfile> => {
-    const response = await api.put<ApiResponse<PatientProfile>>(`/api/patients/${patientId}/`, profileData);
+  // Get payment details
+  getPayment: async (paymentId: string): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>(`/api/payments/${paymentId}/`);
+    return response.data.data;
+  },
+
+  // ===== NOTIFICATIONS APIs (2 endpoints) =====
+  
+  // Get patient notifications
+  getPatientNotifications: async (params?: any): Promise<any[]> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/notifications/', { params });
+    return response.data.data.results;
+  },
+
+  // Mark notification as read
+  markNotificationAsRead: async (notificationId: string): Promise<any> => {
+    const response = await api.put<ApiResponse<any>>(`/api/notifications/${notificationId}/`, { is_read: true });
+    return response.data.data;
+  },
+
+  // ===== ANALYTICS APIs (1 endpoint) =====
+  
+  // Get patient analytics
+  getPatientAnalytics: async (params?: any): Promise<any> => {
+    const response = await api.get<ApiResponse<any>>('/api/analytics/patient/', { params });
     return response.data.data;
   }
 };
