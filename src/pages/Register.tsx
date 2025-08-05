@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight, User, Calendar } from 'lucide-react';
+import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight, User, Calendar, Smartphone, Lock, Users, Star } from 'lucide-react';
 import { api } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -136,36 +136,50 @@ const Register = () => {
 
   const getStepDescription = () => {
     switch (step) {
-      case 'phone': return 'We\'ll send you a secure verification code';
-      case 'info': return 'Help us personalize your experience';
+      case 'phone': return 'We\'ll send you a secure verification code via SMS';
+      case 'info': return 'Help us personalize your healthcare experience';
       case 'otp': return `Verification code sent to ${phoneNumber}`;
       default: return 'Create your account';
     }
   };
 
+  const getStepIcon = () => {
+    switch (step) {
+      case 'phone': return <Smartphone className="h-6 w-6" />;
+      case 'info': return <User className="h-6 w-6" />;
+      case 'otp': return <Lock className="h-6 w-6" />;
+      default: return <Users className="h-6 w-6" />;
+    }
+  };
+
   return (
-    <div 
-      className="min-h-screen flex flex-col"
-      style={{
-        background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%)'
-      }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-[#E17726]/10 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-cyan-400/10 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-80 h-80 bg-gradient-to-t from-purple-400/10 to-transparent rounded-full blur-3xl"></div>
+      </div>
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="bg-[#E17726] p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-md">
-                <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+      <div className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-white/20 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="bg-gradient-to-br from-[#E17726] to-[#FF8A56] p-2 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                <Heart className="h-6 w-6 text-white" />
               </div>
               <div>
-                <span className="text-lg sm:text-xl font-bold text-midnight">SUSHRUSA</span>
-                <span className="text-xs sm:text-sm text-gray-500 ml-1">eClinic</span>
+                <span className="text-xl sm:text-2xl font-black text-gray-900">SUSHRUSA</span>
+                <span className="text-sm text-gray-600 ml-1 font-medium">eClinic</span>
               </div>
             </Link>
             <Link to="/">
-              <Button variant="outline" className="border-gray-300 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 h-8 sm:h-10">
-                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Button 
+                variant="outline" 
+                className="border-gray-300/50 bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white hover:border-[#E17726] hover:text-[#E17726] transition-all duration-300 px-4 py-2 h-10"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Back to Home</span>
                 <span className="sm:hidden">Home</span>
               </Button>
@@ -175,34 +189,43 @@ const Register = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-8 sm:py-12">
-        <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-midnight mb-2">Join Sushrusa eClinic</h2>
-            <p className="text-gray-600 text-base sm:text-lg">Your journey to better health starts here</p>
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="w-full max-w-md lg:max-w-lg space-y-8">
+          {/* Welcome Section */}
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#E17726] to-[#FF8A56] rounded-2xl shadow-lg mb-4">
+              <Users className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight">
+              Join Sushrusa
+              <span className="block text-[#E17726]">eClinic Today</span>
+            </h1>
+            <p className="text-lg text-gray-600 max-w-sm mx-auto">
+              Your journey to better health starts with a simple registration
+            </p>
           </div>
 
           {/* Progress Steps */}
-          <div className="flex justify-center items-center space-x-2 sm:space-x-4 mb-6 sm:mb-8">
+          <div className="flex justify-center items-center space-x-4 mb-8">
             {['phone', 'info', 'otp'].map((stepName, index) => (
               <div key={stepName} className="flex items-center">
-                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
                   step === stepName 
-                    ? 'bg-[#E17726] text-white' 
+                    ? 'bg-gradient-to-br from-[#E17726] to-[#FF8A56] text-white shadow-lg scale-110' 
                     : step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName)
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-lg'
                     : 'bg-gray-200 text-gray-600'
                 }`}>
                   {step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName) ? (
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <CheckCircle className="w-5 h-5" />
                   ) : (
                     index + 1
                   )}
                 </div>
                 {index < 2 && (
-                  <div className={`w-8 sm:w-12 h-1 mx-1 sm:mx-2 ${
+                  <div className={`w-12 h-1 mx-2 rounded-full transition-all duration-300 ${
                     step === 'info' && stepName === 'phone' || step === 'otp' && ['phone', 'info'].includes(stepName)
-                    ? 'bg-green-500'
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
                     : 'bg-gray-200'
                   }`}></div>
                 )}
@@ -210,25 +233,34 @@ const Register = () => {
             ))}
           </div>
 
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="space-y-1 pb-4 sm:pb-6">
-              <CardTitle className="text-xl sm:text-2xl text-center text-midnight">
+          {/* Registration Card */}
+          <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden">
+            <CardHeader className="space-y-3 pb-6 pt-8">
+              <div className="flex items-center justify-center mb-2">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#E17726]/10 to-[#FF8A56]/10 rounded-xl flex items-center justify-center">
+                  {getStepIcon()}
+                </div>
+              </div>
+              <CardTitle className="text-2xl font-bold text-center text-gray-900">
                 {getStepTitle()}
               </CardTitle>
-              <CardDescription className="text-center text-gray-600 text-sm sm:text-base">
+              <CardDescription className="text-center text-gray-600">
                 {getStepDescription()}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-8 pb-8">
               {step === 'phone' && (
-                <form onSubmit={handlePhoneSubmit} className="space-y-4 sm:space-y-6">
-                  {/* Phone Number */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                      Phone Number *
+                <form onSubmit={handlePhoneSubmit} className="space-y-6">
+                  {/* Phone Number Input */}
+                  <div className="space-y-3">
+                    <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 flex items-center">
+                      <Smartphone className="w-4 h-4 mr-2" />
+                      Mobile Number
                     </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400 group-focus-within:text-[#E17726] transition-colors duration-300" />
+                      </div>
                       <Input
                         id="phone"
                         type="tel"
@@ -239,37 +271,62 @@ const Register = () => {
                             setPhoneNumber(cleaned);
                           }
                         }}
-                        placeholder="Enter your phone number"
+                        placeholder="Enter your 10-digit mobile number"
                         required
-                        className="w-full pl-10"
+                        className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                         maxLength={12}
                       />
                     </div>
                   </div>
 
                   {/* Test Info */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs sm:text-sm text-blue-800 font-medium">Test OTP: <span className="font-mono bg-white px-1 rounded">123456</span></p>
+                  <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                    <Shield className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <span className="font-semibold">Test OTP:</span> 
+                      <span className="ml-2 font-mono bg-white px-2 py-1 rounded border">123456</span>
+                    </div>
                   </div>
 
+                  {/* Submit Button */}
                   <Button
                     type="submit"
                     disabled={phoneNumber.length !== 10 || isLoading}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
+                    className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {isLoading ? "Verifying..." : "Send Verification Code"}
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                        Verifying...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <ArrowRight className="w-5 h-5 mr-2" />
+                        Send Verification Code
+                      </div>
+                    )}
                   </Button>
+                  
+                  {error && (
+                    <div className="flex items-center p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                      <Shield className="w-5 h-5 text-red-600 mr-3 flex-shrink-0" />
+                      <div className="text-sm text-red-800">
+                        {error}
+                      </div>
+                    </div>
+                  )}
                 </form>
               )}
 
               {step === 'info' && (
-                <form onSubmit={handleInfoSubmit} className="space-y-4 sm:space-y-6">
+                <form onSubmit={handleInfoSubmit} className="space-y-6">
                   {/* Basic Information */}
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                          First Name *
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <Label htmlFor="firstName" className="text-sm font-semibold text-gray-700 flex items-center">
+                          <User className="w-4 h-4 mr-2" />
+                          First Name
                         </Label>
                         <Input
                           id="firstName"
@@ -277,12 +334,14 @@ const Register = () => {
                           onChange={(e) => handleInputChange('firstName', e.target.value)}
                           placeholder="Enter first name"
                           required
+                          className="w-full px-4 py-4 text-lg border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                         />
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                          Last Name *
+                      <div className="space-y-3">
+                        <Label htmlFor="lastName" className="text-sm font-semibold text-gray-700 flex items-center">
+                          <User className="w-4 h-4 mr-2" />
+                          Last Name
                         </Label>
                         <Input
                           id="lastName"
@@ -290,34 +349,49 @@ const Register = () => {
                           onChange={(e) => handleInputChange('lastName', e.target.value)}
                           placeholder="Enter last name"
                           required
+                          className="w-full px-4 py-4 text-lg border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700">
-                        Date of Birth *
+                    <div className="space-y-3">
+                      <Label htmlFor="dateOfBirth" className="text-sm font-semibold text-gray-700 flex items-center">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Date of Birth
                       </Label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Calendar className="h-5 w-5 text-gray-400 group-focus-within:text-[#E17726] transition-colors duration-300" />
+                        </div>
                         <Input
                           id="dateOfBirth"
                           type="date"
                           value={userInfo.dateOfBirth}
                           onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                           required
-                          className="pl-10"
+                          className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                         />
                       </div>
                     </div>
                   </div>
 
+                  {/* Submit Button */}
                   <Button
                     type="submit"
                     disabled={!userInfo.firstName || !userInfo.lastName || !userInfo.dateOfBirth || isLoading}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
+                    className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {isLoading ? "Processing..." : "Continue to Verification"}
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                        Processing...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <ArrowRight className="w-5 h-5 mr-2" />
+                        Continue to Verification
+                      </div>
+                    )}
                   </Button>
 
                   {/* Back to Phone */}
@@ -325,9 +399,10 @@ const Register = () => {
                     <button
                       type="button"
                       onClick={() => setStep('phone')}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      className="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors duration-300 flex items-center justify-center mx-auto"
                     >
-                      ← Back to phone number
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to phone number
                     </button>
                   </div>
                 </form>
@@ -336,11 +411,12 @@ const Register = () => {
               {step === 'otp' && (
                 <form onSubmit={handleOtpSubmit} className="space-y-6">
                   {/* OTP Input */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">
-                      Enter 6-digit OTP
+                  <div className="space-y-4">
+                    <Label className="text-sm font-semibold text-gray-700 flex items-center justify-center">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Enter 6-digit verification code
                     </Label>
-                    <div className="flex justify-center space-x-2 sm:space-x-3">
+                    <div className="flex justify-center space-x-3">
                       {otp.map((digit, index) => (
                         <Input
                           key={index}
@@ -348,7 +424,7 @@ const Register = () => {
                           type="text"
                           value={digit}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
-                          className="w-10 h-10 sm:w-12 sm:h-12 text-center text-base sm:text-lg font-semibold"
+                          className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                           maxLength={1}
                           autoFocus={index === 0}
                         />
@@ -359,16 +435,18 @@ const Register = () => {
                   {/* Resend OTP */}
                   <div className="text-center">
                     {countdown > 0 ? (
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        Resend OTP in <span className="font-semibold text-[#E17726]">{countdown}s</span>
-                      </p>
+                      <div className="flex items-center justify-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-2" />
+                        Resend code in <span className="font-semibold text-[#E17726] ml-1">{countdown}s</span>
+                      </div>
                     ) : (
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        className="text-xs sm:text-sm text-[#E17726] hover:text-[#c9651e] font-medium"
+                        className="text-sm text-[#E17726] hover:text-[#c9651e] font-semibold transition-colors duration-300 flex items-center justify-center mx-auto"
                       >
-                        Resend OTP
+                        <ArrowRight className="w-4 h-4 mr-2" />
+                        Resend verification code
                       </button>
                     )}
                   </div>
@@ -377,10 +455,29 @@ const Register = () => {
                   <Button
                     type="submit"
                     disabled={otp.join('').length !== 6 || isLoading}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
+                    className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {isLoading ? "Setting up your account..." : "Complete Registration"}
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                        Setting up your account...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Complete Registration
+                      </div>
+                    )}
                   </Button>
+                  
+                  {error && (
+                    <div className="flex items-center p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                      <Shield className="w-5 h-5 text-red-600 mr-3 flex-shrink-0" />
+                      <div className="text-sm text-red-800">
+                        {error}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Back to Info */}
                   <div className="text-center">
@@ -391,24 +488,44 @@ const Register = () => {
                         setOtpSent(false);
                         setOtp(['', '', '', '', '', '']);
                       }}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      className="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors duration-300 flex items-center justify-center mx-auto"
                     >
-                      ← Back to information
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to information
                     </button>
                   </div>
                 </form>
               )}
 
-              <div className="mt-6 text-center">
-                <p className="text-xs sm:text-sm text-gray-600">
+              {/* Login Link */}
+              <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                <p className="text-sm text-gray-600">
                   Already have an account?{' '}
-                  <Link to="/login" className="text-[#E17726] hover:text-[#c9651e] font-medium">
+                  <Link to="/login" className="text-[#E17726] hover:text-[#c9651e] font-semibold transition-colors duration-300">
                     Sign in here
                   </Link>
                 </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Benefits Section */}
+          <div className="text-center space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-500">
+              <div className="flex items-center justify-center">
+                <Shield className="w-4 h-4 mr-2" />
+                <span>Secure & Private</span>
+              </div>
+              <div className="flex items-center justify-center">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>24/7 Access</span>
+              </div>
+              <div className="flex items-center justify-center">
+                <Star className="w-4 h-4 mr-2" />
+                <span>Expert Care</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
