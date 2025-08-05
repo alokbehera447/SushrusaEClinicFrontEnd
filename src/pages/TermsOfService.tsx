@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, FileText, CheckCircle, AlertTriangle, Users, Shield, Clock, Scale } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle, AlertTriangle, Users, Shield, Clock, Scale, MapPin, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,40 +31,6 @@ const TermsOfService = () => {
     }
   ];
 
-  const serviceTerms = [
-    {
-      title: "Platform Services",
-      items: [
-        "Video consultations with healthcare providers",
-        "Digital prescription management",
-        "Health record storage and access",
-        "Appointment scheduling and management",
-        "Payment processing for healthcare services",
-        "Emergency support and triage"
-      ]
-    },
-    {
-      title: "User Responsibilities",
-      items: [
-        "Provide accurate and complete information",
-        "Maintain the security of your account",
-        "Use the platform for legitimate healthcare purposes",
-        "Comply with applicable laws and regulations",
-        "Respect the privacy of other users",
-        "Report any security concerns immediately"
-      ]
-    }
-  ];
-
-  const prohibitedActivities = [
-    "Sharing account credentials with others",
-    "Attempting to access other users' accounts",
-    "Using the platform for non-medical purposes",
-    "Harassing or abusing healthcare providers",
-    "Providing false or misleading information",
-    "Attempting to reverse engineer the platform"
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
@@ -85,8 +51,8 @@ const TermsOfService = () => {
                   <FileText className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-midnight">Terms of Service</h1>
-                  <p className="text-gray-600">Last updated: January 2024</p>
+                  <h1 className="text-2xl font-bold text-midnight">Terms and Conditions</h1>
+                  <p className="text-gray-600">Sushrusa Healthcare & Research Center</p>
                 </div>
               </div>
             </div>
@@ -121,278 +87,304 @@ const TermsOfService = () => {
             {/* Introduction */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Agreement to Terms</CardTitle>
+                <CardTitle className="text-xl font-bold text-midnight">1. Introduction</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700 leading-relaxed">
-                  By accessing and using SUSHRUSA eClinic platform, you agree to be bound by these Terms of Service. 
-                  These terms govern your use of our healthcare platform and services.
-                </p>
-                <p className="text-gray-700 leading-relaxed">
-                  If you do not agree to these terms, please do not use our platform. We reserve the right to modify 
-                  these terms at any time, and your continued use constitutes acceptance of any changes.
+                  Welcome to Sushrusa Healthcare & Research Center. These terms and conditions outline the rules
+                  and regulations for the use of our services. By accessing this center and using our services, you
+                  agree to comply with and be bound by the following terms and conditions.
                 </p>
               </CardContent>
             </Card>
 
-            {/* Service Description */}
+            {/* Services Provided */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Platform Services</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {serviceTerms.map((section, index) => (
-                  <div key={index} className="space-y-3">
-                    <h4 className="font-semibold text-midnight text-lg">{section.title}</h4>
-                    <ul className="space-y-2">
-                      {section.items.map((item, itemIndex) => (
-                        <li key={itemIndex} className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-[#E17726] rounded-full mt-2 flex-shrink-0"></div>
-                          <span className="text-gray-700">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* User Accounts */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">User Accounts & Registration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-midnight">Account Creation</h4>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li>• Provide accurate personal information</li>
-                      <li>• Create a strong, unique password</li>
-                      <li>• Verify your email address</li>
-                      <li>• Complete your health profile</li>
-                    </ul>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-midnight">Account Security</h4>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li>• Keep credentials confidential</li>
-                      <li>• Enable two-factor authentication</li>
-                      <li>• Report suspicious activity</li>
-                      <li>• Log out after each session</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Prohibited Activities */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Prohibited Activities</CardTitle>
+                <CardTitle className="text-xl font-bold text-midnight">2. Services Provided</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700 leading-relaxed">
-                  The following activities are strictly prohibited and may result in account termination:
+                  Sushrusa Healthcare & Research Center offers a range of medical services, including but not
+                  limited to:
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {prohibitedActivities.map((activity, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">{activity}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Payment Terms */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Payment & Billing</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-midnight">Payment Methods</h4>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li>• Credit/Debit cards</li>
-                      <li>• Digital wallets</li>
-                      <li>• Insurance coverage</li>
-                      <li>• Bank transfers</li>
-                    </ul>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-midnight">Billing Policies</h4>
-                    <ul className="space-y-2 text-sm text-gray-700">
-                      <li>• Transparent pricing</li>
-                      <li>• No hidden fees</li>
-                      <li>• Secure payment processing</li>
-                      <li>• Detailed invoices</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Privacy & Data */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Privacy & Data Protection</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-700 leading-relaxed">
-                  Your privacy is paramount. We handle your health information in accordance with:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">HIPAA regulations</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">Data encryption</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">Access controls</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">Audit trails</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">Regular backups</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">Incident response</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Limitation of Liability */}
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-midnight">Limitation of Liability</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-700 leading-relaxed">
-                  SUSHRUSA eClinic provides a platform for healthcare services but is not responsible for:
-                </p>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li>• Medical advice or treatment outcomes</li>
-                  <li>• Actions of healthcare providers</li>
-                  <li>• Technical issues beyond our control</li>
-                  <li>• User-generated content</li>
-                  <li>• Third-party service disruptions</li>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start space-x-3">
+                    <div className="w-2 h-2 bg-[#E17726] rounded-full mt-2 flex-shrink-0"></div>
+                    <span>General healthcare consultations</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <div className="w-2 h-2 bg-[#E17726] rounded-full mt-2 flex-shrink-0"></div>
+                    <span>Specialized medical treatments</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <div className="w-2 h-2 bg-[#E17726] rounded-full mt-2 flex-shrink-0"></div>
+                    <span>Research-based healthcare solutions</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <div className="w-2 h-2 bg-[#E17726] rounded-full mt-2 flex-shrink-0"></div>
+                    <span>E-Clinic services for online consultations</span>
+                  </li>
                 </ul>
+              </CardContent>
+            </Card>
+
+            {/* Appointment and Consultation */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-midnight">3. Appointment and Consultation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">3.1 Scheduling Appointments</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Appointments can be scheduled online, via phone, or in person. We
+                      recommend booking in advance to ensure availability.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">3.2 Consultation Fees</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Fees for consultations and treatments must be paid at the time of service.
+                      Our fee structure is available upon request.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">3.3 E-Clinic Services</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Online consultations are available through our E-Clinic platform. You must
+                      have a stable internet connection and necessary devices to participate.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* No Refund Policy */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-midnight">4. No Refund Policy</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">4.1 Consultation Fees</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      All consultation fees are non-refundable. Once a service is provided, the
+                      payment cannot be refunded under any circumstances.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">4.2 Treatment Packages</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Fees for treatment packages are also non-refundable. In cases of
+                      discontinuation, only residual services that have not been utilized will be available to the patient.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Privacy and Confidentiality */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-midnight">5. Privacy and Confidentiality</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">5.1 Patient Information</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      All patient information is confidential and will be handled according to
+                      our privacy policy.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">5.2 Data Protection</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      We adhere to strict data protection protocols to ensure the safety and privacy
+                      of patient data.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Liability */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-midnight">6. Liability</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">6.1 Medical Advice</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      All medical advice provided by our healthcare professionals is based on their
+                      expertise and available information. Patients are advised to follow the given recommendations.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">6.2 Limitation of Liability</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Sushrusa Healthcare & Research Center will not be liable for any
+                      direct, indirect, incidental, or consequential damages arising from the use of our services.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Research Participation */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-midnight">7. Research Participation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">7.1 Voluntary Participation</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Participation in research studies is voluntary. Participants will be
+                      provided with detailed information about the study and must provide informed consent.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-midnight mb-2">7.2 Confidentiality</h4>
+                    <p className="text-gray-700 leading-relaxed">
+                      Data collected during research will be anonymized and used strictly for
+                      research purposes.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Changes to Terms */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-midnight">8. Changes to Terms and Conditions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <p className="text-gray-700 leading-relaxed">
-                  Our liability is limited to the amount paid for services in the 12 months preceding any claim.
+                  Sushrusa Healthcare & Research Center reserves the right to update or modify these terms and
+                  conditions at any time. Any changes will be communicated to patients and posted on our website.
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Quick Info */}
+          {/* Right Column - Contact Information */}
           <div className="space-y-6">
             {/* Contact Information */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-midnight">Legal Contact</CardTitle>
+                <CardTitle className="text-lg font-bold text-midnight">9. Contact Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-[#E17726]/10 rounded-lg flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-[#E17726]" />
+                <p className="text-sm text-gray-700 mb-4">
+                  For any questions or concerns regarding these terms and conditions, please contact us at:
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-[#E17726]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-4 h-4 text-[#E17726]" />
                     </div>
                     <div>
-                      <p className="font-medium text-midnight">Legal Department</p>
-                      <p className="text-sm text-gray-600">legal@sushrusa.com</p>
+                      <p className="font-medium text-midnight">Address</p>
+                      <p className="text-sm text-gray-600">
+                        HIG 11, 2ND LANE, near Kharavel park, Phase I, Khandagiri, Bhubaneswar, Odisha 751030
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-[#E17726]/10 rounded-lg flex items-center justify-center">
-                      <Users className="w-4 h-4 text-[#E17726]" />
+                    <div className="w-8 h-8 bg-[#E17726]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Phone className="w-4 h-4 text-[#E17726]" />
                     </div>
                     <div>
-                      <p className="font-medium text-midnight">Support Team</p>
-                      <p className="text-sm text-gray-600">support@sushrusa.com</p>
+                      <p className="font-medium text-midnight">Phone</p>
+                      <p className="text-sm text-gray-600">+91 6370 511 060</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-[#E17726]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-4 h-4 text-[#E17726]" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-midnight">Email</p>
+                      <p className="text-sm text-gray-600">care@sushrusahealthcare.co</p>
                     </div>
                   </div>
                 </div>
                 <Button className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white">
-                  Contact Legal Team
+                  Contact Us
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Key Terms */}
+            {/* Key Points */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-midnight">Key Terms</CardTitle>
+                <CardTitle className="text-lg font-bold text-midnight">Key Points</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-gray-700">Acceptance required</span>
+                    <span className="text-sm text-gray-700">Non-refundable fees</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-gray-700">Account security</span>
+                    <span className="text-sm text-gray-700">Confidential patient data</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-gray-700">Payment terms</span>
+                    <span className="text-sm text-gray-700">E-Clinic services available</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-gray-700">Liability limits</span>
+                    <span className="text-sm text-gray-700">Research participation voluntary</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Updates */}
+            {/* Important Notice */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-midnight">Terms Updates</CardTitle>
+                <CardTitle className="text-lg font-bold text-midnight">Important Notice</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-gray-700">
-                  We may update these terms periodically. You will be notified of significant changes through:
-                </p>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li>• Email notification</li>
-                  <li>• In-app alerts</li>
-                  <li>• Updated date stamp</li>
-                </ul>
-                <p className="text-sm text-gray-600">
-                  Last updated: January 15, 2024
-                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800">No Refund Policy</p>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        All consultation fees and treatment packages are non-refundable once services are provided.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Governing Law */}
+            {/* Service Areas */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-midnight">Governing Law</CardTitle>
+                <CardTitle className="text-lg font-bold text-midnight">Service Areas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-gray-700">
-                  These terms are governed by the laws of the jurisdiction where SUSHRUSA eClinic operates.
+                  We provide healthcare services including:
                 </p>
-                <p className="text-sm text-gray-700">
-                  Any disputes will be resolved through binding arbitration in accordance with our dispute resolution policy.
-                </p>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>• General healthcare consultations</li>
+                  <li>• Specialized medical treatments</li>
+                  <li>• Research-based healthcare solutions</li>
+                  <li>• E-Clinic online consultations</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
