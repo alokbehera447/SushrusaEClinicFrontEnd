@@ -44,34 +44,77 @@ interface ConsultationDetails {
     age?: number;
     gender?: string;
   };
+  patient_name?: string;
+  patient_phone?: string;
+  patient_email?: string;
+  patient_age?: number;
+  patient_gender?: string;
+  
   doctor: {
     id: string;
     name: string;
     specialty: string;
     phone: string;
+    email?: string;
   };
+  doctor_name?: string;
+  doctor_phone?: string;
+  doctor_email?: string;
+  doctor_specialty?: string;
+  
   consultationType: 'video' | 'phone' | 'in-person';
+  consultation_type?: string;
   consultationDate: string;
+  scheduled_date?: string;
   consultationTime: string;
+  scheduled_time?: string;
   duration: number;
   status: 'scheduled' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled';
   chiefComplaint: string;
+  chief_complaint?: string;
   symptoms?: string;
   consultationFee: number;
+  consultation_fee?: number;
   paymentMethod: string;
+  payment_method?: string;
   paymentStatus: 'pending' | 'completed' | 'refunded';
+  payment_status?: string;
   meetingLink?: string;
-  doctor_meeting_link?: string; // Added for the new button
-  prescription?: {
+  doctor_meeting_link?: string;
+  
+  prescription_data?: {
     id: string;
-    status: 'pending' | 'active' | 'completed';
-    medicines: string[];
-    instructions: string;
-    writtenDate: string;
+    issued_date: string;
+    issued_time: string;
+    primary_diagnosis: string;
+    secondary_diagnosis: string;
+    general_instructions: string;
+    diet_instructions: string;
+    lifestyle_advice: string;
+    next_visit: string;
+    follow_up_notes: string;
+    is_finalized: boolean;
+    medications: Array<{
+      id: string;
+      medicine_name: string;
+      composition: string;
+      dosage_form: string;
+      morning_dose: number;
+      afternoon_dose: number;
+      evening_dose: number;
+      frequency: string;
+      timing: string;
+      duration_days: number;
+      special_instructions: string;
+      notes: string;
+    }>;
   };
+  
   notes?: string;
   createdAt: string;
+  created_at?: string;
   updatedAt: string;
+  updated_at?: string;
 }
 
 interface Diagnosis {
@@ -349,10 +392,11 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="diagnosis">Diagnosis</TabsTrigger>
             <TabsTrigger value="vitals">Vital Signs</TabsTrigger>
+            <TabsTrigger value="prescription">Prescription</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="symptoms">Symptoms</TabsTrigger>
@@ -429,28 +473,28 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Name:</span>
-                        <span className="font-medium">{consultation.patient.name}</span>
+                        <span className="font-medium">{consultation.patient_name || consultation.patient?.name || 'Not available'}</span>
                       </div>
-                      {consultation.patient.age && (
+                      {(consultation.patient_age || consultation.patient?.age) && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Age:</span>
-                          <span className="font-medium">{consultation.patient.age} years</span>
+                          <span className="font-medium">{consultation.patient_age || consultation.patient?.age} years</span>
                         </div>
                       )}
-                      {consultation.patient.gender && (
+                      {(consultation.patient_gender || consultation.patient?.gender) && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Gender:</span>
-                          <span className="font-medium">{consultation.patient.gender}</span>
+                          <span className="font-medium">{consultation.patient_gender || consultation.patient?.gender}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Phone:</span>
-                        <span className="font-medium">{consultation.patient.phone}</span>
+                        <span className="font-medium">{consultation.patient_phone || consultation.patient?.phone || 'Not available'}</span>
                       </div>
-                      {consultation.patient.email && (
+                      {(consultation.patient_email || consultation.patient?.email) && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Email:</span>
-                          <span className="font-medium">{consultation.patient.email}</span>
+                          <span className="font-medium">{consultation.patient_email || consultation.patient?.email}</span>
                         </div>
                       )}
                     </div>
@@ -464,16 +508,22 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Name:</span>
-                        <span className="font-medium">{consultation.doctor.name}</span>
+                        <span className="font-medium">{consultation.doctor_name || consultation.doctor?.name || 'Not available'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Specialty:</span>
-                        <span className="font-medium">{consultation.doctor.specialty}</span>
+                        <span className="font-medium">{consultation.doctor_specialty || consultation.doctor?.specialty || 'General Medicine'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Phone:</span>
-                        <span className="font-medium">{consultation.doctor.phone}</span>
+                        <span className="font-medium">{consultation.doctor_phone || consultation.doctor?.phone || 'Not available'}</span>
                       </div>
+                      {(consultation.doctor_email || consultation.doctor?.email) && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Email:</span>
+                          <span className="font-medium">{consultation.doctor_email || consultation.doctor?.email}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -636,6 +686,204 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          {/* Prescription Tab */}
+          <TabsContent value="prescription" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-midnight">Prescription</h3>
+              <div className="flex gap-2">
+                {consultation.payment_status === 'completed' && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => window.print()}
+                    className="border-green-600 text-green-600 hover:bg-green-50"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Print Receipt
+                  </Button>
+                )}
+                {(userRole === 'doctor' || userRole === 'admin') && (
+                  <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Prescription
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {consultation.prescription_data ? (
+              <div className="space-y-6">
+                {/* Prescription Header */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Pill className="w-5 h-5 mr-2 text-[#E17726]" />
+                      Prescription Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Issued Date</Label>
+                        <p className="font-medium">{new Date(consultation.prescription_data.issued_date).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Issued Time</Label>
+                        <p className="font-medium">{consultation.prescription_data.issued_time}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Status</Label>
+                        <Badge className={consultation.prescription_data.is_finalized ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                          {consultation.prescription_data.is_finalized ? 'Finalized' : 'Draft'}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {/* Diagnosis */}
+                    {consultation.prescription_data.primary_diagnosis && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Primary Diagnosis</Label>
+                        <p className="text-gray-700">{consultation.prescription_data.primary_diagnosis}</p>
+                      </div>
+                    )}
+                    
+                    {consultation.prescription_data.secondary_diagnosis && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Secondary Diagnosis</Label>
+                        <p className="text-gray-700">{consultation.prescription_data.secondary_diagnosis}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Medications */}
+                {consultation.prescription_data.medications && consultation.prescription_data.medications.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Medications</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {consultation.prescription_data.medications.map((medication, index) => (
+                          <div key={medication.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <h4 className="font-semibold text-lg">{medication.medicine_name}</h4>
+                              <Badge variant="outline">{medication.dosage_form}</Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Composition</Label>
+                                <p className="text-sm">{medication.composition || 'Not specified'}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Dosage</Label>
+                                <p className="text-sm">
+                                  {medication.morning_dose}-{medication.afternoon_dose}-{medication.evening_dose}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Frequency</Label>
+                                <p className="text-sm capitalize">{medication.frequency.replace('_', ' ')}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Timing</Label>
+                                <p className="text-sm capitalize">{medication.timing.replace('_', ' ')}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Duration</Label>
+                                <p className="text-sm">{medication.duration_days} days</p>
+                              </div>
+                            </div>
+                            
+                            {medication.special_instructions && (
+                              <div className="mb-3">
+                                <Label className="text-sm font-medium text-gray-600">Special Instructions</Label>
+                                <p className="text-sm text-gray-700">{medication.special_instructions}</p>
+                              </div>
+                            )}
+                            
+                            {medication.notes && (
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Notes</Label>
+                                <p className="text-sm text-gray-700">{medication.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Instructions */}
+                {(consultation.prescription_data.general_instructions || 
+                  consultation.prescription_data.diet_instructions || 
+                  consultation.prescription_data.lifestyle_advice) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Instructions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {consultation.prescription_data.general_instructions && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">General Instructions</Label>
+                          <p className="text-gray-700">{consultation.prescription_data.general_instructions}</p>
+                        </div>
+                      )}
+                      
+                      {consultation.prescription_data.diet_instructions && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Diet Instructions</Label>
+                          <p className="text-gray-700">{consultation.prescription_data.diet_instructions}</p>
+                        </div>
+                      )}
+                      
+                      {consultation.prescription_data.lifestyle_advice && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Lifestyle Advice</Label>
+                          <p className="text-gray-700">{consultation.prescription_data.lifestyle_advice}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Follow-up */}
+                {(consultation.prescription_data.next_visit || consultation.prescription_data.follow_up_notes) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Follow-up</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {consultation.prescription_data.next_visit && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Next Visit</Label>
+                          <p className="text-gray-700">{consultation.prescription_data.next_visit}</p>
+                        </div>
+                      )}
+                      
+                      {consultation.prescription_data.follow_up_notes && (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Follow-up Notes</Label>
+                          <p className="text-gray-700">{consultation.prescription_data.follow_up_notes}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Pill className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h4 className="text-lg font-semibold text-gray-600 mb-2">No Prescription Available</h4>
+                  <p className="text-gray-500">No prescription has been created for this consultation yet.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Documents Tab */}

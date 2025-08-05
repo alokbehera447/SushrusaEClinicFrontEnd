@@ -41,9 +41,7 @@ import {
 import { format } from 'date-fns';
 import { 
   adminConsultationApi,
-  Consultation,
-  adminPatientApi,
-  doctorApi
+  Consultation
 } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -61,31 +59,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 
-interface PatientProfile {
-  id: string;
-  user_name: string;
-  user_phone: string;
-  user_email: string;
-  date_of_birth: string;
-  gender: string;
-  blood_group: string;
-  emergency_contact: string;
-  medical_history: string;
-  allergies: string;
-  current_medications: string;
-}
 
-interface DoctorProfile {
-  id: string;
-  user_name: string;
-  user_phone: string;
-  user_email: string;
-  specialization: string;
-  experience_years: number;
-  consultation_fee: number;
-  bio: string;
-  is_available: boolean;
-}
 
 const ConsultationDetailPage = () => {
   const { consultationId } = useParams<{ consultationId: string }>();
@@ -93,8 +67,6 @@ const ConsultationDetailPage = () => {
   const { toast } = useToast();
   
   const [consultation, setConsultation] = useState<Consultation | null>(null);
-  const [patient, setPatient] = useState<PatientProfile | null>(null);
-  const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,29 +81,9 @@ const ConsultationDetailPage = () => {
       setLoading(true);
       setError(null);
 
-      // Load consultation details
+      // Load consultation details (includes patient and doctor info)
       const consultationData = await adminConsultationApi.getConsultationById(consultationId!);
       setConsultation(consultationData);
-
-      // Load patient details
-      if (consultationData.patient) {
-        try {
-          const patientData = await adminPatientApi.getPatientById(consultationData.patient);
-          setPatient(patientData);
-        } catch (patientError) {
-          console.error('Error loading patient:', patientError);
-        }
-      }
-
-      // Load doctor details
-      if (consultationData.doctor) {
-        try {
-          const doctorData = await doctorApi.getDoctorById(consultationData.doctor);
-          setDoctor(doctorData);
-        } catch (doctorError) {
-          console.error('Error loading doctor:', doctorError);
-        }
-      }
 
     } catch (error: any) {
       console.error('Error loading consultation details:', error);
@@ -537,15 +489,15 @@ const ConsultationDetailPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {patient ? (
+              {consultation?.patient_name ? (
                 <>
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
-                      <AvatarFallback>{patient.user_name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{consultation.patient_name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-lg">{patient.user_name}</h3>
-                      <p className="text-sm text-gray-600">{patient.user_phone}</p>
+                      <h3 className="font-semibold text-lg">{consultation.patient_name}</h3>
+                      <p className="text-sm text-gray-600">{consultation.patient_phone || 'Phone not available'}</p>
                     </div>
                   </div>
                   
@@ -554,49 +506,25 @@ const ConsultationDetailPage = () => {
                   <div className="space-y-2">
                     <div>
                       <label className="text-xs font-medium text-gray-600">Email</label>
-                      <p className="text-sm">{patient.user_email}</p>
+                      <p className="text-sm">{consultation.patient_email || 'Email not available'}</p>
                     </div>
+                    {consultation.patient_age && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Age</label>
+                        <p className="text-sm">{consultation.patient_age} years</p>
+                      </div>
+                    )}
+                    {consultation.patient_gender && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Gender</label>
+                        <p className="text-sm capitalize">{consultation.patient_gender}</p>
+                      </div>
+                    )}
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Date of Birth</label>
-                      <p className="text-sm">{patient.date_of_birth}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Gender</label>
-                      <p className="text-sm capitalize">{patient.gender}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Blood Group</label>
-                      <p className="text-sm">{patient.blood_group}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Emergency Contact</label>
-                      <p className="text-sm">{patient.emergency_contact}</p>
+                      <label className="text-xs font-medium text-gray-600">Patient ID</label>
+                      <p className="text-sm">{consultation.patient}</p>
                     </div>
                   </div>
-
-                  {patient.medical_history && (
-                    <>
-                      <Separator />
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Medical History</label>
-                        <p className="text-sm mt-1">{patient.medical_history}</p>
-                      </div>
-                    </>
-                  )}
-
-                  {patient.allergies && (
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Allergies</label>
-                      <p className="text-sm mt-1">{patient.allergies}</p>
-                    </div>
-                  )}
-
-                  {patient.current_medications && (
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Current Medications</label>
-                      <p className="text-sm mt-1">{patient.current_medications}</p>
-                    </div>
-                  )}
                 </>
               ) : (
                 <p className="text-gray-500">Patient information not available</p>
@@ -613,23 +541,15 @@ const ConsultationDetailPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {doctor ? (
+              {consultation?.doctor_name ? (
                 <>
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
-                      {doctor.profile_picture ? (
-                        <img 
-                          src={doctor.profile_picture} 
-                          alt={doctor.user_name} 
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback>{doctor.user_name.charAt(0)}</AvatarFallback>
-                      )}
+                      <AvatarFallback>{consultation.doctor_name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-lg">{doctor.user_name}</h3>
-                      <p className="text-sm text-gray-600">{doctor.specialization}</p>
+                      <h3 className="font-semibold text-lg">{consultation.doctor_name}</h3>
+                      <p className="text-sm text-gray-600">{consultation.doctor_specialty || 'Specialty not available'}</p>
                     </div>
                   </div>
                   
@@ -638,37 +558,21 @@ const ConsultationDetailPage = () => {
                   <div className="space-y-2">
                     <div>
                       <label className="text-xs font-medium text-gray-600">Phone</label>
-                      <p className="text-sm">{doctor.user_phone}</p>
+                      <p className="text-sm">{consultation.doctor_phone || 'Phone not available'}</p>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-600">Email</label>
-                      <p className="text-sm">{doctor.user_email}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Experience</label>
-                      <p className="text-sm">{doctor.experience_years} years</p>
+                      <p className="text-sm">{consultation.doctor_email || 'Email not available'}</p>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-600">Consultation Fee</label>
-                      <p className="text-sm font-semibold">₹{doctor.consultation_fee}</p>
+                      <p className="text-sm font-semibold">₹{consultation.consultation_fee || 0}</p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600">Availability</label>
-                      <Badge className={doctor.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                        {doctor.is_available ? 'Available' : 'Unavailable'}
-                      </Badge>
+                      <label className="text-xs font-medium text-gray-600">Doctor ID</label>
+                      <p className="text-sm">{consultation.doctor}</p>
                     </div>
                   </div>
-
-                  {doctor.bio && (
-                    <>
-                      <Separator />
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Bio</label>
-                        <p className="text-sm mt-1">{doctor.bio}</p>
-                      </div>
-                    </>
-                  )}
                 </>
               ) : (
                 <p className="text-gray-500">Doctor information not available</p>
@@ -725,6 +629,6 @@ const ConsultationDetailPage = () => {
       </div>
     </div>
   );
-};
-
-export default ConsultationDetailPage; 
+  };
+  
+  export default ConsultationDetailPage; 

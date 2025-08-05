@@ -28,42 +28,48 @@ const SpecialtiesShowcase = () => {
       title: "Cardiology",
       description: "Expert heart care and cardiovascular health",
       patients: "2,500+ patients treated",
-      image: "Heart specialist consultation"
+      image: "/cardiology.png",
+      altText: "Cardiology specialist consultation"
     },
     {
       icon: Brain,
       title: "Neurology",
       description: "Advanced neurological care and treatment",
       patients: "1,800+ patients treated",
-      image: "Neurological examination"
+      image: "/neurology.png",
+      altText: "Neurological examination"
     },
     {
       icon: Eye,
       title: "Ophthalmology",
       description: "Comprehensive eye care and vision health",
       patients: "3,200+ patients treated",
-      image: "Eye examination"
+      image: "/ophthalmology.png",
+      altText: "Eye examination"
     },
     {
       icon: Bone,
       title: "Orthopedics",
       description: "Bone, joint, and muscle health expertise",
       patients: "2,100+ patients treated",
-      image: "Orthopedic consultation"
+      image: "/orthopedics.png",
+      altText: "Orthopedic consultation"
     },
     {
       icon: Baby,
       title: "Pediatrics",
       description: "Specialized care for children and infants",
       patients: "4,000+ patients treated",
-      image: "Pediatric care"
+      image: "/pediatrics.png",
+      altText: "Pediatric care"
     },
     {
       icon: Stethoscope,
       title: "General Medicine",
       description: "Primary care and general health management",
       patients: "5,500+ patients treated",
-      image: "General consultation"
+      image: "/general_medicine.png",
+      altText: "General consultation"
     }
   ];
 
@@ -120,7 +126,7 @@ const SpecialtiesShowcase = () => {
   };
 
   return (
-    <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-b from-white to-sand-warm/20">
+    <section className="py-8 sm:py-12 lg:py-8 bg-gradient-to-b from-white to-sand-warm/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-6">
           <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-[#E17726]/20 hover-glow group cursor-pointer">
@@ -153,8 +159,8 @@ const SpecialtiesShowcase = () => {
                 {/* Image Section */}
                 <div className="aspect-[4/3] bg-gradient-to-br from-[#E17726]/5 to-aqua/5 relative overflow-hidden">
                   <img 
-                    src="/healthcare-consultation.svg" 
-                    alt={specialty.image}
+                    src={specialty.image} 
+                    alt={specialty.altText}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-midnight/40 via-transparent to-transparent"></div>
@@ -208,8 +214,8 @@ const SpecialtiesShowcase = () => {
                           {/* Image Section */}
                           <div className="aspect-[4/3] bg-gradient-to-br from-[#E17726]/5 to-aqua/5 relative overflow-hidden">
                             <img 
-                              src="/healthcare-consultation.svg" 
-                              alt={specialty.image}
+                              src={specialty.image} 
+                              alt={specialty.altText}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-midnight/40 via-transparent to-transparent"></div>
@@ -245,7 +251,7 @@ const SpecialtiesShowcase = () => {
             </div>
 
             {/* Navigation Arrows */}
-            <div className="absolute top-1/2 -translate-y-1/2 -left-2">
+            <div className="absolute top-1/2 -translate-y-1/2 left-2">
               <Button
                 onClick={prevSlide}
                 variant="outline"
@@ -257,7 +263,7 @@ const SpecialtiesShowcase = () => {
               </Button>
             </div>
 
-            <div className="absolute top-1/2 -translate-y-1/2 -right-2">
+            <div className="absolute top-1/2 -translate-y-1/2 right-2">
               <Button
                 onClick={nextSlide}
                 variant="outline"

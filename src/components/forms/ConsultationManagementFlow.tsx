@@ -36,13 +36,27 @@ interface Consultation {
     name: string;
     phone: string;
     email?: string;
+    age?: number;
+    gender?: string;
   };
+  // New API fields for backward compatibility
+  patient_name?: string;
+  patient_phone?: string;
+  patient_email?: string;
+  patient_age?: number;
+  patient_gender?: string;
   doctor: {
     id: string;
     name: string;
     specialty: string;
     phone: string;
+    email?: string;
   };
+  // New API fields for backward compatibility
+  doctor_name?: string;
+  doctor_phone?: string;
+  doctor_email?: string;
+  doctor_specialty?: string;
   consultationType: 'video' | 'phone' | 'in-person';
   consultationDate: string;
   consultationTime: string;
@@ -119,14 +133,29 @@ const ConsultationManagementFlow = () => {
           patient: {
             id: c.patient,
             name: c.patient_name,
-            phone: '',
+            phone: c.patient_phone || '',
+            email: c.patient_email || '',
+            age: c.patient_age || undefined,
+            gender: c.patient_gender || undefined,
           },
+          // Add the new API fields for backward compatibility
+          patient_name: c.patient_name,
+          patient_phone: c.patient_phone,
+          patient_email: c.patient_email,
+          patient_age: c.patient_age,
+          patient_gender: c.patient_gender,
           doctor: {
             id: c.doctor,
             name: c.doctor_name,
-            specialty: '',
-            phone: '',
+            specialty: c.doctor_specialty || '',
+            phone: c.doctor_phone || '',
+            email: c.doctor_email || '',
           },
+          // Add the new API fields for backward compatibility
+          doctor_name: c.doctor_name,
+          doctor_phone: c.doctor_phone,
+          doctor_email: c.doctor_email,
+          doctor_specialty: c.doctor_specialty,
           consultationType: c.consultation_type === 'video_call' ? 'video' : c.consultation_type,
           consultationDate: c.scheduled_date,
           consultationTime: c.scheduled_time,
@@ -141,6 +170,7 @@ const ConsultationManagementFlow = () => {
           createdAt: c.created_at,
           updatedAt: c.updated_at,
         }));
+        setAllConsultations(mapped);
         setConsultations(mapped);
         setLoading(false);
       })
@@ -150,11 +180,47 @@ const ConsultationManagementFlow = () => {
       });
   }, [assignedClinics, loadingClinics]);
 
+  // Filter consultations based on current filters
+  useEffect(() => {
+    let filtered = [...allConsultations];
+
+    // Filter upcoming consultations
+    if (filterUpcoming) {
+      const now = new Date();
+      filtered = filtered.filter(consultation => {
+        const consultationDate = new Date(consultation.consultationDate);
+        const consultationTime = consultation.consultationTime;
+        const [hours, minutes] = consultationTime.split(':');
+        consultationDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        return consultationDate >= now;
+      });
+    }
+
+    // Filter by status
+    if (filterStatus) {
+      filtered = filtered.filter(consultation => consultation.status === filterStatus);
+    }
+
+    // Filter by payment status
+    if (filterPaymentStatus) {
+      filtered = filtered.filter(consultation => consultation.paymentStatus === filterPaymentStatus);
+    }
+
+    setConsultations(filtered);
+  }, [allConsultations, filterUpcoming, filterStatus, filterPaymentStatus]);
+
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const [showPrescriptionDialog, setShowPrescriptionDialog] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedConsultationForDetails, setSelectedConsultationForDetails] = useState<Consultation | null>(null);
+  
+  // Filter states
+  const [filterUpcoming, setFilterUpcoming] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('');
+  const [allConsultations, setAllConsultations] = useState<Consultation[]>([]);
 
   // API Functions aligned with endpoints
   const updateConsultationStatus = async (consultationId: string, status: string) => {
@@ -306,10 +372,78 @@ const ConsultationManagementFlow = () => {
         ))}
       </div>
 
+      {/* Filters */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold text-midnight">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="upcoming"
+                checked={filterUpcoming}
+                onChange={(e) => setFilterUpcoming(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="upcoming" className="text-sm font-medium text-gray-700">
+                Upcoming Consultations Only
+              </label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Status:</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="rounded border-gray-300 text-sm"
+              >
+                <option value="">All Status</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Payment:</label>
+              <select
+                value={filterPaymentStatus}
+                onChange={(e) => setFilterPaymentStatus(e.target.value)}
+                className="rounded border-gray-300 text-sm"
+              >
+                <option value="">All Payments</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFilterUpcoming(false);
+                setFilterStatus('');
+                setFilterPaymentStatus('');
+              }}
+              className="text-gray-600"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Consultation List */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-midnight">All Consultations</CardTitle>
+          <CardTitle className="text-xl font-bold text-midnight">
+            Consultations ({consultations.length})
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {loading && <p className="text-center py-8">Loading consultations...</p>}
@@ -371,6 +505,16 @@ const ConsultationManagementFlow = () => {
                       <Play className="w-4 h-4 mr-2" />
                       Start Consultation
                     </Button>
+                    {consultation.consultationType === 'video' && consultation.meetingLink && (
+                      <Button 
+                        size="sm" 
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => window.open(consultation.meetingLink, '_blank')}
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        Join Meeting
+                      </Button>
+                    )}
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -399,7 +543,7 @@ const ConsultationManagementFlow = () => {
                       <Button 
                         size="sm" 
                         className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={() => navigate(`/consultation-meeting?meeting=${encodeURIComponent(consultation.meetingLink)}`)}
+                        onClick={() => window.open(consultation.meetingLink, '_blank')}
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Join Meeting
@@ -438,7 +582,7 @@ const ConsultationManagementFlow = () => {
                   <Button
                     size="sm"
                     className="bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={() => navigate(`/consultation-meeting?meeting=${encodeURIComponent(consultation.meetingLink)}`)}
+                    onClick={() => window.open(consultation.meetingLink, '_blank')}
                   >
                     <Video className="w-4 h-4 mr-2" />
                     Join Now

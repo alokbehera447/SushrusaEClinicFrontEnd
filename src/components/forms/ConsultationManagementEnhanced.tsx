@@ -107,6 +107,25 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [consultationToDelete, setConsultationToDelete] = useState<Consultation | null>(null);
 
+  // Consultation popup state
+  const [showConsultationPopup, setShowConsultationPopup] = useState(false);
+  const [upcomingConsultation, setUpcomingConsultation] = useState<Consultation | null>(null);
+  const [shownPopupConsultations, setShownPopupConsultations] = useState<Set<string>>(new Set());
+  const [isProcessingPopup, setIsProcessingPopup] = useState(false);
+
+  // Load shown consultations from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('shownPopupConsultations');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setShownPopupConsultations(new Set(parsed));
+      } catch (error) {
+        console.error('Error loading shown consultations:', error);
+      }
+    }
+  }, []);
+
   // Calculate total pages
   const totalPages = Math.ceil(totalConsultations / pageSize);
 
@@ -150,15 +169,13 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
       // Get today's consultations for stats
       const todayConsultations = await adminConsultationApi.getTodaysConsultations();
       
-      // Calculate stats from consultations data
+      // Calculate statistics
       const stats = {
-        total_consultations: totalConsultations,
-        today_consultations: todayConsultations.length,
-        completed_consultations: Array.isArray(consultations) ? consultations.filter(c => c.status === 'completed').length : 0,
+        total_consultations: Array.isArray(consultations) ? consultations.length : 0,
         pending_consultations: Array.isArray(consultations) ? consultations.filter(c => c.status === 'scheduled').length : 0,
         cancelled_consultations: Array.isArray(consultations) ? consultations.filter(c => c.status === 'cancelled').length : 0,
-        total_revenue: Array.isArray(consultations) ? consultations.reduce((sum, c) => sum + (c.is_paid ? c.consultation_fee : 0), 0) : 0,
-        pending_revenue: Array.isArray(consultations) ? consultations.filter(c => !c.is_paid).reduce((sum, c) => sum + c.consultation_fee, 0) : 0
+        total_revenue: Array.isArray(consultations) ? consultations.reduce((sum, c) => sum + (c.is_paid ? Number(c.consultation_fee) : 0), 0) : 0,
+        pending_revenue: Array.isArray(consultations) ? consultations.filter(c => !c.is_paid).reduce((sum, c) => sum + Number(c.consultation_fee), 0) : 0
       };
       
       // Update stats in component state (you could add a stats state if needed)
@@ -181,6 +198,94 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
     }
   }, [isAssignedToClinic, fetchConsultations, fetchConsultationStats]);
 
+  // Check for upcoming consultations and show popup
+  useEffect(() => {
+    if (consultations.length > 0 && !showConsultationPopup && !isProcessingPopup) {
+      const now = new Date();
+      const upcomingConsultations = consultations.filter(consultation => {
+        if (consultation.status !== 'scheduled') return false;
+        
+        // Skip if we've already shown popup for this consultation
+        if (shownPopupConsultations.has(consultation.id)) return false;
+        
+        const consultationDate = new Date(consultation.scheduled_date);
+        const consultationTime = consultation.scheduled_time;
+        const [hours, minutes] = consultationTime.split(':').map(Number);
+        consultationDate.setHours(hours, minutes, 0, 0);
+        
+        // Show popup for consultations happening within next 30 minutes
+        const timeDiff = consultationDate.getTime() - now.getTime();
+        const minutesDiff = timeDiff / (1000 * 60);
+        
+        return minutesDiff >= -5 && minutesDiff <= 30; // 5 minutes before to 30 minutes after
+      });
+      
+      if (upcomingConsultations.length > 0) {
+        setIsProcessingPopup(true);
+        // Show popup for the first upcoming consultation
+        const firstUpcoming = upcomingConsultations[0];
+        setUpcomingConsultation(firstUpcoming);
+        setShowConsultationPopup(true);
+        // Mark this consultation as shown and save to localStorage
+        const newShownSet = new Set([...shownPopupConsultations, firstUpcoming.id]);
+        setShownPopupConsultations(newShownSet);
+        localStorage.setItem('shownPopupConsultations', JSON.stringify([...newShownSet]));
+        
+        // If there are more upcoming consultations, show them one by one
+        if (upcomingConsultations.length > 1) {
+          // Store remaining consultations to show after this one
+          const remainingConsultations = upcomingConsultations.slice(1);
+          localStorage.setItem('pendingPopupConsultations', JSON.stringify(remainingConsultations));
+        }
+      }
+    }
+  }, [consultations, showConsultationPopup, shownPopupConsultations, isProcessingPopup]);
+
+  // Separate effect to handle pending consultations when popup closes
+  useEffect(() => {
+    if (!showConsultationPopup && upcomingConsultation === null && !isProcessingPopup) {
+      // Check if there are pending consultations to show
+      const pendingConsultations = localStorage.getItem('pendingPopupConsultations');
+      if (pendingConsultations) {
+        try {
+          const remainingConsultations = JSON.parse(pendingConsultations);
+          if (remainingConsultations.length > 0) {
+            setIsProcessingPopup(true);
+            // Add a small delay to prevent immediate popup
+            const timeoutId = setTimeout(() => {
+              const nextConsultation = remainingConsultations[0];
+              const updatedRemaining = remainingConsultations.slice(1);
+              
+              setUpcomingConsultation(nextConsultation);
+              setShowConsultationPopup(true);
+              
+              // Mark this consultation as shown
+              const newShownSet = new Set([...shownPopupConsultations, nextConsultation.id]);
+              setShownPopupConsultations(newShownSet);
+              localStorage.setItem('shownPopupConsultations', JSON.stringify([...newShownSet]));
+              
+              // Update remaining consultations
+              if (updatedRemaining.length > 0) {
+                localStorage.setItem('pendingPopupConsultations', JSON.stringify(updatedRemaining));
+              } else {
+                localStorage.removeItem('pendingPopupConsultations');
+              }
+            }, 1000); // 1 second delay to prevent rapid popups
+            
+            return () => clearTimeout(timeoutId);
+          } else {
+            localStorage.removeItem('pendingPopupConsultations');
+          }
+        } catch (error) {
+          console.error('Error processing pending consultations:', error);
+          localStorage.removeItem('pendingPopupConsultations');
+        }
+      }
+    }
+  }, [showConsultationPopup, upcomingConsultation, shownPopupConsultations, isProcessingPopup]);
+
+
+
   // Reset to first page when filters change
   useEffect(() => {
     if (isAssignedToClinic && currentPage !== 1) {
@@ -202,9 +307,16 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
           setConsultationToDelete(consultation);
           setDeleteDialogOpen(true);
           break;
-        case 'join':
-          navigate(`/consultation-meeting?meeting=${encodeURIComponent(`https://meet.jit.si/Consultation-${consultation.id}`)}`);
+        case 'join': {
+          // Open doctor's meeting link directly in new tab
+          const meetingLink = (consultation as any).doctor_meeting_link || (consultation as any).meeting_link;
+          if (meetingLink) {
+            window.open(meetingLink, '_blank');
+          } else {
+            toast.error('Meeting link not available for this consultation');
+          }
           break;
+        }
         case 'reschedule':
           navigate(`/admin/consultations/${consultation.id}/reschedule`);
           break;
@@ -288,7 +400,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
     },
     {
       title: "Pending Revenue",
-      value: `₹${Array.isArray(consultations) ? consultations.filter(c => !c.is_paid).reduce((sum, c) => sum + c.consultation_fee, 0) : 0}`,
+      value: Array.isArray(consultations) ? consultations.filter(c => !c.is_paid).reduce((sum, c) => sum + Number(c.consultation_fee), 0) : 0,
       icon: DollarSign,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
@@ -319,7 +431,12 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-2">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stat.title === "Pending Revenue" || stat.title === "Total Revenue" 
+                      ? `₹${typeof stat.value === 'number' ? stat.value.toLocaleString('en-IN') : stat.value}`
+                      : stat.value.toLocaleString()
+                    }
+                  </p>
                   <div className="flex items-center mt-2">
                     {stat.changeType === 'positive' ? (
                       <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
@@ -340,6 +457,46 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Show Upcoming Consultations Button */}
+      <div className="flex justify-end">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => {
+            if (consultations.length > 0) {
+              const scheduledConsultations = consultations.filter(c => c.status === 'scheduled');
+              if (scheduledConsultations.length > 0) {
+                // Clear shown consultations to allow all to show
+                setShownPopupConsultations(new Set());
+                localStorage.removeItem('shownPopupConsultations');
+                localStorage.removeItem('pendingPopupConsultations');
+                
+                // Show first consultation immediately
+                const firstConsultation = scheduledConsultations[0];
+                setUpcomingConsultation(firstConsultation);
+                setShowConsultationPopup(true);
+                
+                // Store remaining consultations
+                if (scheduledConsultations.length > 1) {
+                  const remainingConsultations = scheduledConsultations.slice(1);
+                  localStorage.setItem('pendingPopupConsultations', JSON.stringify(remainingConsultations));
+                }
+                
+                toast.success(`Showing ${scheduledConsultations.length} scheduled consultations`);
+              } else {
+                toast.info('No scheduled consultations found');
+              }
+            } else {
+              toast.info('No consultations loaded yet');
+            }
+          }}
+          className="text-xs"
+        >
+          <Clock className="w-3 h-3 mr-1" />
+          Show Upcoming Consultations
+        </Button>
       </div>
 
       {/* Error Alerts */}
@@ -707,6 +864,109 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
           )}
         </CardContent>
       </Card>
+
+      {/* Upcoming Consultation Popup */}
+      <Dialog open={showConsultationPopup} onOpenChange={setShowConsultationPopup}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-orange-500" />
+              Upcoming Consultation
+              {(() => {
+                const pendingConsultations = localStorage.getItem('pendingPopupConsultations');
+                if (pendingConsultations) {
+                  try {
+                    const remainingConsultations = JSON.parse(pendingConsultations);
+                    if (remainingConsultations.length > 0) {
+                      return (
+                        <Badge variant="secondary" className="ml-2">
+                          +{remainingConsultations.length} more
+                        </Badge>
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error parsing pending consultations:', error);
+                  }
+                }
+                return null;
+              })()}
+            </DialogTitle>
+            <DialogDescription>
+              A consultation is scheduled to start soon
+            </DialogDescription>
+          </DialogHeader>
+          
+          {upcomingConsultation && (
+            <div className="space-y-4">
+              {/* Patient Information */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src="/patient-avatar-1.svg" />
+                  <AvatarFallback>{upcomingConsultation.patient_name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900">{upcomingConsultation.patient_name}</h4>
+                  <p className="text-sm text-gray-600">Patient</p>
+                </div>
+              </div>
+
+              {/* Consultation Details */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Time:</span>
+                  <span className="font-medium">{upcomingConsultation.scheduled_time}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Type:</span>
+                  <Badge variant="outline" className="capitalize">
+                    {upcomingConsultation.consultation_type}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Fee:</span>
+                  <span className="font-medium">₹{upcomingConsultation.consultation_fee}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Payment:</span>
+                  <Badge className={getPaymentStatusColor(upcomingConsultation.is_paid)}>
+                    {upcomingConsultation.is_paid ? 'Paid' : 'Pending'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    if ((upcomingConsultation as any).doctor_meeting_link) {
+                      window.open((upcomingConsultation as any).doctor_meeting_link, '_blank');
+                    } else {
+                      toast.error('Meeting link not available');
+                    }
+                    setShowConsultationPopup(false);
+                    setUpcomingConsultation(null);
+                    setIsProcessingPopup(false);
+                  }}
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  Join Meeting
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowConsultationPopup(false);
+                    setUpcomingConsultation(null);
+                    setIsProcessingPopup(false);
+                  }}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

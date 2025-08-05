@@ -103,7 +103,6 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalPatients, setTotalPatients] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -114,21 +113,11 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
   const [activeDetailTab, setActiveDetailTab] = useState('overview');
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  // Load data on component mount
+  // Load patients with pagination, search, filters, and sorting
   useEffect(() => {
     loadPatients();
     loadPatientStats();
-  }, [currentPage, pageSize, sortBy, sortOrder]);
-
-  // Load patients with search and filters
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setCurrentPage(1); // Reset to first page when searching
-      loadPatients();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, currentPage, pageSize, sortBy, sortOrder]);
 
   const loadPatients = async () => {
     setIsLoading(true);
@@ -151,7 +140,6 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
       const response = await adminPatientApi.getPatients(params);
       setPatients(response.results || []);
       setTotalPatients(response.count || 0);
-      setTotalPages(Math.ceil((response.count || 0) / pageSize));
     } catch (error: any) {
       console.error('Error loading patients:', error);
       toast({
@@ -1115,10 +1103,29 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                 </Table>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {totalPatients > 0 && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                    <div className="text-sm text-gray-700">
-                      Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalPatients)} of {totalPatients} patients
+                    <div className="flex items-center gap-4">
+                      <div className="text-sm text-gray-700">
+                        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalPatients)} of {totalPatients} patients
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Show:</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setCurrentPage(1); // Reset to first page when changing page size
+                          }}
+                          className="text-sm border border-gray-300 rounded px-2 py-1"
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                        </select>
+                        <span className="text-sm text-gray-600">per page</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -1132,13 +1139,13 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={() => setCurrentPage(currentPage - 1)}
                         disabled={currentPage === 1}
                       >
                         Previous
                       </Button>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        {Array.from({ length: Math.min(5, Math.ceil(totalPatients / pageSize)) }, (_, i) => {
                           const page = i + 1;
                           return (
                             <Button
@@ -1156,16 +1163,16 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage >= Math.ceil(totalPatients / pageSize)}
                       >
                         Next
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(Math.ceil(totalPatients / pageSize))}
+                        disabled={currentPage >= Math.ceil(totalPatients / pageSize)}
                       >
                         Last
                       </Button>

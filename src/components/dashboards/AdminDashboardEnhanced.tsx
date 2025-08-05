@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { 
   Users, 
   Calendar, 
@@ -44,7 +44,17 @@ import {
   FileCheck,
   FileX,
   AlertTriangle,
-  Info
+  Info,
+  Bell,
+  HelpCircle,
+  MoreVertical,
+  User,
+  LogOut,
+  MessageSquare,
+  Shield,
+  Sun,
+  Moon,
+  Zap
 } from 'lucide-react';
 import { 
   adminAnalyticsApi, 
@@ -64,6 +74,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import EnhancedPatientManagementTab from '@/components/forms/EnhancedPatientManagementTab';
 import ConsultationManagementEnhanced from '@/components/forms/ConsultationManagementEnhanced';
+import PaymentTrackingDashboard from '@/components/dashboards/PaymentTrackingDashboard';
+import DetailedAnalyticsDashboard from '@/components/dashboards/DetailedAnalyticsDashboard';
 import { 
   Dialog, 
   DialogContent, 
@@ -140,6 +152,9 @@ const AdminDashboardEnhanced = () => {
 
   // Warning dialog state
   const [showNoClinicWarning, setShowNoClinicWarning] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   // Check if admin is assigned to any clinic
   const isAssignedToClinic = assignedClinics.length > 0;
@@ -287,14 +302,21 @@ const AdminDashboardEnhanced = () => {
   };
 
   // Handle consultation actions
-  const handleConsultationAction = (consultationId: string, action: string) => {
+  const handleConsultationAction = (consultation: any, action: string) => {
     switch (action) {
       case 'view':
-        navigate(`/admin/consultations/${consultationId}`);
+        navigate(`/admin/consultations/${consultation.id}`);
         break;
-      case 'join':
-        navigate(`/consultation-meeting?meeting=${encodeURIComponent(`https://meet.jit.si/Consultation-${consultationId}`)}`);
+      case 'join': {
+        // Open doctor's meeting link directly in new tab
+        const meetingLink = consultation.doctor_meeting_link || consultation.meeting_link;
+        if (meetingLink) {
+          window.open(meetingLink, '_blank');
+        } else {
+          toast.error('Meeting link not available for this consultation');
+        }
         break;
+      }
       default:
         break;
     }
@@ -354,53 +376,158 @@ const AdminDashboardEnhanced = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      {/* Enhanced Header */}
+      <div className="shadow-lg border-b bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 border-emerald-500 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
+            {/* Left Section - Logo and Title */}
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              {user && user.role === 'admin' && assignedClinics.length > 0 && (
-                <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                  <Building2 className="w-3 h-3 mr-1" />
-                  {assignedClinics[0].name}
-                </Badge>
-              )}
+              <div className="flex items-center space-x-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
+                  <div className="flex items-center space-x-2 text-xs text-emerald-100">
+                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                    <span>System Online</span>
+                    <span>•</span>
+                    <span>Last activity: 2 minutes ago</span>
+                    {user && user.role === 'admin' && assignedClinics.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="flex items-center space-x-1">
+                          <Building2 className="w-3 h-3" />
+                          <span>Assigned E-Clinic: {assignedClinics[0].name}</span>
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
+              {/* Quick Actions Button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Quick Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/admin/patients/new')} disabled={!isAssignedToClinic}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add New Patient
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/admin/consultations/new')} disabled={!isAssignedToClinic}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    New Consultation
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('patients')} disabled={!isAssignedToClinic}>
+                    <Users className="w-4 h-4 mr-2" />
+                    Manage Patients
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('consultations')} disabled={!isAssignedToClinic}>
+                    <Video className="w-4 h-4 mr-2" />
+                    Manage Consultations
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('payments')} disabled={!isAssignedToClinic}>
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Payment Tracking
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleRefresh} disabled={loadingStats}>
+                    <RefreshCw className={`w-4 h-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
+                    Refresh Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Reports
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Theme Toggle */}
               <Button 
-                onClick={handleRefresh}
-                variant="outline"
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="text-white hover:bg-white/20"
+              >
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+
+              {/* Help Button */}
+              <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+
+              {/* Notifications */}
+              <Button 
+                variant="ghost" 
                 size="sm"
-                disabled={loadingStats}
+                className="relative text-white hover:bg-white/20"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
-                Refresh
+                <Bell className="w-4 h-4" />
+                {notificationCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-red-500 border border-white">
+                    {notificationCount}
+                  </Badge>
+                )}
               </Button>
-              <Button 
-                onClick={() => navigate('/admin/patients/new')}
-                className="bg-[#E17726] hover:bg-[#c9651e] text-white"
-                disabled={!isAssignedToClinic}
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Patient
-              </Button>
-              <Button 
-                onClick={() => navigate('/admin/consultations/new')}
-                variant="outline"
-                className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
-                disabled={!isAssignedToClinic}
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                New Consultation
-              </Button>
+
+              {/* User Profile */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/20">
+                    <Avatar className="h-8 w-8 border-2 border-white/20">
+                      <AvatarFallback className="bg-white/20 text-white font-semibold">
+                        {user?.name?.charAt(0) || 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-white">
+                        {user?.name || 'Admin'}
+                      </p>
+                      <p className="text-xs text-emerald-100">
+                        {(user as any)?.email || 'admin@example.com'}
+                      </p>
+                    </div>
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="w-4 h-4 mr-2" />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Support
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* No Clinic Assignment Warning Banner */}
         {!loadingClinics && !isAssignedToClinic && user?.role === 'admin' && (
           <Alert className="mb-6 border-orange-200 bg-orange-50">
@@ -429,41 +556,73 @@ const AdminDashboardEnhanced = () => {
         )}
 
         {/* Main Dashboard Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-              <Activity className="w-4 h-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="patients" 
-              className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white"
-              disabled={!isAssignedToClinic}
+        <div className="mb-8">
+          <div className="flex space-x-1 p-1 rounded-xl shadow-sm bg-white">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'overview'
+                  ? 'bg-[#E17726] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
             >
-              <Users className="w-4 h-4 mr-2" />
-              Patients
-            </TabsTrigger>
-            <TabsTrigger 
-              value="consultations" 
-              className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white"
+              <Activity className="w-4 h-4" />
+              <span>Overview</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('patients')}
               disabled={!isAssignedToClinic}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'patients'
+                  ? 'bg-[#E17726] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              } ${!isAssignedToClinic ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <Video className="w-4 h-4 mr-2" />
-              Consultations
-            </TabsTrigger>
+              <Users className="w-4 h-4" />
+              <span>Patients</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('consultations')}
+              disabled={!isAssignedToClinic}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'consultations'
+                  ? 'bg-[#E17726] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              } ${!isAssignedToClinic ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Video className="w-4 h-4" />
+              <span>Consultations</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('payments')}
+              disabled={!isAssignedToClinic}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'payments'
+                  ? 'bg-[#E17726] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              } ${!isAssignedToClinic ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Payments</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              disabled={!isAssignedToClinic}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'analytics'
+                  ? 'bg-[#E17726] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              } ${!isAssignedToClinic ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Analytics</span>
+            </button>
+          </div>
+        </div>
 
-            <TabsTrigger 
-              value="payments" 
-              className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white"
-              disabled={!isAssignedToClinic}
-            >
-              <CreditCard className="w-4 h-4 mr-2" />
-              Payments
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-8">
             {/* No Clinic Assignment Warning in Overview */}
             {!loadingClinics && !isAssignedToClinic && user?.role === 'admin' && (
               <Card className="border-orange-200 bg-orange-50 shadow-lg rounded-2xl">
@@ -501,15 +660,59 @@ const AdminDashboardEnhanced = () => {
               </Card>
             )}
 
+            {/* Welcome Section */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50">
+              <CardContent className="p-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                      Welcome back, {user?.name || 'Admin'}! 👋
+                    </h2>
+                    <p className="text-gray-600 text-lg">
+                      Here's what's happening with your e-clinic today
+                    </p>
+                    {user && user.role === 'admin' && assignedClinics.length > 0 && (
+                      <div className="flex items-center mt-3 space-x-2">
+                        <Building2 className="w-5 h-5 text-emerald-600" />
+                        <span className="text-emerald-700 font-medium">
+                          Managing: {assignedClinics[0].name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="hidden lg:block">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Current Time</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {new Date().toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date().toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {statsCards.map((stat, index) => (
-                <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+                <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl group">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-600 mb-2">{stat.title}</p>
-                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                        <p className="text-2xl font-bold text-gray-900 group-hover:text-[#E17726] transition-colors">{stat.value}</p>
                         <div className="flex items-center mt-2">
                           {stat.changeType === 'positive' ? (
                             <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
@@ -523,7 +726,7 @@ const AdminDashboardEnhanced = () => {
                           </span>
                         </div>
                       </div>
-                      <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
+                      <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                         <stat.icon className={`w-6 h-6 ${stat.color}`} />
                       </div>
                     </div>
@@ -532,10 +735,140 @@ const AdminDashboardEnhanced = () => {
               ))}
             </div>
 
+            {/* Quick Actions & Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Quick Actions */}
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-bold text-gray-900">
+                    <Zap className="w-5 h-5 mr-2 text-[#E17726]" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button 
+                    className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => navigate('/admin/patients/new')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add New Patient
+                  </Button>
+                  <Button 
+                    className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => navigate('/admin/consultations/new')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Schedule Consultation
+                  </Button>
+                  <Button 
+                    className="w-full justify-start bg-purple-600 hover:bg-purple-700 text-white"
+                    onClick={() => setActiveTab('payments')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    View Payments
+                  </Button>
+                  <Button 
+                    className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white"
+                    onClick={() => setActiveTab('analytics')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    View Analytics
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Clinic Performance Summary */}
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-bold text-gray-900">
+                    <TrendingUp className="w-5 h-5 mr-2 text-[#E17726]" />
+                    Clinic Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Success Rate</span>
+                    </div>
+                    <span className="text-lg font-bold text-emerald-600">94.2%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Avg. Response Time</span>
+                    </div>
+                    <span className="text-lg font-bold text-blue-600">2.3 min</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Patient Satisfaction</span>
+                    </div>
+                    <span className="text-lg font-bold text-purple-600">4.8/5</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Monthly Growth</span>
+                    </div>
+                    <span className="text-lg font-bold text-orange-600">+12.5%</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* System Status */}
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-bold text-gray-900">
+                    <Activity className="w-5 h-5 mr-2 text-[#E17726]" />
+                    System Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-gray-700">Server Status</span>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">Online</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Database</span>
+                    </div>
+                    <Badge className="bg-blue-100 text-blue-800">Connected</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Video Calls</span>
+                    </div>
+                    <Badge className="bg-purple-100 text-purple-800">Active</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Payments</span>
+                    </div>
+                    <Badge className="bg-orange-100 text-orange-800">Secure</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Today's Consultations */}
             <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold text-gray-900">Today's Consultations</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center">
+                  <Calendar className="w-5 h-5 mr-2 text-[#E17726]" />
+                  Today's Consultations
+                </CardTitle>
                 <Button 
                   size="sm" 
                   className="bg-[#E17726] hover:bg-[#c9651e] text-white"
@@ -603,7 +936,7 @@ const AdminDashboardEnhanced = () => {
                             <Button 
                               size="sm" 
                               className="bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => handleConsultationAction(consultation.id, 'join')}
+                              onClick={() => handleConsultationAction(consultation, 'join')}
                             >
                               <Video className="w-4 h-4 mr-2" />
                               Join
@@ -616,40 +949,127 @@ const AdminDashboardEnhanced = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Patients Tab */}
-          <TabsContent value="patients" className="space-y-6">
-                            <EnhancedPatientManagementTab />
-          </TabsContent>
+            {/* Recent Activity & Notifications */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Activity */}
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-bold text-gray-900">
+                    <Activity className="w-5 h-5 mr-2 text-[#E17726]" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">New patient registered</p>
+                      <p className="text-xs text-gray-500">Sarah Johnson • 2 minutes ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Consultation completed</p>
+                      <p className="text-xs text-gray-500">Dr. Smith • 15 minutes ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Payment received</p>
+                      <p className="text-xs text-gray-500">₹2,500 • 1 hour ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">New consultation scheduled</p>
+                      <p className="text-xs text-gray-500">Tomorrow • 10:00 AM</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Consultations Tab */}
-          <TabsContent value="consultations" className="space-y-6">
+              {/* Upcoming Events */}
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-bold text-gray-900">
+                    <Calendar className="w-5 h-5 mr-2 text-[#E17726]" />
+                    Upcoming Events
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Team Meeting</p>
+                        <p className="text-xs text-gray-500">Today • 3:00 PM</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-red-100 text-red-800">Urgent</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Monthly Report Due</p>
+                        <p className="text-xs text-gray-500">Tomorrow • 9:00 AM</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-blue-100 text-blue-800">Due</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">System Maintenance</p>
+                        <p className="text-xs text-gray-500">Friday • 2:00 AM</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">Scheduled</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Training Session</p>
+                        <p className="text-xs text-gray-500">Next Week • Monday</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-purple-100 text-purple-800">Planned</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'patients' && (
+          <div className="space-y-8">
+            <EnhancedPatientManagementTab />
+          </div>
+        )}
+
+        {activeTab === 'consultations' && (
+          <div className="space-y-8">
             <ConsultationManagementEnhanced isAssignedToClinic={isAssignedToClinic} />
-          </TabsContent>
+          </div>
+        )}
 
+        {activeTab === 'payments' && (
+          <div className="space-y-8">
+            <PaymentTrackingDashboard />
+          </div>
+        )}
 
-
-          {/* Payments Tab */}
-          <TabsContent value="payments" className="space-y-6">
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-gray-900">Payment Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Payment Management</h3>
-                  <p className="text-gray-500 mb-4">Payment management features will be available soon.</p>
-                  <Button variant="outline" disabled>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Report
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {activeTab === 'analytics' && (
+          <div className="space-y-8">
+            <DetailedAnalyticsDashboard />
+          </div>
+        )}
       </div>
 
       {/* No Clinic Assignment Warning Dialog */}

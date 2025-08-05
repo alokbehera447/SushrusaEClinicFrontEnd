@@ -14,14 +14,16 @@ const Footer = () => {
 
   return (
     <footer id="contact" className="bg-midnight text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
           {/* Company Info */}
           <div className="space-y-4 sm:space-y-6 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center space-x-3">
-              <div className="bg-[#E17726] p-2 sm:p-3 rounded-xl sm:rounded-2xl">
-                <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-              </div>
+              <img 
+                src="/sushrusa_logo_1-Photoroom.png" 
+                alt="Sushrusa Logo" 
+                className="h-16 w-16 sm:h-18 sm:w-18 object-contain"
+              />
               <div>
                 <span className="text-xl sm:text-2xl font-bold">SUSHRUSA</span>
                 <span className="text-sm text-white/60 block">eClinic Platform</span>
@@ -126,7 +128,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/20 mt-12 sm:mt-16 pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+        <div className="border-t border-white/20 mt-8 sm:mt-12 pt-4 sm:pt-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p className="text-white/60 text-base sm:text-lg text-center md:text-left">
             © 2024 SUSHRUSA eClinic. All rights reserved.
           </p>

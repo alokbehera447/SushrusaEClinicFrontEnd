@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { toast } from '@/hooks/use-toast';
 import { 
   Users, 
   Building2, 
@@ -88,6 +89,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { doctorApi, CreateDoctorUserData, CreateDoctorProfileData, DoctorProfile } from '@/lib/api';
 import ManageAdmins from './ManageAdmins';
@@ -165,16 +167,10 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
         page: currentPage,
         page_size: pageSize
       });
-      if (Array.isArray(response)) {
-        setDoctors(response);
-        setTotalDoctors(response.length);
-      } else if (response && typeof response === 'object' && 'results' in response) {
-        setDoctors(response.results);
-        setTotalDoctors(response.count || response.results.length);
-      } else {
-        setDoctors([]);
-        setTotalDoctors(0);
-      }
+      
+      // Handle the new paginated response format
+      setDoctors(response.results);
+      setTotalDoctors(response.count);
     } catch (error) {
       console.error('Failed to fetch doctors:', error);
       toast({
@@ -182,6 +178,8 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
         description: "Failed to fetch doctors",
         variant: "destructive",
       });
+      setDoctors([]);
+      setTotalDoctors(0);
     } finally {
       setLoading(false);
     }
@@ -232,10 +230,10 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       });
       return false;
     }
-    if (!doctorForm.specialization) {
+    if (!doctorForm.specializations || doctorForm.specializations.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Specialization is required",
+        description: "At least one specialization is required",
         variant: "destructive",
       });
       return false;
@@ -445,7 +443,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       if (doctorForm.date_of_birth) formData.append('date_of_birth', doctorForm.date_of_birth);
       if (doctorForm.date_of_anniversary) formData.append('date_of_anniversary', doctorForm.date_of_anniversary);
 
-      const updatedDoctor = await doctorApi.updateDoctor(editingDoctor.id.toString(), formData);
+      const updatedDoctor = await doctorApi.updateDoctor(editingDoctor.user, formData);
       setDoctors(prev => prev.map(doc => 
         doc.id === editingDoctor.id ? updatedDoctor : doc
       ));
@@ -472,7 +470,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
     if (!deletingDoctor) return;
 
     try {
-      await doctorApi.deleteDoctor(deletingDoctor.id.toString());
+      await doctorApi.deleteDoctor(deletingDoctor.user);
       setDoctors(prev => prev.filter(doc => doc.id !== deletingDoctor.id));
       
       toast({
@@ -804,8 +802,27 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
               {/* Pagination */}
               {totalDoctors > 0 && (
                 <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <div className="text-sm text-gray-700">
-                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalDoctors)} of {totalDoctors} doctors
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-gray-700">
+                      Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalDoctors)} of {totalDoctors} doctors
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Show:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setCurrentPage(1); // Reset to first page when changing page size
+                        }}
+                        className="text-sm border border-gray-300 rounded px-2 py-1"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                      <span className="text-sm text-gray-600">per page</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1295,15 +1312,138 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [lastActivity, setLastActivity] = useState('2 minutes ago');
 
+  // Profile Management States
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    date_of_birth: '',
+    gender: '',
+    street: '',
+    city: '',
+    state: '',
+    pincode: '',
+    country: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: ''
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+
   const fetchUserProfile = async () => {
     try {
       const profile = await superAdminApi.getCurrentUserProfile();
       setUserProfile(profile);
+      // Initialize profile form with current data
+      setProfileForm({
+        name: profile?.name || '',
+        email: profile?.email || '',
+        date_of_birth: profile?.date_of_birth || '',
+        gender: profile?.gender || '',
+        street: profile?.street || '',
+        city: profile?.city || '',
+        state: profile?.state || '',
+        pincode: profile?.pincode || '',
+        country: profile?.country || 'India',
+        emergency_contact_name: profile?.emergency_contact_name || '',
+        emergency_contact_phone: profile?.emergency_contact_phone || '',
+        emergency_contact_relationship: profile?.emergency_contact_relationship || ''
+      });
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Profile Management Functions
+  const handleViewProfile = () => {
+    setIsEditingProfile(false);
+    setShowProfileDialog(true);
+  };
+
+  const handleEditProfile = () => {
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileLoading(true);
+    try {
+      // Validate required fields
+      if (!profileForm.name.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Name is required",
+          variant: "destructive",
+        });
+        setProfileLoading(false);
+        return;
+      }
+
+      // Prepare data for API (only send non-empty fields)
+      const updateData = Object.fromEntries(
+        Object.entries(profileForm).filter(([key, value]) => value !== '' && value !== null)
+      );
+
+      // Call actual API to update profile
+      const updatedProfile = await superAdminApi.updateUserProfile(updateData);
+      
+      // Update local state with the response from backend
+      setUserProfile(updatedProfile);
+      setIsEditingProfile(false);
+      
+      // Show success toast
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+        variant: "default",
+      });
+    } catch (error: unknown) {
+      console.error('Failed to update profile:', error);
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to update profile. Please try again.';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const responseError = error as { response?: { data?: { error?: { message?: string }; message?: string } } };
+        if (responseError.response?.data?.error?.message) {
+          errorMessage = responseError.response.data.error.message;
+        } else if (responseError.response?.data?.message) {
+          errorMessage = responseError.response.data.message;
+        }
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        const messageError = error as { message: string };
+        errorMessage = messageError.message;
+      }
+      
+      // Show error toast
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form to original values
+    setProfileForm({
+      name: userProfile?.name || '',
+      email: userProfile?.email || '',
+      date_of_birth: userProfile?.date_of_birth || '',
+      gender: userProfile?.gender || '',
+      street: userProfile?.street || '',
+      city: userProfile?.city || '',
+      state: userProfile?.state || '',
+      pincode: userProfile?.pincode || '',
+      country: userProfile?.country || 'India',
+      emergency_contact_name: userProfile?.emergency_contact_name || '',
+      emergency_contact_phone: userProfile?.emergency_contact_phone || '',
+      emergency_contact_relationship: userProfile?.emergency_contact_relationship || ''
+    });
+    setIsEditingProfile(false);
   };
 
   const fetchNotificationCount = async () => {
@@ -1537,7 +1677,10 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
                 <DropdownMenuContent align="end" className={`w-56 ${isDarkMode ? 'bg-gray-800 border-gray-700' : ''}`}>
                   <DropdownMenuLabel className={isDarkMode ? 'text-gray-200' : ''}>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator className={isDarkMode ? 'bg-gray-700' : ''} />
-                  <DropdownMenuItem className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}>
+                  <DropdownMenuItem 
+                    onClick={handleViewProfile}
+                    className={isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''}
+                  >
                     <User className="w-4 h-4 mr-2" />
                     View Profile
                   </DropdownMenuItem>
@@ -1595,6 +1738,389 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
         {/* Tab Content */}
         {renderTabContent()}
       </main>
+
+      {/* Profile Management Dialog */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className={`max-w-4xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'
+        }`}>
+          <DialogHeader className="flex-shrink-0 pb-4 border-b border-gray-200 dark:border-gray-700">
+            <DialogTitle className={`flex items-center gap-2 transition-colors duration-300 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              <User className="w-5 h-5" />
+              {isEditingProfile ? 'Edit Profile' : 'Profile Information'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-4">
+            <div className="space-y-4 sm:space-y-6">
+              {/* Profile Avatar Section */}
+              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 text-center sm:text-left">
+                <Avatar className="w-20 h-20 flex-shrink-0">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
+                    {userProfile?.name?.charAt(0) || 'SA'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className={`text-lg font-semibold transition-colors duration-300 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {userProfile?.name || 'Super Admin'}
+                  </h3>
+                  <p className={`text-sm transition-colors duration-300 ${
+                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    Super Administrator
+                  </p>
+                </div>
+              </div>
+
+              {/* Profile Form */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="profile-name" className={isDarkMode ? 'text-gray-200' : ''}>
+                  Full Name *
+                </Label>
+                <Input
+                  id="profile-name"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                  disabled={!isEditingProfile}
+                  className={`transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                  }`}
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="profile-email" className={isDarkMode ? 'text-gray-200' : ''}>
+                  Email Address
+                </Label>
+                <Input
+                  id="profile-email"
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
+                  disabled={!isEditingProfile}
+                  className={`transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                  }`}
+                />
+              </div>
+
+              {/* Phone - Read Only (Primary Authentication) */}
+              <div className="space-y-2">
+                <Label htmlFor="profile-phone" className={isDarkMode ? 'text-gray-200' : ''}>
+                  Phone Number
+                </Label>
+                <Input
+                  id="profile-phone"
+                  value={userProfile?.phone || ''}
+                  disabled={true}
+                  className={`transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                  } opacity-50`}
+                  placeholder="Primary phone number (cannot be changed)"
+                />
+              </div>
+
+              {/* Date of Birth */}
+              <div className="space-y-2">
+                <Label htmlFor="profile-dob" className={isDarkMode ? 'text-gray-200' : ''}>
+                  Date of Birth
+                </Label>
+                <Input
+                  id="profile-dob"
+                  type="date"
+                  value={profileForm.date_of_birth}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                  disabled={!isEditingProfile}
+                  className={`transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                  }`}
+                />
+              </div>
+
+              {/* Gender */}
+              <div className="space-y-2">
+                <Label htmlFor="profile-gender" className={isDarkMode ? 'text-gray-200' : ''}>
+                  Gender
+                </Label>
+                <Select
+                  value={profileForm.gender}
+                  onValueChange={(value) => setProfileForm(prev => ({ ...prev, gender: value }))}
+                  disabled={!isEditingProfile}
+                >
+                  <SelectTrigger className={`transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                  }`}>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Country */}
+              <div className="space-y-2">
+                <Label htmlFor="profile-country" className={isDarkMode ? 'text-gray-200' : ''}>
+                  Country
+                </Label>
+                <Input
+                  id="profile-country"
+                  value={profileForm.country}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, country: e.target.value }))}
+                  disabled={!isEditingProfile}
+                  className={`transition-colors duration-300 ${
+                    isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                  }`}
+                />
+              </div>
+
+                {/* Address Section */}
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className={isDarkMode ? 'text-gray-200' : ''}>
+                    Address Information
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Street */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-street" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Street Address
+                    </Label>
+                    <Input
+                      id="profile-street"
+                      value={profileForm.street}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, street: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                    />
+                  </div>
+
+                  {/* City */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-city" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      City
+                    </Label>
+                    <Input
+                      id="profile-city"
+                      value={profileForm.city}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, city: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                    />
+                  </div>
+
+                  {/* State */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-state" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      State
+                    </Label>
+                    <Input
+                      id="profile-state"
+                      value={profileForm.state}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, state: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                    />
+                  </div>
+
+                  {/* Pincode */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-pincode" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Pincode
+                    </Label>
+                    <Input
+                      id="profile-pincode"
+                      value={profileForm.pincode}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, pincode: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+                {/* Emergency Contact Section */}
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className={isDarkMode ? 'text-gray-200' : ''}>
+                    Emergency Contact Information
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Emergency Contact Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-emergency-name" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Contact Name
+                    </Label>
+                    <Input
+                      id="profile-emergency-name"
+                      value={profileForm.emergency_contact_name}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, emergency_contact_name: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                    />
+                  </div>
+
+                  {/* Emergency Contact Phone */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-emergency-phone" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Contact Phone
+                    </Label>
+                    <Input
+                      id="profile-emergency-phone"
+                      value={profileForm.emergency_contact_phone}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, emergency_contact_phone: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                    />
+                  </div>
+
+                  {/* Emergency Contact Relationship */}
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-emergency-relationship" className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Relationship
+                    </Label>
+                    <Input
+                      id="profile-emergency-relationship"
+                      value={profileForm.emergency_contact_relationship}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, emergency_contact_relationship: e.target.value }))}
+                      disabled={!isEditingProfile}
+                      className={`transition-colors duration-300 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''
+                      }`}
+                      placeholder="e.g., Spouse, Parent, Sibling"
+                    />
+                  </div>
+                  </div>
+                </div>
+
+                {/* System Information */}
+                {!isEditingProfile && (
+                  <div className={`border-t pt-4 mt-6 transition-colors duration-300 ${
+                    isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                  }`}>
+                    <h4 className={`font-medium mb-3 transition-colors duration-300 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      System Information
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className={`font-medium transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
+                          User ID:
+                        </span>
+                        <span className={`ml-2 transition-colors duration-300 ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {userProfile?.id || 'SA001'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`font-medium transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
+                          Role:
+                        </span>
+                        <span className={`ml-2 transition-colors duration-300 ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          Super Administrator
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`font-medium transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
+                          Last Login:
+                        </span>
+                        <span className={`ml-2 transition-colors duration-300 ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {new Date().toLocaleString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`font-medium transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
+                          Status:
+                        </span>
+                        <Badge className="ml-2 bg-green-100 text-green-800">Active</Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-shrink-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {isEditingProfile ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={profileLoading}
+                  className={`w-full sm:w-auto ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : ''}`}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={profileLoading}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {profileLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowProfileDialog(false)}
+                  className={`w-full sm:w-auto ${isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : ''}`}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={handleEditProfile}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Notification Center */}
       <NotificationCenter 

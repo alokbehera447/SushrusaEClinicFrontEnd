@@ -143,14 +143,14 @@ const HeroSection = () => {
                   {/* Video Section - Using doctor_consult.mp4 */}
                   <div className="w-full h-56 sm:h-72 md:h-80 lg:h-96 bg-gradient-to-br from-[#E17726]/30 via-cyan-400/25 to-purple-400/30 flex items-center justify-center rounded-2xl relative overflow-hidden">
                     <video 
-                      className="w-full h-full object-cover rounded-2xl"
+                      className="w-full h-full object-contain rounded-2xl"
                       autoPlay 
                       muted 
                       loop 
                       playsInline
                       poster="/img1.jpeg"
                     >
-                      <source src="/doctor_consult.mp4" type="video/mp4" />
+                      <source src="/odia_doctor.mp4" type="video/mp4" />
                       {/* Fallback content if video doesn't load */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center space-y-4">

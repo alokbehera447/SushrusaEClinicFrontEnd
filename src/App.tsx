@@ -9,6 +9,7 @@ import WorkflowDemo from "./pages/WorkflowDemo";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import FindDoctors from "./pages/FindDoctors";
+import TestDoctors from "./pages/TestDoctors";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 
@@ -31,6 +32,7 @@ import VideoConsultation from "@/components/workflow/VideoConsultation";
 import DoctorSchedule from "@/components/workflow/DoctorSchedule";
 import AnalyticsDashboard from "@/components/workflow/AnalyticsDashboard";
 import ConsultationCreationPage from "./pages/ConsultationCreationPage";
+import AddPatientPage from "./pages/AddPatientPage";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -55,6 +57,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/find-doctors" element={<FindDoctors />} />
+            <Route path="/test-doctors" element={<TestDoctors />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             
@@ -82,6 +85,11 @@ const App = () => (
             <Route path="/admin/consultations/new" element={
               <ProtectedRoute requiredRole="admin">
                 <ConsultationCreationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/patients/new" element={
+              <ProtectedRoute requiredRole="admin">
+                <AddPatientPage />
               </ProtectedRoute>
             } />
             <Route path="/doctor/dashboard" element={

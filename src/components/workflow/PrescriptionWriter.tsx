@@ -10,7 +10,7 @@ interface PrescriptionWriterProps {
 
 const DEFAULT_HEADER = (
   <div className="flex items-center gap-4 px-6 py-4 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, #E17726 0%, #ffb380 100%)' }}>
-    <img src="/placeholder.svg" alt="eClinic Logo" className="h-12 w-12 rounded bg-white p-1 shadow" />
+    <img src="/sushrusa_logo_1-Photoroom.png" alt="Sushrusa Logo" className="h-20 w-20 object-contain" />
     <div className="flex-1 text-center">
       <div className="text-lg font-bold text-white">Sushrusa eClinic</div>
       <div className="text-sm text-white">123 Health Street, City</div>
@@ -149,7 +149,7 @@ const PrescriptionWriter: React.FC<PrescriptionWriterProps> = ({ consultationId,
                 </ul>
               </div>
               <div className="bg-white rounded-2xl shadow p-6 flex flex-col items-center border border-orange-100">
-                <img src="/placeholder.svg" alt="eClinic Logo" className="h-16 w-16 mb-2" />
+                <img src="/sushrusa_logo_1-Photoroom.png" alt="Sushrusa Logo" className="h-24 w-24 mb-2 object-contain" />
                 <div className="text-orange-700 font-bold text-lg">Sushrusa eClinic</div>
                 <div className="text-xs text-gray-500 text-center mt-1">Your trusted partner in digital healthcare.</div>
               </div>

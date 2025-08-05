@@ -108,14 +108,11 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-14 sm:h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group hover-scale">
-            <div className="relative">
-              <div className="bg-gradient-orange p-1.5 sm:p-2 lg:p-3 rounded-lg sm:rounded-xl lg:rounded-2xl transition-all duration-300 hover-glow">
-                <Heart className="h-4 w-4 sm:h-5 sm:w-5 lg:h-7 lg:w-7 text-white group-hover:scale-110 transition-transform duration-300" />
-              </div>
-              <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1">
-                <Sparkles className="h-2 w-2 sm:h-3 sm:w-3 lg:h-4 lg:w-4 text-[#E17726] animate-pulse" />
-              </div>
-            </div>
+            <img 
+              src="/sushrusa_logo_1-Photoroom.png" 
+              alt="Sushrusa Logo" 
+              className="h-16 w-16 sm:h-18 sm:w-18 lg:h-20 lg:w-20 object-contain transition-transform duration-300 group-hover:scale-110"
+            />
             <div className="group-hover:scale-105 transition-transform duration-300">
               <span className="text-lg sm:text-xl lg:text-2xl font-black text-midnight group-hover:text-[#E17726] transition-colors duration-300">
                 SUSHRUSA

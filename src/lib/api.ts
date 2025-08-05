@@ -1,7 +1,7 @@
 import { api } from './utils';
 
 // Utility function to extract error messages from backend responses
-export const extractErrorMessage = (error: any): string => {
+export const extractErrorMessage = (error: unknown): string => {
   console.log('Error object:', error);
   
   // If it's an axios error with response data
@@ -1211,9 +1211,125 @@ export interface AdminDashboardStats {
   [key: string]: number;
 }
 
+// Enhanced Analytics Interfaces
+export interface DetailedAnalytics {
+  overview: {
+    total_clinics: number;
+    active_clinics: number;
+    total_doctors: number;
+    active_doctors: number;
+    total_patients: number;
+    total_consultations: number;
+    total_revenue: number;
+    success_rate: number;
+  };
+  today: {
+    consultations: number;
+    new_patients: number;
+    revenue: number;
+    completed_consultations: number;
+    cancelled_consultations: number;
+  };
+  this_month: {
+    consultations: number;
+    new_patients: number;
+    revenue: number;
+    growth_rate: number;
+  };
+  clinic_performance: Array<{
+    id: string;
+    name: string;
+    consultations: number;
+    revenue: number;
+    success_rate: number;
+    active_doctors: number;
+  }>;
+  consultation_analytics: {
+    by_status: Record<string, number>;
+    by_type: Record<string, number>;
+    peak_hours: Array<{ hour: number; count: number }>;
+    daily_trends: Array<{ date: string; consultations: number; revenue: number }>;
+  };
+  payment_analytics: {
+    total_payments: number;
+    successful_payments: number;
+    failed_payments: number;
+    pending_payments: number;
+    average_transaction_value: number;
+    payment_methods: Record<string, number>;
+    revenue_trends: Array<{ date: string; revenue: number }>;
+  };
+  doctor_performance: Array<{
+    id: string;
+    name: string;
+    specialization: string;
+    consultations: number;
+    revenue: number;
+    rating: number;
+    success_rate: number;
+  }>;
+  patient_analytics: {
+    total_patients: number;
+    new_patients_this_month: number;
+    active_patients: number;
+    gender_distribution: Record<string, number>;
+    age_distribution: Record<string, number>;
+    top_cities: Array<{ city: string; count: number }>;
+  };
+}
+
 export const adminAnalyticsApi = {
   getDashboardStats: async (): Promise<AdminDashboardStats> => {
     const response = await api.get('/api/analytics/dashboard/');
+    return response.data.data;
+  },
+
+  getDetailedAnalytics: async (): Promise<DetailedAnalytics> => {
+    const response = await api.get('/api/analytics/detailed/');
+    return response.data.data;
+  },
+
+  getClinicAnalytics: async (): Promise<ClinicAnalytics> => {
+    const response = await api.get('/api/analytics/clinics/');
+    return response.data.data;
+  },
+
+  getConsultationAnalytics: async (params?: {
+    start_date?: string;
+    end_date?: string;
+    clinic_id?: string;
+  }): Promise<any> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get(`/api/analytics/consultations/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  getPaymentAnalytics: async (params?: {
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+  }): Promise<any> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get(`/api/analytics/payments/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  getDoctorPerformance: async (): Promise<DoctorPerformanceStats[]> => {
+    const response = await api.get('/api/analytics/doctors/performance/');
     return response.data.data;
   }
 };
@@ -1369,22 +1485,239 @@ export const adminConsultationApi = {
   // Get consultation statistics
   getConsultationStats: async (): Promise<{
     total_consultations: number;
-    today_consultations: number;
+    scheduled_consultations: number;
     completed_consultations: number;
-    pending_consultations: number;
     cancelled_consultations: number;
     total_revenue: number;
     pending_revenue: number;
   }> => {
     const response = await api.get<ApiResponse<{
       total_consultations: number;
-      today_consultations: number;
+      scheduled_consultations: number;
       completed_consultations: number;
-      pending_consultations: number;
       cancelled_consultations: number;
       total_revenue: number;
       pending_revenue: number;
     }>>('/api/consultations/stats/');
+    return response.data.data;
+  },
+
+  // Generate receipt for consultation
+  generateReceipt: async (consultationId: string): Promise<{
+    id: number;
+    receipt_number: string;
+    consultation_id: string;
+    patient_name: string;
+    doctor_name: string;
+    clinic_name: string;
+    amount: string;
+    formatted_amount: string;
+    payment_method: string;
+    payment_status: string;
+    issued_by: string;
+    issued_by_name: string;
+    issued_at: string;
+    receipt_data: any;
+  }> => {
+    const response = await api.post<ApiResponse<{
+      id: number;
+      receipt_number: string;
+      consultation_id: string;
+      patient_name: string;
+      doctor_name: string;
+      clinic_name: string;
+      amount: string;
+      formatted_amount: string;
+      payment_method: string;
+      payment_status: string;
+      issued_by: string;
+      issued_by_name: string;
+      issued_at: string;
+      receipt_data: any;
+    }>>(`/api/consultations/${consultationId}/receipt/`);
+    return response.data.data;
+  },
+
+  // Get receipt for consultation
+  getReceipt: async (consultationId: string): Promise<{
+    id: number;
+    receipt_number: string;
+    consultation_id: string;
+    patient_name: string;
+    doctor_name: string;
+    clinic_name: string;
+    amount: string;
+    formatted_amount: string;
+    payment_method: string;
+    payment_status: string;
+    issued_by: string;
+    issued_by_name: string;
+    issued_at: string;
+    receipt_data: any;
+  }> => {
+    const response = await api.get<ApiResponse<{
+      id: number;
+      receipt_number: string;
+      consultation_id: string;
+      patient_name: string;
+      doctor_name: string;
+      clinic_name: string;
+      amount: string;
+      formatted_amount: string;
+      payment_method: string;
+      payment_status: string;
+      issued_by: string;
+      issued_by_name: string;
+      issued_at: string;
+      receipt_data: any;
+    }>>(`/api/consultations/${consultationId}/receipt/`);
+    return response.data.data;
+  },
+};
+
+// Payment Tracking APIs
+export const paymentTrackingApi = {
+  // Get comprehensive payment tracking data
+  getPaymentTracking: async (params?: {
+    start_date?: string;
+    end_date?: string;
+  }): Promise<{
+    overview: {
+      total_payments: number;
+      successful_payments: number;
+      failed_payments: number;
+      pending_payments: number;
+      total_revenue: number;
+      total_refunds: number;
+      net_revenue: number;
+      success_rate: number;
+    };
+    payment_method_breakdown: Array<{
+      payment_method: string;
+      count: number;
+      total_amount: number;
+    }>;
+    daily_revenue: Array<{
+      date: string;
+      revenue: number;
+      count: number;
+    }>;
+    top_revenue_sources: Array<{
+      consultation__doctor__name: string;
+      total_revenue: number;
+      consultation_count: number;
+    }>;
+    recent_payments: Array<any>;
+  }> => {
+    const queryParams = new URLSearchParams();
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+    
+    const response = await api.get<ApiResponse<any>>(`/api/payments/tracking/?${queryParams}`);
+    return response.data.data;
+  },
+
+  // Get payment history with filters
+  getPaymentHistory: async (params?: {
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+    payment_method?: string;
+    min_amount?: number;
+    max_amount?: number;
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<any>> => {
+    const queryParams = new URLSearchParams();
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.payment_method) queryParams.append('payment_method', params.payment_method);
+    if (params?.min_amount) queryParams.append('min_amount', params.min_amount.toString());
+    if (params?.max_amount) queryParams.append('max_amount', params.max_amount.toString());
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const response = await api.get<ApiResponse<PaginatedResponse<any>>>(`/api/payments/history/?${queryParams}`);
+    return response.data.data;
+  },
+
+  // Get payment analytics
+  getPaymentAnalytics: async (period?: 'week' | 'month' | 'quarter' | 'year'): Promise<{
+    period: string;
+    revenue_trends: Array<{
+      date?: string;
+      period?: string;
+      revenue: number;
+    }>;
+    method_performance: Array<{
+      payment_method: string;
+      total_amount: number;
+      count: number;
+      success_rate: number;
+    }>;
+    top_doctors: Array<{
+      consultation__doctor__name: string;
+      total_revenue: number;
+      consultation_count: number;
+      avg_amount: number;
+    }>;
+    failure_analysis: Array<{
+      payment_method: string;
+      failure_count: number;
+      total_attempts: number;
+    }>;
+    summary: {
+      total_revenue: number;
+      total_transactions: number;
+      success_rate: number;
+      avg_transaction_value: number;
+    };
+  }> => {
+    const queryParams = new URLSearchParams();
+    if (period) queryParams.append('period', period);
+    
+    const response = await api.get<ApiResponse<any>>(`/api/payments/analytics/?${queryParams}`);
+    return response.data.data;
+  },
+
+  // Get payment receipt
+  getPaymentReceipt: async (paymentId: string): Promise<{
+    payment_id: string;
+    receipt_number: string;
+    patient_name: string;
+    doctor_name: string;
+    consultation_id: string;
+    amount: number;
+    currency: string;
+    payment_method: string;
+    status: string;
+    description: string;
+    created_at: string;
+    completed_at: string;
+    gateway_transaction_id: string;
+    clinic_name: string;
+  }> => {
+    const response = await api.get<ApiResponse<any>>(`/api/payments/receipt/${paymentId}/`);
+    return response.data.data;
+  },
+
+  // Get payment statistics
+  getPaymentStats: async (): Promise<{
+    total_payments: number;
+    successful_payments: number;
+    failed_payments: number;
+    pending_payments: number;
+    total_revenue: number;
+    total_refunds: number;
+    payment_method_distribution: Record<string, number>;
+    monthly_revenue: Array<{
+      month: string;
+      revenue: number;
+    }>;
+    average_transaction_amount: number;
+  }> => {
+    const response = await api.get<ApiResponse<any>>('/api/payments/stats/');
     return response.data.data;
   },
 };
@@ -1506,7 +1839,63 @@ export interface DoctorProfile {
   updated_at: string;
 }
 
+export interface PublicDoctorProfile {
+  id: number;
+  name: string;
+  profile_picture?: string;
+  specialization: string;
+  sub_specialization?: string;
+  experience_years: number;
+  consultation_fee: number;
+  online_consultation_fee?: number;
+  languages_spoken: string[];
+  bio?: string;
+  rating: number;
+  total_reviews: number;
+  clinic_name?: string;
+  clinic_address?: string;
+  consultation_types: ('in-person' | 'video')[];
+  is_online_consultation_available: boolean;
+  consultation_duration?: number;
+}
+
 export const doctorApi = {
+  // Public doctor listing (no authentication required)
+  getPublicDoctors: async (params?: {
+    search?: string;
+    specialization?: string;
+    pincode?: string;
+    city?: string;
+    min_experience?: number;
+    max_experience?: number;
+    min_fee?: number;
+    max_fee?: number;
+    rating_min?: number;
+    consultation_type?: 'in_person' | 'online' | 'both';
+    page?: number;
+    page_size?: number;
+    ordering?: 'rating' | 'experience' | 'fee' | 'name';
+  }): Promise<PaginatedResponse<PublicDoctorProfile[]>> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      if (params.search) queryParams.append('search', params.search);
+      if (params.specialization) queryParams.append('specialization', params.specialization);
+      if (params.pincode) queryParams.append('pincode', params.pincode);
+      if (params.city) queryParams.append('city', params.city);
+      if (params.min_experience) queryParams.append('min_experience', params.min_experience.toString());
+      if (params.max_experience) queryParams.append('max_experience', params.max_experience.toString());
+      if (params.min_fee) queryParams.append('min_fee', params.min_fee.toString());
+      if (params.max_fee) queryParams.append('max_fee', params.max_fee.toString());
+      if (params.rating_min) queryParams.append('rating_min', params.rating_min.toString());
+      if (params.consultation_type) queryParams.append('consultation_type', params.consultation_type);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+      if (params.ordering) queryParams.append('ordering', params.ordering);
+    }
+    const response = await api.get(`/api/doctors/public/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
   // Create doctor account and profile in one call (SuperAdmin only)
   createDoctor: async (data: FormData): Promise<{
     doctor_profile: DoctorProfile;
@@ -1556,29 +1945,55 @@ export const doctorApi = {
     is_active?: boolean; 
     is_verified?: boolean;
     specialization?: string;
-  }): Promise<DoctorProfile[]> => {
+    page?: number;
+    page_size?: number;
+  }): Promise<{ results: DoctorProfile[]; count: number; next: string | null; previous: string | null }> => {
     const queryParams = new URLSearchParams();
     if (params) {
       if (params.search) queryParams.append('search', params.search);
       if (typeof params.is_active === 'boolean' || typeof params.is_active === 'number') queryParams.append('is_active', params.is_active ? 'true' : 'false');
       if (typeof params.is_verified === 'boolean' || typeof params.is_verified === 'number') queryParams.append('is_verified', params.is_verified ? 'true' : 'false');
       if (params.specialization) queryParams.append('specialization', params.specialization);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
     }
     const response = await api.get(`/api/doctors/superadmin/?${queryParams.toString()}`);
     
-    // Handle different response structures
-    if (response.data && response.data.data && Array.isArray(response.data.data)) {
-      return response.data.data;
-    }
-    if (response.data && Array.isArray(response.data)) {
-      return response.data;
-    }
+    // Handle paginated response structure
     if (response.data && response.data.results && Array.isArray(response.data.results)) {
-      return response.data.results;
+      return {
+        results: response.data.results,
+        count: response.data.count || 0,
+        next: response.data.next || null,
+        previous: response.data.previous || null
+      };
     }
     
-    // Fallback to empty array
-    return [];
+    // Handle legacy response structures
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      return {
+        results: response.data.data,
+        count: response.data.data.length,
+        next: null,
+        previous: null
+      };
+    }
+    if (response.data && Array.isArray(response.data)) {
+      return {
+        results: response.data,
+        count: response.data.length,
+        next: null,
+        previous: null
+      };
+    }
+    
+    // Fallback to empty response
+    return {
+      results: [],
+      count: 0,
+      next: null,
+      previous: null
+    };
   },
 
   // Get doctor details by ID (SuperAdmin only)
@@ -1666,14 +2081,36 @@ export const doctorApi = {
         }
       });
     }
-    const response = await api.get(`/api/consultations/?${queryParams.toString()}`);
-    // Handle paginated response
-    if (response.data && response.data.data && response.data.data.results) {
-      return response.data.data.results;
-    } else if (response.data && response.data.results) {
+    const response = await api.get(`/api/consultations/doctor/consultations/?${queryParams.toString()}`);
+    if (response.data && response.data.results) {
       return response.data.results;
     }
-    return [];
+    return response.data;
+  },
+
+  startConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await post<Consultation>(`/api/doctor/consultations/${consultationId}/start/`);
+    return response;
+  },
+
+  completeConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await post<Consultation>(`/api/doctor/consultations/${consultationId}/complete/`);
+    return response;
+  },
+
+  cancelConsultation: async (consultationId: string): Promise<Consultation> => {
+    const response = await post<Consultation>(`/api/doctor/consultations/${consultationId}/cancel/`);
+    return response;
+  },
+
+  addConsultationNote: async (consultationId: string, note: { content: string }): Promise<PatientNote> => {
+    const response = await post<PatientNote>(`/api/doctor/consultations/${consultationId}/notes/`, note);
+    return response;
+  },
+
+  getConsultationNotes: async (consultationId: string): Promise<PatientNote[]> => {
+    const response = await get<PatientNote[]>(`/api/doctor/consultations/${consultationId}/notes/`);
+    return response;
   },
 };
 

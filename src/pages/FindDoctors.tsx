@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Heart, ArrowLeft, Search, MapPin, Star, Calendar, Clock, Video, User, Award, Stethoscope, Sparkles, Navigation, Loader2, Phone } from 'lucide-react';
+import { doctorApi, PublicDoctorProfile } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Doctor {
   id: number;
@@ -33,92 +35,11 @@ interface Ecenter {
   services: string[];
 }
 
-const mockDoctors: Doctor[] = [
-  {
-    id: 1,
-    name: "Dr. Ramesh Kumar",
-    specialty: "Cardiology",
-    experience: 15,
-    rating: 4.8,
-    reviews: 342,
-    location: "Mumbai, Maharashtra",
-    pincode: "400001",
-    consultationFee: 800,
-    nextAvailable: "Today 3:00 PM",
-    consultationTypes: ["in-person", "video"]
-  },
-  {
-    id: 2,
-    name: "Dr. Priya Sharma",
-    specialty: "Dermatology",
-    experience: 12,
-    rating: 4.9,
-    reviews: 287,
-    location: "Delhi, Delhi",
-    pincode: "110001",
-    consultationFee: 600,
-    nextAvailable: "Tomorrow 10:00 AM",
-    consultationTypes: ["in-person", "video", "phone"]
-  },
-  {
-    id: 3,
-    name: "Dr. Arun Patel",
-    specialty: "Orthopedics",
-    experience: 20,
-    rating: 4.7,
-    reviews: 456,
-    location: "Bangalore, Karnataka",
-    pincode: "560001",
-    consultationFee: 900,
-    nextAvailable: "Monday 2:00 PM",
-    consultationTypes: ["in-person"]
-  },
-  {
-    id: 4,
-    name: "Dr. Sneha Reddy",
-    specialty: "Pediatrics",
-    experience: 8,
-    rating: 4.6,
-    reviews: 198,
-    location: "Hyderabad, Telangana",
-    pincode: "500001",
-    consultationFee: 500,
-    nextAvailable: "Today 5:00 PM",
-    consultationTypes: ["in-person", "video"]
-  },
-  {
-    id: 5,
-    name: "Dr. Vikram Singh",
-    specialty: "Neurology",
-    experience: 18,
-    rating: 4.9,
-    reviews: 312,
-    location: "Chennai, Tamil Nadu",
-    pincode: "600001",
-    consultationFee: 1200,
-    nextAvailable: "Wednesday 11:00 AM",
-    consultationTypes: ["in-person", "video"]
-  },
-  {
-    id: 6,
-    name: "Dr. Meera Gupta",
-    specialty: "Gynecology",
-    experience: 14,
-    rating: 4.8,
-    reviews: 267,
-    location: "Pune, Maharashtra",
-    pincode: "411001",
-    consultationFee: 700,
-    nextAvailable: "Today 4:30 PM",
-    consultationTypes: ["in-person", "video"]
-  }
-];
-
 const mockEcenters: Ecenter[] = [
   {
     id: 1,
-    name: "Sushrusa eClinic - Mumbai Central",
-    address: "123, Marine Drive, Mumbai",
+    name: "HealthFirst E-Center",
+    address: "123 Main Street, Mumbai, Maharashtra 400001",
     pincode: "400001",
     doctors: 8,
     rating: 4.7,
@@ -126,28 +47,29 @@ const mockEcenters: Ecenter[] = [
   },
   {
     id: 2,
-    name: "Sushrusa eClinic - Delhi Central",
-    address: "456, Connaught Place, Delhi",
+    name: "Wellness Hub",
+    address: "456 Park Avenue, Delhi, Delhi 110001",
     pincode: "110001",
     doctors: 12,
     rating: 4.8,
-    services: ["General Medicine", "Orthopedics", "Pediatrics"]
+    services: ["Orthopedics", "Neurology", "Pediatrics"]
   },
   {
     id: 3,
-    name: "Sushrusa eClinic - Bangalore Central",
-    address: "789, MG Road, Bangalore",
+    name: "CareConnect Center",
+    address: "789 Tech Park, Bangalore, Karnataka 560001",
     pincode: "560001",
-    doctors: 10,
-    rating: 4.6,
-    services: ["General Medicine", "Neurology", "Gynecology"]
+    doctors: 15,
+    rating: 4.9,
+    services: ["Gynecology", "Ophthalmology", "ENT"]
   }
 ];
 
-const specialties = ["All Specialties", "Cardiology", "Dermatology", "Orthopedics", "Pediatrics", "Neurology", "Gynecology"];
+const specializations = ["All Specialties", "Cardiology", "Dermatology", "Orthopedics", "Pediatrics", "Neurology", "Gynecology", "Ophthalmology", "ENT", "General Medicine"];
 const locations = ["All Locations", "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Pune"];
 
 const FindDoctors = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All Specialties');
   const [selectedLocation, setSelectedLocation] = useState('All Locations');
@@ -156,6 +78,13 @@ const FindDoctors = () => {
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationDetected, setLocationDetected] = useState(false);
   const [showEcenters, setShowEcenters] = useState(false);
+  
+  // Real API data
+  const [doctors, setDoctors] = useState<PublicDoctorProfile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalDoctors, setTotalDoctors] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
 
   // Detect user location on component mount
   useEffect(() => {
@@ -231,6 +160,54 @@ const FindDoctors = () => {
     }
   };
 
+  // Fetch doctors from API
+  const fetchDoctors = async () => {
+    setLoading(true);
+    try {
+      const params: any = {
+        page: currentPage,
+        page_size: pageSize,
+        ordering: sortBy === 'rating' ? 'rating' : sortBy === 'experience' ? 'experience' : sortBy === 'fee' ? 'fee' : 'rating'
+      };
+
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      if (selectedSpecialty !== 'All Specialties') {
+        params.specialization = selectedSpecialty;
+      }
+
+      if (userPincode) {
+        params.pincode = userPincode;
+      }
+
+      if (selectedLocation !== 'All Locations') {
+        params.city = selectedLocation;
+      }
+
+      const response = await doctorApi.getPublicDoctors(params);
+      setDoctors(response.results || []);
+      setTotalDoctors(response.count || 0);
+    } catch (error) {
+      console.error('Failed to fetch doctors:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load doctors. Please try again.",
+        variant: "destructive",
+      });
+      setDoctors([]);
+      setTotalDoctors(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load doctors when filters change
+  useEffect(() => {
+    fetchDoctors();
+  }, [searchTerm, selectedSpecialty, selectedLocation, sortBy, currentPage, pageSize, userPincode]);
+
   const calculateDistance = (pincode1: string, pincode2: string) => {
     // Simple distance calculation (in real app, use proper geocoding API)
     // For demo, we'll use a simple logic based on pincode similarity
@@ -238,27 +215,23 @@ const FindDoctors = () => {
     return Math.random() * 10 * similarity; // Random distance for demo
   };
 
-  const filteredDoctors = mockDoctors
-    .map(doctor => ({
-      ...doctor,
-      distance: userPincode ? calculateDistance(userPincode, doctor.pincode) : undefined
-    }))
-    .filter(doctor => {
-      const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSpecialty = selectedSpecialty === 'All Specialties' || doctor.specialty === selectedSpecialty;
-      const matchesLocation = selectedLocation === 'All Locations' || doctor.location.includes(selectedLocation);
-      return matchesSearch && matchesSpecialty && matchesLocation;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'rating': return b.rating - a.rating;
-        case 'experience': return b.experience - a.experience;
-        case 'fee': return a.consultationFee - b.consultationFee;
-        case 'distance': return (a.distance || 999) - (b.distance || 999);
-        default: return 0;
-      }
-    });
+  // Transform API data to match the expected format
+  const transformedDoctors = doctors.map(doctor => ({
+    id: doctor.id,
+    name: doctor.name,
+    specialty: doctor.specialization,
+    experience: doctor.experience_years,
+    rating: doctor.rating,
+    reviews: doctor.total_reviews,
+    location: doctor.clinic_address || 'Location not specified',
+    pincode: doctor.clinic_address?.match(/\d{6}/)?.[0] || '',
+    consultationFee: doctor.consultation_fee,
+    nextAvailable: 'Available for booking',
+    consultationTypes: doctor.consultation_types,
+    distance: userPincode && doctor.clinic_address?.match(/\d{6}/)?.[0] 
+      ? calculateDistance(userPincode, doctor.clinic_address.match(/\d{6}/)?.[0] || '') 
+      : undefined
+  }));
 
   const filteredEcenters = mockEcenters
     .map(ecenter => ({
@@ -300,213 +273,217 @@ const FindDoctors = () => {
         </div>
       </div>
 
-      {/* Pincode/Search Bar - Reference Style */}
-      <div className="w-full bg-[#f3f7fa] py-4 shadow-sm border-b border-gray-100 flex justify-center">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-3xl px-2">
-          <div className="flex items-center bg-white rounded-full shadow px-4 py-2 gap-2 min-w-[120px]">
-            <MapPin className="w-5 h-5 text-[#E17726]" />
-            {locationDetected ? (
-              <button
-                className="font-semibold text-midnight focus:outline-none hover:underline"
-                onClick={() => setUserPincode('')}
-                title="Change location"
-              >
-                {userPincode}
-              </button>
-            ) : (
-              <span className="text-gray-500 text-sm">Detecting...</span>
-            )}
-          </div>
-          <form
-            onSubmit={e => { e.preventDefault(); }}
-            className="flex flex-1 items-center bg-white rounded-full shadow px-4 py-2 gap-2 min-w-[200px]"
-          >
-            <Search className="w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search for doctors or specialties..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-midnight placeholder-gray-400 text-base"
-            />
-            <button type="submit" className="focus:outline-none">
-              <span className="sr-only">Search</span>
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Location Info */}
-      {locationDetected && (
-        <div className="bg-green-50 border-b border-green-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <MapPin className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-green-800">
-                    Showing results near Pincode: {userPincode}
-                  </p>
-                  <p className="text-xs text-green-600">
-                    {filteredDoctors.length} doctors found in your area
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={() => setUserPincode('')}
-                size="sm"
-                variant="outline"
-                className="border-green-300 text-green-700 hover:bg-green-100"
-              >
-                Change Location
-              </Button>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search doctors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Search and Filter Section */}
-      <div className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Specialty Filter */}
             <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
-              <SelectTrigger className="border-gray-200 focus:border-[#E17726] focus:ring-[#E17726]">
+              <SelectTrigger>
                 <SelectValue placeholder="Select Specialty" />
               </SelectTrigger>
               <SelectContent>
-                {specialties.map(specialty => (
-                  <SelectItem key={specialty} value={specialty}>{specialty}</SelectItem>
+                {specializations.map(specialty => (
+                  <SelectItem key={specialty} value={specialty}>
+                    {specialty}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Location Filter */}
             <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-              <SelectTrigger className="border-gray-200 focus:border-[#E17726] focus:ring-[#E17726]">
+              <SelectTrigger>
                 <SelectValue placeholder="Select Location" />
               </SelectTrigger>
               <SelectContent>
                 {locations.map(location => (
-                  <SelectItem key={location} value={location}>{location}</SelectItem>
+                  <SelectItem key={location} value={location}>
+                    {location}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Sort By */}
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="border-gray-200 focus:border-[#E17726] focus:ring-[#E17726]">
+              <SelectTrigger>
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="rating">Highest Rated</SelectItem>
                 <SelectItem value="experience">Most Experienced</SelectItem>
                 <SelectItem value="fee">Lowest Fee</SelectItem>
-                {userPincode && <SelectItem value="distance">Nearest First</SelectItem>}
+                <SelectItem value="distance">Nearest</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex space-x-2">
+          </div>
+
+          {/* Location Detection */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
               <Button
-                onClick={() => setShowEcenters(false)}
-                variant={!showEcenters ? "default" : "outline"}
-                className={!showEcenters ? "bg-[#E17726] hover:bg-[#c9651e]" : ""}
+                variant="outline"
+                size="sm"
+                onClick={detectUserLocation}
+                disabled={isDetectingLocation}
+                className="flex items-center space-x-2"
               >
+                {isDetectingLocation ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Navigation className="w-4 h-4" />
+                )}
+                <span>{isDetectingLocation ? 'Detecting...' : 'Detect My Location'}</span>
+              </Button>
+              {locationDetected && userPincode && (
+                <div className="flex items-center space-x-2 text-sm text-green-600">
+                  <MapPin className="w-4 h-4" />
+                  <span>Detected: {userPincode}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Toggle View */}
+            <div className="flex items-center space-x-2">
+              <Button
+                variant={!showEcenters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowEcenters(false)}
+                className="bg-[#E17726] hover:bg-[#c9651e]"
+              >
+                <Stethoscope className="w-4 h-4 mr-2" />
                 Doctors
               </Button>
               <Button
-                onClick={() => setShowEcenters(true)}
                 variant={showEcenters ? "default" : "outline"}
-                className={showEcenters ? "bg-[#E17726] hover:bg-[#c9651e]" : ""}
+                size="sm"
+                onClick={() => setShowEcenters(true)}
+                className="bg-cyan-600 hover:bg-cyan-700"
               >
+                <Sparkles className="w-4 h-4 mr-2" />
                 E-Centers
               </Button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Results Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-midnight">
-              {showEcenters ? `${filteredEcenters.length} E-Centers Found` : `${filteredDoctors.length} Doctors Found`}
-            </h2>
-            <p className="text-gray-600 mt-1">
-              {showEcenters ? 'Professional consultation centers near you' : 'Book appointments with top specialists'}
-            </p>
-          </div>
-        </div>
-
+        {/* Results */}
         {!showEcenters ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDoctors.map(doctor => (
-              <Card key={doctor.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:scale-105">
-                <CardContent className="p-6">
-                  {/* Doctor Header */}
-                  <div className="flex items-start space-x-4 mb-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-[#E17726]/20 to-cyan-400/20 rounded-full flex items-center justify-center shadow-md">
-                      <Stethoscope className="w-8 h-8 text-[#E17726]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-midnight truncate group-hover:text-[#E17726] transition-colors">
-                        {doctor.name}
-                      </h3>
-                      <p className="text-[#E17726] font-semibold text-sm">{doctor.specialty}</p>
-                      <div className="flex items-center mt-2 space-x-3">
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span className="text-sm font-semibold ml-1">{doctor.rating}</span>
-                          <span className="text-xs text-gray-500 ml-1">({doctor.reviews})</span>
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 6 }).map((_, index) => (
+                <Card key={index} className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="flex items-start space-x-4 mb-4">
+                        <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                         </div>
-                        <div className="flex items-center">
-                          <Award className="w-4 h-4 text-gray-400" />
-                          <span className="text-xs text-gray-600 ml-1">{doctor.experience} yrs</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-gray-200 rounded"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : transformedDoctors.length > 0 ? (
+              transformedDoctors.map(doctor => (
+                <Card key={doctor.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:scale-105">
+                  <CardContent className="p-6">
+                    {/* Doctor Header */}
+                    <div className="flex items-start space-x-4 mb-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-[#E17726]/20 to-cyan-400/20 rounded-full flex items-center justify-center shadow-md">
+                        <Stethoscope className="w-8 h-8 text-[#E17726]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-bold text-midnight truncate group-hover:text-[#E17726] transition-colors">
+                          {doctor.name}
+                        </h3>
+                        <p className="text-[#E17726] font-semibold text-sm">{doctor.specialty}</p>
+                        <div className="flex items-center mt-2 space-x-3">
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                            <span className="text-sm font-semibold ml-1">{doctor.rating}</span>
+                            <span className="text-xs text-gray-500 ml-1">({doctor.reviews})</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Award className="w-4 h-4 text-gray-400" />
+                            <span className="text-xs text-gray-600 ml-1">{doctor.experience} yrs</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Location and Availability */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="w-4 h-4 mr-2 text-[#E17726]" />
-                      <span className="truncate">{doctor.location}</span>
-                      {doctor.distance !== undefined && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {doctor.distance.toFixed(1)} km
+                    {/* Location and Availability */}
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2 text-[#E17726]" />
+                        <span className="truncate">{doctor.location}</span>
+                        {doctor.distance !== undefined && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {doctor.distance.toFixed(1)} km
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-2 text-[#E17726]" />
+                        <span>{doctor.nextAvailable}</span>
+                      </div>
+                    </div>
+
+                    {/* Consultation Types */}
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {doctor.consultationTypes.map(type => (
+                        <Badge key={type} variant="secondary" className="text-xs bg-gray-100 text-gray-700 flex items-center">
+                          {getConsultationIcon(type)}
+                          <span className="ml-1 capitalize">{type}</span>
                         </Badge>
-                      )}
+                      ))}
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="w-4 h-4 mr-2 text-[#E17726]" />
-                      <span>Next: {doctor.nextAvailable}</span>
-                    </div>
-                  </div>
 
-                  {/* Consultation Types */}
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {doctor.consultationTypes.map(type => (
-                      <Badge key={type} variant="secondary" className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">
-                        {getConsultationIcon(type)}
-                        <span className="ml-1">
-                          {type === 'video' ? 'Video' : type === 'phone' ? 'Phone' : 'In-person'}
-                        </span>
-                      </Badge>
-                    ))}
-                  </div>
-
-                  {/* Price and Action */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-[#E17726]">
-                        ₹{doctor.consultationFee}
+                    {/* Price and Action */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-[#E17726]">
+                          ₹{doctor.consultationFee}
+                        </div>
+                        <div className="text-xs text-gray-500">Consultation Fee</div>
                       </div>
-                      <div className="text-xs text-gray-500">Consultation Fee</div>
+                      <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-105">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Book Now
+                      </Button>
                     </div>
-                    <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-105">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Book Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-16">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No doctors found</h3>
+                <p className="text-gray-500">Try adjusting your search filters or location.</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -576,13 +553,33 @@ const FindDoctors = () => {
           </div>
         )}
 
-        {((!showEcenters && filteredDoctors.length === 0) || (showEcenters && filteredEcenters.length === 0)) && (
-          <div className="text-center py-16">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-12 h-12 text-gray-400" />
+        {/* Pagination */}
+        {!showEcenters && totalDoctors > 0 && (
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalDoctors)} of {totalDoctors} doctors
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No results found</h3>
-            <p className="text-gray-500">Try adjusting your search filters or location.</p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600 px-2">
+                Page {currentPage} of {Math.ceil(totalDoctors / pageSize)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= Math.ceil(totalDoctors / pageSize)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </div>

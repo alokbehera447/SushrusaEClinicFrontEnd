@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 
 import { Badge } from "../ui/badge";
 import { useToast } from "../../hooks/use-toast";
-import { get, post, put, del } from "../../lib/api";
+import { api } from "../../lib/utils";
 import { 
   User, 
   Phone, 
@@ -49,8 +49,6 @@ interface Stats {
   avg_performance: { value: string; change: string };
 }
 
-const PAGE_SIZE = 10;
-
 interface ManageAdminsProps {
   isDarkMode?: boolean;
 }
@@ -63,8 +61,9 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
   const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalAdmins, setTotalAdmins] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState<Admin | null>(null);
@@ -90,34 +89,41 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
   // Fetch stats
   useEffect(() => {
     setStatsLoading(true);
-    get("/api/auth/superadmin/admins/stats/")
-      .then((res) => setStats(res.data))
+    api.get("/api/auth/superadmin/admins/stats/")
+      .then((res) => setStats(res.data.data))
       .catch(() => setStats(null))
       .finally(() => setStatsLoading(false));
   }, []);
 
-  // Fetch admins
-  const fetchAdmins = () => {
-    setLoading(true);
-    setError(null);
-    get(
-      `/api/auth/superadmin/admins/?search=${encodeURIComponent(search)}&page=${page}&page_size=${PAGE_SIZE}`
-    )
-      .then((res) => {
-        setAdmins(res.data.admins);
-        setTotalPages(res.data.pagination.total_pages);
-      })
-      .catch((err) => {
-        setError("Failed to load admins");
-        setAdmins([]);
-      })
-      .finally(() => setLoading(false));
-  };
-
+  // Fetch admins with pagination, search, and filters
   useEffect(() => {
     fetchAdmins();
-    // eslint-disable-next-line
-  }, [search, page]);
+  }, [search, filterStatus, currentPage, pageSize]);
+
+  const fetchAdmins = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (filterStatus) params.append('status', filterStatus);
+      params.append('page', currentPage.toString());
+      params.append('page_size', pageSize.toString());
+      
+      const response = await api.get(`/api/auth/superadmin/admins/?${params.toString()}`);
+      
+      // Handle the new paginated response format
+      setAdmins(response.data.data.admins || []);
+      setTotalAdmins(response.data.data.pagination.total_count || 0);
+    } catch (err) {
+      setError("Failed to load admins");
+      setAdmins([]);
+      setTotalAdmins(0);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Populate edit form when admin is selected for editing
   useEffect(() => {
@@ -133,8 +139,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
   // Handlers
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(1);
-    fetchAdmins();
+    setCurrentPage(1);
   };
 
   const handleCreate = () => {
@@ -144,7 +149,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
     }
     
     setLoading(true);
-    post("/api/auth/superadmin/admins/", createFormData)
+    api.post("/api/auth/superadmin/admins/", createFormData)
       .then(() => {
         toast({ title: "Admin created successfully" });
         setShowCreate(false);
@@ -165,7 +170,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
     }
     
     setLoading(true);
-    put(`/api/auth/superadmin/admins/${showEdit.id}/`, editFormData)
+    api.put(`/api/auth/superadmin/admins/${showEdit.id}/`, editFormData)
       .then(() => {
         toast({ title: "Admin updated successfully" });
         setShowEdit(null);
@@ -189,7 +194,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
     
     try {
       setIsDeleting(true);
-      await del(`/api/auth/superadmin/admins/${adminToDelete.id}/`);
+      await api.delete(`/api/auth/superadmin/admins/${adminToDelete.id}/`);
       
       toast({ title: "Admin deactivated successfully" });
       setShowDeleteDialog(false);
@@ -204,15 +209,15 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
   };
 
   const getStatusColor = (isActive: boolean, isVerified: boolean) => {
-    if (!isVerified) return 'bg-yellow-100 text-yellow-800';
-    if (isActive) return 'bg-green-100 text-green-800';
-    return 'bg-red-100 text-red-800';
+    if (!isActive) return "bg-red-100 text-red-800";
+    if (!isVerified) return "bg-yellow-100 text-yellow-800";
+    return "bg-green-100 text-green-800";
   };
 
   const getStatusText = (isActive: boolean, isVerified: boolean) => {
-    if (!isVerified) return 'Pending Verification';
-    if (isActive) return 'Active';
-    return 'Inactive';
+    if (!isActive) return "Inactive";
+    if (!isVerified) return "Pending";
+    return "Active";
   };
 
   const filteredAdmins = admins.filter(admin => {
@@ -254,7 +259,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
                 <p className={`text-2xl font-bold transition-colors duration-300 ${
                   isDarkMode ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {statsLoading ? '...' : stats?.total_admins.value || 0}
+                  {statsLoading ? '...' : stats?.total_admins?.value || 0}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
@@ -276,7 +281,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
                 <p className={`text-2xl font-bold transition-colors duration-300 ${
                   isDarkMode ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {statsLoading ? '...' : stats?.active_admins.value || 0}
+                  {statsLoading ? '...' : stats?.active_admins?.value || 0}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
@@ -298,7 +303,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
                 <p className={`text-2xl font-bold transition-colors duration-300 ${
                   isDarkMode ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {statsLoading ? '...' : stats?.new_this_month.value || 0}
+                  {statsLoading ? '...' : stats?.new_this_month?.value || 0}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center">
@@ -320,7 +325,7 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
                 <p className={`text-2xl font-bold transition-colors duration-300 ${
                   isDarkMode ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {statsLoading ? '...' : stats?.avg_performance.value || '0%'}
+                  {statsLoading ? '...' : stats?.avg_performance?.value || '0%'}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 flex items-center justify-center">
@@ -483,37 +488,47 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
             </div>
             
             {/* Pagination */}
-            {totalPages > 1 && (
+            {totalAdmins > 0 && (
               <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                <div className="text-sm text-gray-700">
-                  Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, admins.length)} of {admins.length} admins
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-700">
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalAdmins)} of {totalAdmins} admins
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Show:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage(1)}
-                    disabled={page === 1}
-                  >
-                    First
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
                   >
                     Previous
                   </Button>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    {Array.from({ length: Math.min(5, Math.ceil(totalAdmins / pageSize)) }, (_, i) => {
                       const pageNum = i + 1;
                       return (
                         <Button
                           key={pageNum}
-                          variant={page === pageNum ? "default" : "outline"}
+                          variant={currentPage === pageNum ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setPage(pageNum)}
+                          onClick={() => setCurrentPage(pageNum)}
                           className="w-8 h-8 p-0"
                         >
                           {pageNum}
@@ -524,18 +539,10 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= totalPages}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage >= Math.ceil(totalAdmins / pageSize)}
                   >
                     Next
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(totalPages)}
-                    disabled={page >= totalPages}
-                  >
-                    Last
                   </Button>
                 </div>
               </div>

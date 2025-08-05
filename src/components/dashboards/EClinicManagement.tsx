@@ -179,6 +179,30 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (20MB = 20 * 1024 * 1024 bytes)
+      const maxSize = 20 * 1024 * 1024; // 20MB
+      if (file.size > maxSize) {
+        toast({
+          title: "File Size Error",
+          description: "Cover image must be less than 20MB. Please choose a smaller file.",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "File Type Error",
+          description: "Please upload a valid image file (JPEG, PNG, or WebP).",
+          variant: "destructive",
+        });
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
       setCoverImage(file);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -1253,6 +1277,7 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
 
             <div>
               <Label htmlFor="cover_image" className="text-sm font-medium text-gray-700">Upload Cover Image</Label>
+              <p className="text-xs text-gray-500 mt-1 mb-2">Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP</p>
               <div className="flex items-center space-x-4 mt-2">
                 <div className="flex-1">
                   <Input
@@ -1284,6 +1309,14 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
                   </div>
                 )}
               </div>
+              {coverImage && (
+                <div className="mt-2 text-xs text-gray-600">
+                  <span className="font-medium">Selected file:</span> {coverImage.name} 
+                  <span className="ml-2 text-green-600">
+                    ({(coverImage.size / (1024 * 1024)).toFixed(2)} MB)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

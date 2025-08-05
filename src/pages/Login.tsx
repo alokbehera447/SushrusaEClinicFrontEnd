@@ -117,7 +117,17 @@ const Login = () => {
       setStep('otp');
       setCountdown(30); // 30 seconds countdown
     } catch (err: unknown) {
-      setLoginError('Failed to send OTP. Please check your number and try again.');
+      // Handle specific error messages from backend
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const response = (err as any).response;
+        if (response?.data?.error?.message) {
+          setLoginError(response.data.error.message);
+        } else {
+          setLoginError('Failed to send OTP. Please check your number and try again.');
+        }
+      } else {
+        setLoginError('Failed to send OTP. Please check your number and try again.');
+      }
     }
     setIsSubmitting(false);
   };
@@ -167,7 +177,17 @@ const Login = () => {
         setOtp(['', '', '', '', '', '']);
       }
     } catch (err: unknown) {
-      setLoginError('Invalid OTP. Please try again.');
+      // Handle specific error messages from backend
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const response = (err as any).response;
+        if (response?.data?.error?.message) {
+          setLoginError(response.data.error.message);
+        } else {
+          setLoginError('Invalid OTP. Please try again.');
+        }
+      } else {
+        setLoginError('Invalid OTP. Please try again.');
+      }
       setOtp(['', '', '', '', '', '']);
     }
     setIsSubmitting(false);
