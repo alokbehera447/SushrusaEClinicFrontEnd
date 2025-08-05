@@ -78,10 +78,10 @@ const Footer = () => {
                   <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-[#E17726]" />
                 </div>
                 <a 
-                  href="tel:+15551234567"
+                  href="tel:+916370511060"
                   className="text-white/70 text-base sm:text-lg hover:text-[#E17726] transition-colors duration-300 min-h-[44px] flex items-center"
                 >
-                  +1 (555) 123-4567
+                  +91 6370 511 060
                 </a>
               </div>
               <div className="flex items-center space-x-4">
@@ -89,10 +89,10 @@ const Footer = () => {
                   <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-aqua" />
                 </div>
                 <a 
-                  href="mailto:hello@sushrusa.com"
+                  href="mailto:care@sushrusahealthcare.com"
                   className="text-white/70 text-base sm:text-lg hover:text-aqua transition-colors duration-300 min-h-[44px] flex items-center"
                 >
-                  hello@sushrusa.com
+                  care@sushrusahealthcare.com
                 </a>
               </div>
               <div className="flex items-start space-x-4">
@@ -100,8 +100,9 @@ const Footer = () => {
                   <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-[#E17726]" />
                 </div>
                 <span className="text-white/70 text-base sm:text-lg leading-relaxed">
-                  123 Healthcare Avenue<br />
-                  Medical District, MD 12345
+                  HIG 11, 2ND LANE, near Kharavel park,<br />
+                  Phase I, Khandagiri, Bhubaneswar,<br />
+                  Odisha 751030
                 </span>
               </div>
             </div>
