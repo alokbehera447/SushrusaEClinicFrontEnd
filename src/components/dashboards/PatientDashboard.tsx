@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -38,12 +40,32 @@ import {
   HelpCircle,
   MoreVertical,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  CalendarDays,
+  Stethoscope,
+  Pill,
+  FileImage,
+  Upload,
+  Plus,
+  TrendingUp,
+  HeartPulse,
+  UserCircle,
+  Smartphone,
+  Shield,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
+  VideoIcon as Video,
+  Users,
+  BookOpen,
+  Target,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
   patientApi,
   UserProfile,
+  Consultation,
   formatDate,
   formatDateTime
 } from '@/lib/api';
@@ -74,24 +96,56 @@ interface EditProfileForm {
   country: string;
 }
 
+interface Prescription {
+  id: string;
+  doctor_name: string;
+  date: string;
+  medicines: Array<{
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+  }>;
+  notes?: string;
+}
+
+interface HealthMetric {
+  id: string;
+  type: 'blood_pressure' | 'weight' | 'blood_sugar' | 'heart_rate';
+  value: string;
+  unit: string;
+  recorded_date: string;
+  status: 'normal' | 'high' | 'low';
+}
+
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // State for data
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
+  const [consultationsLoading, setConsultationsLoading] = useState(false);
+  const [prescriptionsLoading, setPrescriptionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Header state
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
+  // Filter and search states
+  const [consultationFilter, setConsultationFilter] = useState('all');
+  const [consultationSearch, setConsultationSearch] = useState('');
+  const [prescriptionSearch, setPrescriptionSearch] = useState('');
+
+  // Modal states
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [bookConsultationOpen, setBookConsultationOpen] = useState(false);
+  const [viewPrescriptionOpen, setViewPrescriptionOpen] = useState(false);
+  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
 
   const { toast } = useToast();
-  const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editForm, setEditForm] = useState<EditProfileForm>({
     name: '',
@@ -109,7 +163,7 @@ const PatientDashboard = () => {
   });
 
   // Fetch user profile data
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -121,12 +175,144 @@ const PatientDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Fetch consultations
+  const fetchConsultations = useCallback(async () => {
+    try {
+      setConsultationsLoading(true);
+      // Mock data for now - replace with actual API call
+      const mockConsultations: Consultation[] = [
+        {
+          id: '1',
+          patient: user?.id || '',
+          doctor: 'dr1',
+          patient_name: userProfile?.name || 'Patient',
+          doctor_name: 'Dr. Sarah Johnson',
+          consultation_type: 'video',
+          scheduled_date: '2024-01-15',
+          scheduled_time: '10:00',
+          duration: 30,
+          status: 'completed',
+          payment_status: 'paid',
+          consultation_fee: 500,
+          is_paid: true,
+          chief_complaint: 'Regular checkup',
+          created_at: '2024-01-10T10:00:00Z',
+          updated_at: '2024-01-15T10:30:00Z'
+        },
+        {
+          id: '2',
+          patient: user?.id || '',
+          doctor: 'dr2',
+          patient_name: userProfile?.name || 'Patient',
+          doctor_name: 'Dr. Michael Chen',
+          consultation_type: 'video',
+          scheduled_date: '2024-01-20',
+          scheduled_time: '14:00',
+          duration: 45,
+          status: 'scheduled',
+          payment_status: 'paid',
+          consultation_fee: 750,
+          is_paid: true,
+          chief_complaint: 'Follow-up consultation',
+          created_at: '2024-01-18T14:00:00Z',
+          updated_at: '2024-01-18T14:00:00Z'
+        }
+      ];
+      setConsultations(mockConsultations);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to load consultations', variant: 'destructive' });
+    } finally {
+      setConsultationsLoading(false);
+    }
+  }, [user?.id, userProfile?.name, toast]);
+
+  // Fetch prescriptions
+  const fetchPrescriptions = useCallback(async () => {
+    try {
+      setPrescriptionsLoading(true);
+      // Mock data for now - replace with actual API call
+      const mockPrescriptions: Prescription[] = [
+        {
+          id: '1',
+          doctor_name: 'Dr. Sarah Johnson',
+          date: '2024-01-15',
+          medicines: [
+            { name: 'Paracetamol', dosage: '500mg', frequency: 'Twice daily', duration: '5 days' },
+            { name: 'Vitamin D3', dosage: '1000 IU', frequency: 'Once daily', duration: '30 days' }
+          ],
+          notes: 'Take medicines after meals. Complete the course as prescribed.'
+        },
+        {
+          id: '2',
+          doctor_name: 'Dr. Michael Chen',
+          date: '2024-01-10',
+          medicines: [
+            { name: 'Omeprazole', dosage: '20mg', frequency: 'Once daily', duration: '14 days' }
+          ],
+          notes: 'Take on empty stomach, 30 minutes before breakfast.'
+        }
+      ];
+      setPrescriptions(mockPrescriptions);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to load prescriptions', variant: 'destructive' });
+    } finally {
+      setPrescriptionsLoading(false);
+    }
+  }, [toast]);
+
+  // Fetch health metrics
+  const fetchHealthMetrics = useCallback(async () => {
+    try {
+      // Mock data for now - replace with actual API call
+      const mockMetrics: HealthMetric[] = [
+        {
+          id: '1',
+          type: 'blood_pressure',
+          value: '120/80',
+          unit: 'mmHg',
+          recorded_date: '2024-01-15',
+          status: 'normal'
+        },
+        {
+          id: '2',
+          type: 'weight',
+          value: '70',
+          unit: 'kg',
+          recorded_date: '2024-01-15',
+          status: 'normal'
+        },
+        {
+          id: '3',
+          type: 'blood_sugar',
+          value: '95',
+          unit: 'mg/dL',
+          recorded_date: '2024-01-15',
+          status: 'normal'
+        },
+        {
+          id: '4',
+          type: 'heart_rate',
+          value: '72',
+          unit: 'bpm',
+          recorded_date: '2024-01-15',
+          status: 'normal'
+        }
+      ];
+      setHealthMetrics(mockMetrics);
+    } catch (err) {
+      console.error('Error fetching health metrics:', err);
+    }
+  }, []);
 
   // Load data on component mount
   useEffect(() => {
     fetchUserProfile();
-  }, []);
+    fetchConsultations();
+    fetchPrescriptions();
+    fetchHealthMetrics();
+  }, [fetchUserProfile, fetchConsultations, fetchPrescriptions, fetchHealthMetrics]);
 
   useEffect(() => {
     if (userProfile) {
@@ -157,7 +343,7 @@ const PatientDashboard = () => {
     try {
       await patientApi.updateUserProfile(editForm);
       toast({ title: 'Profile updated', description: 'Your profile was updated successfully.' });
-      setEditOpen(false);
+      setEditProfileOpen(false);
       fetchUserProfile();
     } catch (err) {
       toast({ title: 'Update failed', description: 'Could not update profile.', variant: 'destructive' });
@@ -171,54 +357,44 @@ const PatientDashboard = () => {
     return profile?.name || 'Patient';
   };
 
-  // Get patient info from user profile
-  const getPatientInfo = () => {
-    if (userProfile) {
-      return {
-        name: userProfile.name || 'Unknown',
-        age: userProfile.age || null,
-        gender: userProfile.gender || 'Not specified',
-        phone: userProfile.phone || 'Not specified',
-        email: userProfile.email || 'Not specified',
-        address: userProfile.full_address || 'Not specified',
-        bloodGroup: userProfile.blood_group || 'Not specified',
-        allergies: userProfile.allergies || 'None'
-      };
-    }
+  // Filter consultations
+  const filteredConsultations = consultations.filter(consultation => {
+    const matchesFilter = consultationFilter === 'all' || consultation.status === consultationFilter;
+    const matchesSearch = consultation.doctor_name.toLowerCase().includes(consultationSearch.toLowerCase()) ||
+                         consultation.chief_complaint.toLowerCase().includes(consultationSearch.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  // Filter prescriptions
+  const filteredPrescriptions = prescriptions.filter(prescription =>
+    prescription.doctor_name.toLowerCase().includes(prescriptionSearch.toLowerCase()) ||
+    prescription.medicines.some(med => med.name.toLowerCase().includes(prescriptionSearch.toLowerCase()))
+  );
+
+  // Get quick stats
+  const getQuickStats = () => {
+    const totalConsultations = consultations.length;
+    const upcomingConsultations = consultations.filter(c => c.status === 'scheduled').length;
+    const completedConsultations = consultations.filter(c => c.status === 'completed').length;
+    const activePrescriptions = prescriptions.length;
 
     return {
-      name: 'Loading...',
-      age: null,
-      gender: 'Loading...',
-      phone: 'Loading...',
-      email: 'Loading...',
-      address: 'Loading...',
-      bloodGroup: 'Loading...',
-      allergies: 'Loading...'
+      totalConsultations,
+      upcomingConsultations,
+      completedConsultations,
+      activePrescriptions
     };
   };
 
-  const patientInfo = getPatientInfo();
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'consultations', label: 'Consultations', icon: Calendar },
-    { id: 'profile', label: 'Profile', icon: User }
-  ];
-
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star key={i} className={`w-4 h-4 ${i < rating ? 'text-yellow-500 fill-current' : 'text-gray-300'}`} />
-    ));
-  };
+  const stats = getQuickStats();
 
   // Loading component
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[#E17726]" />
-          <p className="text-gray-600">Loading patient dashboard...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-[#E17726]" />
+          <p className="text-gray-600 text-lg">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -227,10 +403,10 @@ const PatientDashboard = () => {
   // Error component
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="w-8 h-8 mx-auto mb-4 text-red-500" />
-          <p className="text-red-600 mb-4">{error}</p>
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+          <p className="text-red-600 mb-4 text-lg">{error}</p>
           <Button onClick={fetchUserProfile} className="bg-[#E17726] hover:bg-[#c9651e] text-white">
             <RefreshCw className="w-4 h-4 mr-2" />
             Retry
@@ -241,99 +417,71 @@ const PatientDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 border-b border-blue-400 sticky top-16 z-40">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-[#E17726] to-[#FF8A56] rounded-xl flex items-center justify-center">
+                <HeartPulse className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">{getDisplayName(userProfile)}</h1>
-                <p className="text-xs text-blue-100">{user?.phone || 'No contact available'}</p>
+                <h1 className="text-lg font-bold text-gray-900">{getDisplayName(userProfile)}</h1>
+                <p className="text-sm text-gray-600">{user?.phone || 'Patient Dashboard'}</p>
               </div>
-              <Badge className="bg-green-100 text-green-800 border-green-200">
+              <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200">
+                <CheckCircle className="w-3 h-3 mr-1" />
                 Active Patient
               </Badge>
             </div>
             <div className="flex items-center space-x-3">
-              {/* Theme Toggle */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="text-white hover:bg-white/20 transition-colors duration-300"
-              >
-                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </Button>
-
-              {/* Help Button */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white hover:bg-white/20 transition-colors duration-300"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </Button>
-
               {/* Notifications */}
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowNotifications(true)}
-                className="relative text-white hover:bg-white/20 transition-colors duration-300"
-              >
+              <Button variant="ghost" size="sm" className="relative">
                 <Bell className="w-4 h-4" />
-                {notificationCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-red-500 border border-white">
-                    {notificationCount}
-                  </Badge>
-                )}
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-xs bg-red-500 text-white">
+                  2
+                </Badge>
               </Button>
 
-              {/* User Profile */}
+              {/* Quick Actions */}
+              <Button 
+                onClick={() => setBookConsultationOpen(true)}
+                className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Book Consultation
+              </Button>
+
+              {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/20 transition-colors duration-300">
-                    <Avatar className="h-8 w-8 border-2 border-white/20">
-                      <AvatarFallback className="bg-white/20 text-white font-semibold">
-                        {getDisplayName(userProfile).charAt(0) || 'P'}
+                  <Button variant="ghost" className="flex items-center space-x-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-gradient-to-br from-[#E17726] to-[#FF8A56] text-white">
+                        {getDisplayName(userProfile).charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden md:block text-left">
-                      <p className="text-sm font-medium text-white">
-                        {getDisplayName(userProfile)}
-                      </p>
-                      <p className="text-xs text-blue-100">
-                        {user?.phone || 'No contact available'}
-                      </p>
-                    </div>
                     <MoreVertical className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEditProfileOpen(true)}>
                     <User className="w-4 h-4 mr-2" />
-                    View Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                    <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings className="w-4 h-4 mr-2" />
-                    Account Settings
+                    Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Support
+                    <HelpCircle className="w-4 h-4 mr-2" />
+                    Help & Support
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem onClick={logout} className="text-red-600">
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </DropdownMenuItem>
@@ -344,691 +492,781 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Edit Profile</DialogTitle>
-                    <DialogDescription>Update your profile information below.</DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleEditSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Name</label>
-                        <input name="name" value={editForm.name} onChange={handleEditChange} className="w-full border rounded px-3 py-2" required />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Email</label>
-                        <input name="email" value={editForm.email} onChange={handleEditChange} className="w-full border rounded px-3 py-2" type="email" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Phone</label>
-                        <input name="phone" value={editForm.phone} onChange={handleEditChange} className="w-full border rounded px-3 py-2" disabled />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Date of Birth</label>
-                        <input name="date_of_birth" value={editForm.date_of_birth} onChange={handleEditChange} className="w-full border rounded px-3 py-2" type="date" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Gender</label>
-                        <select name="gender" value={editForm.gender} onChange={handleEditChange} className="w-full border rounded px-3 py-2">
-                          <option value="">Select</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Blood Group</label>
-                        <input name="blood_group" value={editForm.blood_group} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Allergies</label>
-                        <input name="allergies" value={editForm.allergies} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Street</label>
-                        <input name="street" value={editForm.street} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">City</label>
-                        <input name="city" value={editForm.city} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">State</label>
-                        <input name="state" value={editForm.state} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Pincode</label>
-                        <input name="pincode" value={editForm.pincode} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Country</label>
-                        <input name="country" value={editForm.country} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit" className="bg-[#E17726] text-white" disabled={editLoading}>
-                        {editLoading ? 'Saving...' : 'Save Changes'}
-                      </Button>
-                      <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel</Button>
-                      </DialogClose>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
-
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-[#E17726] text-[#E17726]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="w-4 h-4 inline mr-2" />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Welcome Section */}
-            <Card className="bg-gradient-to-r from-[#E17726] to-[#f7931e] text-white">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-2">Welcome back, {patientInfo.name}!</h2>
-                    <p className="text-[#E17726]/90">Your health journey starts here. Manage your profile and health information.</p>
-                  </div>
-                  <div className="hidden md:block">
-                    <img src="/healthcare-consultation.svg" alt="Healthcare" className="w-32 h-32 opacity-20" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-white/50 backdrop-blur-sm">
+            <TabsTrigger value="overview" className="flex items-center space-x-2">
+              <Activity className="w-4 h-4" />
+              <span>Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="flex items-center space-x-2">
+              <Stethoscope className="w-4 h-4" />
+              <span>Consultations</span>
+            </TabsTrigger>
+            <TabsTrigger value="prescriptions" className="flex items-center space-x-2">
+              <Pill className="w-4 h-4" />
+              <span>Prescriptions</span>
+            </TabsTrigger>
+            <TabsTrigger value="records" className="flex items-center space-x-2">
+              <FileImage className="w-4 h-4" />
+              <span>Records</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center space-x-2">
+              <UserCircle className="w-4 h-4" />
+              <span>Profile</span>
+            </TabsTrigger>
+          </TabsList>
 
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
                 <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Calendar className="w-6 h-6 text-blue-600" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Total Consultations</p>
+                      <p className="text-2xl font-bold text-blue-900">{stats.totalConsultations}</p>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Consultations</p>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                    </div>
+                    <Calendar className="w-8 h-8 text-blue-500" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
                 <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <FileText className="w-6 h-6 text-green-600" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">Upcoming</p>
+                      <p className="text-2xl font-bold text-green-900">{stats.upcomingConsultations}</p>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Active Prescriptions</p>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                    </div>
+                    <Clock className="w-8 h-8 text-green-500" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
                 <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Heart className="w-6 h-6 text-purple-600" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-purple-600">Prescriptions</p>
+                      <p className="text-2xl font-bold text-purple-900">{stats.activePrescriptions}</p>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Health Score</p>
-                      <p className="text-2xl font-bold text-gray-900">85%</p>
+                    <Pill className="w-8 h-8 text-purple-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-600">Completed</p>
+                      <p className="text-2xl font-bold text-orange-900">{stats.completedConsultations}</p>
                     </div>
+                    <CheckCircle className="w-8 h-8 text-orange-500" />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Activity className="w-5 h-5 mr-2" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No recent activity to display</p>
-                  <p className="text-sm">Your consultations and prescriptions will appear here</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+            {/* Health Metrics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <HeartPulse className="w-5 h-5 mr-2 text-red-500" />
+                    Health Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {healthMetrics.map((metric) => (
+                    <div key={metric.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          metric.status === 'normal' ? 'bg-green-500' :
+                          metric.status === 'high' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <div>
+                          <p className="font-medium capitalize">{metric.type.replace('_', ' ')}</p>
+                          <p className="text-sm text-gray-600">{formatDate(metric.recorded_date)}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{metric.value} {metric.unit}</p>
+                        <Badge variant={metric.status === 'normal' ? 'default' : 'destructive'} className="text-xs">
+                          {metric.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  <Button variant="outline" className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Health Record
+                  </Button>
+                </CardContent>
+              </Card>
 
-        {activeTab === 'consultations' && (
-          <div className="space-y-6">
-            {/* Consultations Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-midnight">My Consultations</h2>
-                <p className="text-gray-600">Track your consultation history and upcoming appointments</p>
+              {/* Recent Activity */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Activity className="w-5 h-5 mr-2 text-blue-500" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {consultations.slice(0, 3).map((consultation) => (
+                    <div key={consultation.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-8 h-8 bg-gradient-to-br from-[#E17726] to-[#FF8A56] rounded-full flex items-center justify-center">
+                        <Stethoscope className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{consultation.doctor_name}</p>
+                        <p className="text-sm text-gray-600">{consultation.chief_complaint}</p>
+                        <p className="text-xs text-gray-500">{formatDate(consultation.scheduled_date)}</p>
+                      </div>
+                      <Badge variant={consultation.status === 'completed' ? 'default' : 'secondary'}>
+                        {consultation.status}
+                      </Badge>
+                    </div>
+                  ))}
+                  <Button variant="outline" className="w-full">
+                    View All Activity
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Consultations Tab */}
+          <TabsContent value="consultations" className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search consultations..."
+                    value={consultationSearch}
+                    onChange={(e) => setConsultationSearch(e.target.value)}
+                    className="pl-10 w-full sm:w-64"
+                  />
+                </div>
+                <Select value={consultationFilter} onValueChange={setConsultationFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Consultations</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Button className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                <Calendar className="w-4 h-4 mr-2" />
+              <Button 
+                onClick={() => setBookConsultationOpen(true)}
+                className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
                 Book New Consultation
               </Button>
             </div>
 
-            {/* Consultation Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {consultationsLoading ? (
+                <div className="col-span-2 text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[#E17726]" />
+                  <p>Loading consultations...</p>
+                </div>
+              ) : filteredConsultations.length === 0 ? (
+                <div className="col-span-2 text-center py-8">
+                  <CalendarDays className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">No consultations found</p>
+                </div>
+              ) : (
+                filteredConsultations.map((consultation) => (
+                  <Card key={consultation.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                              {consultation.doctor_name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-semibold">{consultation.doctor_name}</h3>
+                            <p className="text-sm text-gray-600">{consultation.chief_complaint}</p>
+                          </div>
+                        </div>
+                        <Badge variant={
+                          consultation.status === 'completed' ? 'default' :
+                          consultation.status === 'scheduled' ? 'secondary' :
+                          'destructive'
+                        }>
+                          {consultation.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Date & Time:</span>
+                          <span>{formatDate(consultation.scheduled_date)} at {consultation.scheduled_time}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Type:</span>
+                          <span className="flex items-center">
+                            {consultation.consultation_type === 'video' ? (
+                              <Video className="w-4 h-4 mr-1" />
+                            ) : (
+                              <Users className="w-4 h-4 mr-1" />
+                            )}
+                            {consultation.consultation_type}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Duration:</span>
+                          <span>{consultation.duration} minutes</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Fee:</span>
+                          <span>₹{consultation.consultation_fee}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between mt-4 space-x-2">
+                        {consultation.status === 'scheduled' && (
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Reschedule
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                        {consultation.status === 'completed' && (
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download Report
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Prescriptions Tab */}
+          <TabsContent value="prescriptions" className="space-y-6">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search prescriptions..."
+                  value={prescriptionSearch}
+                  onChange={(e) => setPrescriptionSearch(e.target.value)}
+                  className="pl-10 w-full sm:w-64"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {prescriptionsLoading ? (
+                <div className="col-span-2 text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-[#E17726]" />
+                  <p>Loading prescriptions...</p>
+                </div>
+              ) : filteredPrescriptions.length === 0 ? (
+                <div className="col-span-2 text-center py-8">
+                  <Pill className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">No prescriptions found</p>
+                </div>
+              ) : (
+                filteredPrescriptions.map((prescription) => (
+                  <Card key={prescription.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold">{prescription.doctor_name}</h3>
+                          <p className="text-sm text-gray-600">{formatDate(prescription.date)}</p>
+                        </div>
+                        <Badge variant="secondary">
+                          {prescription.medicines.length} medicine{prescription.medicines.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {prescription.medicines.slice(0, 2).map((medicine, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div>
+                              <p className="font-medium">{medicine.name}</p>
+                              <p className="text-sm text-gray-600">{medicine.dosage} - {medicine.frequency}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {medicine.duration}
+                            </Badge>
+                          </div>
+                        ))}
+                        {prescription.medicines.length > 2 && (
+                          <p className="text-sm text-gray-500 text-center">
+                            +{prescription.medicines.length - 2} more medicine{prescription.medicines.length - 2 !== 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex justify-between mt-4 space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => {
+                            setSelectedPrescription(prescription);
+                            setViewPrescriptionOpen(true);
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Full
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Medical Records Tab */}
+          <TabsContent value="records" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Medical Records</h2>
+              <Button className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Record
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Health Metrics Card */}
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Calendar className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total</p>
-                      <p className="text-2xl font-bold text-gray-900">3</p>
-                    </div>
-                  </div>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
+                    Health Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">Track your vital signs and health indicators</p>
+                  <Button variant="outline" className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Metric
+                  </Button>
                 </CardContent>
               </Card>
 
+              {/* Lab Reports Card */}
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Clock className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Completed</p>
-                      <p className="text-2xl font-bold text-gray-900">2</p>
-                    </div>
-                  </div>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-blue-500" />
+                    Lab Reports
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">Upload and manage your laboratory test results</p>
+                  <Button variant="outline" className="w-full">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Report
+                  </Button>
                 </CardContent>
               </Card>
 
+              {/* Medical Images Card */}
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Clock className="w-6 h-6 text-yellow-600" />
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileImage className="w-5 h-5 mr-2 text-purple-500" />
+                    Medical Images
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">Store X-rays, MRIs, and other medical imaging</p>
+                  <Button variant="outline" className="w-full">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Image
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Profile Summary */}
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <UserCircle className="w-5 h-5 mr-2" />
+                    Profile Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center">
+                    <Avatar className="h-20 w-20 mx-auto mb-4">
+                      <AvatarFallback className="bg-gradient-to-br from-[#E17726] to-[#FF8A56] text-white text-xl">
+                        {getDisplayName(userProfile).charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-semibold text-lg">{getDisplayName(userProfile)}</h3>
+                    <p className="text-gray-600">{userProfile?.email}</p>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Age:</span>
+                      <span>{userProfile?.age || 'N/A'}</span>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Upcoming</p>
-                      <p className="text-2xl font-bold text-gray-900">1</p>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Gender:</span>
+                      <span>{userProfile?.gender || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Blood Group:</span>
+                      <span>{userProfile?.blood_group || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Phone:</span>
+                      <span>{userProfile?.phone}</span>
                     </div>
                   </div>
+                  <Button 
+                    onClick={() => setEditProfileOpen(true)}
+                    className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Star className="w-6 h-6 text-purple-600" />
+              {/* Detailed Information */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center">
+                        <User className="w-4 h-4 mr-2" />
+                        Basic Information
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Full Name:</span>
+                          <span>{userProfile?.name || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Date of Birth:</span>
+                          <span>{userProfile?.date_of_birth ? formatDate(userProfile.date_of_birth) : 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Gender:</span>
+                          <span>{userProfile?.gender || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Blood Group:</span>
+                          <span>{userProfile?.blood_group || 'Not provided'}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                      <p className="text-2xl font-bold text-gray-900">4.8</p>
+
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center">
+                        <Smartphone className="w-4 h-4 mr-2" />
+                        Contact Information
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Phone:</span>
+                          <span>{userProfile?.phone}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Email:</span>
+                          <span>{userProfile?.email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Emergency Contact:</span>
+                          <span>{userProfile?.emergency_contact_name || 'Not provided'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Emergency Phone:</span>
+                          <span>{userProfile?.emergency_contact_phone || 'Not provided'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Address
+                      </h4>
+                      <div className="text-sm">
+                        <p>{userProfile?.full_address || 'No address provided'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center">
+                        <Heart className="w-4 h-4 mr-2" />
+                        Medical Information
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Allergies:</span>
+                          <p className="mt-1">{userProfile?.allergies || 'None reported'}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Medical History:</span>
+                          <p className="mt-1">{userProfile?.medical_history || 'No history provided'}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-
-            {/* Consultations List */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Recent Consultations</span>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filter
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Search className="w-4 h-4 mr-2" />
-                      Search
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Consultation 1 - Upcoming */}
-                  <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Calendar className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-midnight">Dr. Sarah Johnson</h3>
-                          <p className="text-sm text-gray-600">Cardiologist • Video Consultation</p>
-                          <p className="text-sm text-gray-500">Scheduled for Dec 25, 2024 at 2:00 PM</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 mb-2">
-                          Upcoming
-                        </Badge>
-                        <p className="text-sm font-medium text-gray-900">₹800</p>
-                        <div className="flex items-center mt-1">
-                          {renderStars(5)}
-                          <span className="text-xs text-gray-500 ml-1">(4.9)</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Clock className="w-4 h-4 mr-2" />
-                          Reschedule
-                        </Button>
-                      </div>
-                      <Button size="sm" className="bg-[#E17726] hover:bg-[#c9651e] text-white">
-                        Join Meeting
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Consultation 2 - Completed */}
-                  <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                          <Calendar className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-midnight">Dr. Michael Chen</h3>
-                          <p className="text-sm text-gray-600">General Physician • In-Person</p>
-                          <p className="text-sm text-gray-500">Completed on Dec 20, 2024 at 10:30 AM</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className="bg-green-100 text-green-800 border-green-200 mb-2">
-                          Completed
-                        </Badge>
-                        <p className="text-sm font-medium text-gray-900">₹600</p>
-                        <div className="flex items-center mt-1">
-                          {renderStars(5)}
-                          <span className="text-xs text-gray-500 ml-1">(4.8)</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <FileText className="w-4 h-4 mr-2" />
-                          View Prescription
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Report
-                        </Button>
-                      </div>
-                      <Button size="sm" variant="outline">
-                        Book Follow-up
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Consultation 3 - Completed */}
-                  <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                          <Calendar className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-midnight">Dr. Emily Rodriguez</h3>
-                          <p className="text-sm text-gray-600">Dermatologist • Video Consultation</p>
-                          <p className="text-sm text-gray-500">Completed on Dec 15, 2024 at 3:00 PM</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className="bg-green-100 text-green-800 border-green-200 mb-2">
-                          Completed
-                        </Badge>
-                        <p className="text-sm font-medium text-gray-900">₹900</p>
-                        <div className="flex items-center mt-1">
-                          {renderStars(4)}
-                          <span className="text-xs text-gray-500 ml-1">(4.7)</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <FileText className="w-4 h-4 mr-2" />
-                          View Prescription
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Report
-                        </Button>
-                      </div>
-                      <Button size="sm" variant="outline">
-                        Book Follow-up
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* No Consultations State */}
-                <div className="text-center py-8 text-gray-500 hidden">
-                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>No consultations found</p>
-                  <p className="text-sm">Book your first consultation to get started</p>
-                  <Button className="mt-4 bg-[#E17726] hover:bg-[#c9651e] text-white">
-                    Book Consultation
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === 'profile' && (
-          <div className="space-y-6">
-            {/* Profile Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Personal Information</span>
-                  <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Edit Profile</DialogTitle>
-                        <DialogDescription>Update your profile information below.</DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleEditSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Name</label>
-                            <input name="name" value={editForm.name} onChange={handleEditChange} className="w-full border rounded px-3 py-2" required />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Email</label>
-                            <input name="email" value={editForm.email} onChange={handleEditChange} className="w-full border rounded px-3 py-2" type="email" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Phone</label>
-                            <input name="phone" value={editForm.phone} onChange={handleEditChange} className="w-full border rounded px-3 py-2" disabled />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Date of Birth</label>
-                            <input name="date_of_birth" value={editForm.date_of_birth} onChange={handleEditChange} className="w-full border rounded px-3 py-2" type="date" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Gender</label>
-                            <select name="gender" value={editForm.gender} onChange={handleEditChange} className="w-full border rounded px-3 py-2">
-                              <option value="">Select</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Blood Group</label>
-                            <input name="blood_group" value={editForm.blood_group} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Allergies</label>
-                            <input name="allergies" value={editForm.allergies} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Street</label>
-                            <input name="street" value={editForm.street} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">City</label>
-                            <input name="city" value={editForm.city} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">State</label>
-                            <input name="state" value={editForm.state} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Pincode</label>
-                            <input name="pincode" value={editForm.pincode} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Country</label>
-                            <input name="country" value={editForm.country} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button type="submit" className="bg-[#E17726] text-white" disabled={editLoading}>
-                            {editLoading ? 'Saving...' : 'Save Changes'}
-                          </Button>
-                          <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
-                          </DialogClose>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                      <p className="text-gray-900">{patientInfo.name}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                      <p className="text-gray-900">{patientInfo.email}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                      <p className="text-gray-900">{patientInfo.phone}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                      <p className="text-gray-900">{userProfile?.date_of_birth ? formatDate(userProfile.date_of_birth) : 'Not specified'}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                      <p className="text-gray-900">{patientInfo.gender}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
-                      <p className="text-gray-900">{patientInfo.bloodGroup}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-                      <p className="text-gray-900">{patientInfo.allergies}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                      <p className="text-gray-900">{patientInfo.age || 'Not specified'}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Address Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Address Information</span>
-                  <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Edit Profile</DialogTitle>
-                        <DialogDescription>Update your profile information below.</DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleEditSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Name</label>
-                            <input name="name" value={editForm.name} onChange={handleEditChange} className="w-full border rounded px-3 py-2" required />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Email</label>
-                            <input name="email" value={editForm.email} onChange={handleEditChange} className="w-full border rounded px-3 py-2" type="email" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Phone</label>
-                            <input name="phone" value={editForm.phone} onChange={handleEditChange} className="w-full border rounded px-3 py-2" disabled />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Date of Birth</label>
-                            <input name="date_of_birth" value={editForm.date_of_birth} onChange={handleEditChange} className="w-full border rounded px-3 py-2" type="date" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Gender</label>
-                            <select name="gender" value={editForm.gender} onChange={handleEditChange} className="w-full border rounded px-3 py-2">
-                              <option value="">Select</option>
-                              <option value="male">Male</option>
-                              <option value="female">Female</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Blood Group</label>
-                            <input name="blood_group" value={editForm.blood_group} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Allergies</label>
-                            <input name="allergies" value={editForm.allergies} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Street</label>
-                            <input name="street" value={editForm.street} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">City</label>
-                            <input name="city" value={editForm.city} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">State</label>
-                            <input name="state" value={editForm.state} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Pincode</label>
-                            <input name="pincode" value={editForm.pincode} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Country</label>
-                            <input name="country" value={editForm.country} onChange={handleEditChange} className="w-full border rounded px-3 py-2" />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button type="submit" className="bg-[#E17726] text-white" disabled={editLoading}>
-                            {editLoading ? 'Saving...' : 'Save Changes'}
-                          </Button>
-                          <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
-                          </DialogClose>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Address</label>
-                    <p className="text-gray-900">{patientInfo.address}</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                      <p className="text-gray-900">{userProfile?.city || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                      <p className="text-gray-900">{userProfile?.state || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-                      <p className="text-gray-900">{userProfile?.pincode || 'Not specified'}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Account Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Patient ID</label>
-                    <p className="text-gray-900">{userProfile?.id || 'Not available'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-                    <p className="text-gray-900">{userProfile?.role || 'Patient'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
-                    <p className="text-gray-900">{userProfile?.date_joined ? formatDate(userProfile.date_joined) : 'Not available'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Edit Profile Modal */}
+      <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your personal information and medical details.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Full Name</label>
+                <Input
+                  name="name"
+                  value={editForm.name}
+                  onChange={handleEditChange}
+                  placeholder="Enter your full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <Input
+                  name="email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={handleEditChange}
+                  placeholder="Enter your email"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone</label>
+                <Input
+                  name="phone"
+                  value={editForm.phone}
+                  onChange={handleEditChange}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Date of Birth</label>
+                <Input
+                  name="date_of_birth"
+                  type="date"
+                  value={editForm.date_of_birth}
+                  onChange={handleEditChange}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Gender</label>
+                <Select value={editForm.gender} onValueChange={(value) => setEditForm({ ...editForm, gender: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Blood Group</label>
+                <Select value={editForm.blood_group} onValueChange={(value) => setEditForm({ ...editForm, blood_group: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select blood group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A+">A+</SelectItem>
+                    <SelectItem value="A-">A-</SelectItem>
+                    <SelectItem value="B+">B+</SelectItem>
+                    <SelectItem value="B-">B-</SelectItem>
+                    <SelectItem value="AB+">AB+</SelectItem>
+                    <SelectItem value="AB-">AB-</SelectItem>
+                    <SelectItem value="O+">O+</SelectItem>
+                    <SelectItem value="O-">O-</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Allergies</label>
+              <Input
+                name="allergies"
+                value={editForm.allergies}
+                onChange={handleEditChange}
+                placeholder="List any allergies (comma separated)"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Street Address</label>
+                <Input
+                  name="street"
+                  value={editForm.street}
+                  onChange={handleEditChange}
+                  placeholder="Enter street address"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">City</label>
+                <Input
+                  name="city"
+                  value={editForm.city}
+                  onChange={handleEditChange}
+                  placeholder="Enter city"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">State</label>
+                <Input
+                  name="state"
+                  value={editForm.state}
+                  onChange={handleEditChange}
+                  placeholder="Enter state"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Pincode</label>
+                <Input
+                  name="pincode"
+                  value={editForm.pincode}
+                  onChange={handleEditChange}
+                  placeholder="Enter pincode"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditProfileOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editLoading} className="bg-[#E17726] hover:bg-[#c9651e]">
+                {editLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Prescription Modal */}
+      <Dialog open={viewPrescriptionOpen} onOpenChange={setViewPrescriptionOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Prescription Details</DialogTitle>
+            <DialogDescription>
+              {selectedPrescription && `By ${selectedPrescription.doctor_name} on ${formatDate(selectedPrescription.date)}`}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPrescription && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <h4 className="font-semibold">Medicines:</h4>
+                {selectedPrescription.medicines.map((medicine, index) => (
+                  <div key={index} className="p-3 border rounded-lg">
+                    <h5 className="font-medium">{medicine.name}</h5>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>Dosage: {medicine.dosage}</p>
+                      <p>Frequency: {medicine.frequency}</p>
+                      <p>Duration: {medicine.duration}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {selectedPrescription.notes && (
+                <div>
+                  <h4 className="font-semibold mb-2">Notes:</h4>
+                  <p className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">
+                    {selectedPrescription.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewPrescriptionOpen(false)}>
+              Close
+            </Button>
+            <Button className="bg-[#E17726] hover:bg-[#c9651e]">
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Book Consultation Modal Placeholder */}
+      <Dialog open={bookConsultationOpen} onOpenChange={setBookConsultationOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Book New Consultation</DialogTitle>
+            <DialogDescription>
+              Schedule a consultation with one of our healthcare professionals.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <CalendarDays className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 mb-4">Consultation booking form will be implemented here.</p>
+            <Button 
+              onClick={() => setBookConsultationOpen(false)}
+              className="bg-[#E17726] hover:bg-[#c9651e]"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default PatientDashboard; 
+export default PatientDashboard;
