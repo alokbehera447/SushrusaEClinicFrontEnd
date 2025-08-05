@@ -279,14 +279,7 @@ const Register = () => {
                     </div>
                   </div>
 
-                  {/* Test Info */}
-                  <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-                    <Shield className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
-                    <div className="text-sm text-blue-800">
-                      <span className="font-semibold">Test OTP:</span> 
-                      <span className="ml-2 font-mono bg-white px-2 py-1 rounded border">123456</span>
-                    </div>
-                  </div>
+
 
                   {/* Submit Button */}
                   <Button
