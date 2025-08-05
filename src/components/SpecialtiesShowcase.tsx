@@ -126,25 +126,24 @@ const SpecialtiesShowcase = () => {
   };
 
   return (
-    <section className="py-8 sm:py-12 lg:py-8 bg-gradient-to-b from-white to-sand-warm/20">
+    <section className="py-8 sm:py-12 lg:py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-6">
-          <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-[#E17726]/20 hover-glow group cursor-pointer">
+          <div className="inline-flex items-center space-x-2 sm:space-x-3 bg-orange-50 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-orange-200">
             <div className="relative">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-orange rounded-full animate-pulse-glow"></div>
-              <div className="absolute inset-0 w-2 h-2 sm:w-3 sm:h-3 bg-[#E17726] rounded-full animate-ping"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-orange-500 rounded-full"></div>
             </div>
-            <Sparkles className="w-4 h-4 text-[#E17726] group-hover:rotate-12 transition-transform duration-300" />
-            <span className="text-xs sm:text-sm lg:text-lg font-bold text-[#E17726] tracking-wide">MEDICAL SPECIALTIES</span>
+            <Sparkles className="w-4 h-4 text-orange-600" />
+            <span className="text-xs sm:text-sm lg:text-lg font-bold text-orange-600 tracking-wide">MEDICAL SPECIALTIES</span>
           </div>
           
           <div className="space-y-3 sm:space-y-4">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-midnight leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
               Expert care across
-              <span className="text-[#E17726] block">all specialties</span>
+              <span className="text-orange-600 block">all specialties</span>
             </h2>
             
-            <p className="text-base sm:text-lg md:text-xl text-midnight/70 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Our board-certified specialists provide world-class care across multiple medical disciplines, 
               ensuring you receive the right treatment from the right expert.
             </p>
@@ -154,36 +153,37 @@ const SpecialtiesShowcase = () => {
         {/* Desktop Grid */}
         <div className="hidden lg:grid lg:grid-cols-3 gap-6 sm:gap-8">
           {specialties.map((specialty, index) => (
-            <Card key={index} className="group hover:shadow-modern transition-all duration-500 hover:-translate-y-3 border-0 shadow-soft bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden">
+            <Card key={index} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border-0 shadow-md bg-white rounded-3xl overflow-hidden">
               <CardContent className="p-0">
                 {/* Image Section */}
-                <div className="aspect-[4/3] bg-gradient-to-br from-[#E17726]/5 to-aqua/5 relative overflow-hidden">
+                <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
                   <img 
                     src={specialty.image} 
                     alt={specialty.altText}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-midnight/40 via-transparent to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/40 via-transparent to-transparent"></div>
                   
                   {/* Icon overlay */}
                   <div className="absolute top-6 left-6 w-14 h-14 bg-white/90 rounded-2xl flex items-center justify-center">
-                    <specialty.icon className="w-7 h-7 text-[#E17726]" />
+                    <specialty.icon className="w-7 h-7 text-orange-600" />
                   </div>
                   
                   {/* Patient count */}
                   <div className="absolute bottom-6 left-6 right-6">
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2">
-                      <p className="text-sm font-medium text-midnight">{specialty.patients}</p>
+                    <div className="bg-white/90 rounded-xl px-4 py-2">
+                      <p className="text-sm font-medium text-gray-900">{specialty.patients}</p>
                     </div>
                   </div>
                 </div>
                 
                 {/* Content Section */}
                 <div className="p-6 sm:p-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-midnight mb-3 group-hover:text-[#E17726] transition-colors duration-300">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors duration-300">
                     {specialty.title}
                   </h3>
-                  <p className="text-midnight/70 leading-relaxed text-base sm:text-lg">
+                  <p className="text-gray-600 leading-relaxed text-base sm:text-lg">
                     {specialty.description}
                   </p>
                 </div>
@@ -209,36 +209,37 @@ const SpecialtiesShowcase = () => {
                 <div key={slideIndex} className="w-full flex-shrink-0 px-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     {specialties.slice(slideIndex * 2, slideIndex * 2 + 2).map((specialty, index) => (
-                      <Card key={index} className="group hover:shadow-modern transition-all duration-500 hover:-translate-y-2 border-0 shadow-soft bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden">
+                      <Card key={index} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-2 border-0 shadow-md bg-white rounded-2xl overflow-hidden">
                         <CardContent className="p-0">
                           {/* Image Section */}
-                          <div className="aspect-[4/3] bg-gradient-to-br from-[#E17726]/5 to-aqua/5 relative overflow-hidden">
+                          <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">
                             <img 
                               src={specialty.image} 
                               alt={specialty.altText}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-midnight/40 via-transparent to-transparent"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/40 via-transparent to-transparent"></div>
                             
                             {/* Icon overlay */}
                             <div className="absolute top-4 left-4 w-12 h-12 bg-white/90 rounded-xl flex items-center justify-center">
-                              <specialty.icon className="w-6 h-6 text-[#E17726]" />
+                              <specialty.icon className="w-6 h-6 text-orange-600" />
                             </div>
                             
                             {/* Patient count */}
                             <div className="absolute bottom-4 left-4 right-4">
-                              <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2">
-                                <p className="text-xs font-medium text-midnight">{specialty.patients}</p>
+                              <div className="bg-white/90 rounded-lg px-3 py-2">
+                                <p className="text-xs font-medium text-gray-900">{specialty.patients}</p>
                               </div>
                             </div>
                           </div>
                           
                           {/* Content Section */}
                           <div className="p-4 sm:p-6">
-                            <h3 className="text-lg sm:text-xl font-bold text-midnight mb-2 group-hover:text-[#E17726] transition-colors duration-300">
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors duration-300">
                               {specialty.title}
                             </h3>
-                            <p className="text-midnight/70 leading-relaxed text-sm sm:text-base">
+                            <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
                               {specialty.description}
                             </p>
                           </div>
@@ -256,7 +257,7 @@ const SpecialtiesShowcase = () => {
                 onClick={prevSlide}
                 variant="outline"
                 size="icon"
-                className="w-10 h-10 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift"
+                className="w-10 h-10 rounded-full bg-white/90 border-2 border-white/50 text-orange-600 hover:bg-orange-600 hover:text-white shadow-lg"
                 disabled={currentSlide === 0}
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -268,7 +269,7 @@ const SpecialtiesShowcase = () => {
                 onClick={nextSlide}
                 variant="outline"
                 size="icon"
-                className="w-10 h-10 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift"
+                className="w-10 h-10 rounded-full bg-white/90 border-2 border-white/50 text-orange-600 hover:bg-orange-600 hover:text-white shadow-lg"
                 disabled={currentSlide === Math.ceil(specialties.length / 2) - 1}
               >
                 <ChevronRight className="w-5 h-5" />
@@ -284,8 +285,8 @@ const SpecialtiesShowcase = () => {
                 onClick={() => goToSlide(index)}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   index === currentSlide
-                    ? 'bg-gradient-orange shadow-md scale-110'
-                    : 'bg-gray-300/60 hover:bg-[#E17726]/80 hover:scale-110'
+                    ? 'bg-orange-500 shadow-md scale-110'
+                    : 'bg-gray-300/60 hover:bg-orange-500/80 hover:scale-110'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
@@ -298,7 +299,7 @@ const SpecialtiesShowcase = () => {
               onClick={() => setIsAutoPlaying(!isAutoPlaying)}
               variant="outline"
               size="sm"
-              className="glass px-4 py-2 rounded-full text-xs font-medium text-gray-600 hover:text-[#E17726] transition-colors duration-300 border border-[#E17726]/20 hover:border-[#E17726]"
+              className="bg-white/90 px-4 py-2 rounded-full text-xs font-medium text-gray-600 hover:text-orange-600 transition-colors duration-300 border border-orange-200 hover:border-orange-500"
             >
               {isAutoPlaying ? '⏸️ Pause' : '▶️ Play'}
             </Button>

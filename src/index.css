@@ -445,8 +445,29 @@
 
 /* Mobile-specific optimizations */
 @media (max-width: 768px) {
+  /* Force visibility for mobile components */
+  .fade-in-section {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  
+  /* Ensure all sections are visible on mobile */
+  section {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  /* Disable complex animations on mobile for better performance */
   .animate-float {
-    animation: float 4s ease-in-out infinite;
+    animation: none;
+  }
+  
+  .animate-pulse-glow {
+    animation: none;
+  }
+  
+  .animate-gradient {
+    animation: none;
   }
 
   .hover-lift:hover {
