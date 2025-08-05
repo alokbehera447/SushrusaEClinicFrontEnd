@@ -47,7 +47,7 @@ const PartnershipsCertifications = () => (
         </p>
       </div>
 
-      {/* Hospital Partners */}
+      {/* Hospital Partners - COMMENTED OUT
       <div className="mb-8 sm:mb-12 lg:mb-16">
         <h3 className="text-2xl sm:text-3xl font-bold text-midnight mb-8 text-center flex items-center justify-center">
           <Building className="w-6 h-6 mr-3 text-[#E17726]" />
@@ -73,6 +73,7 @@ const PartnershipsCertifications = () => (
           ))}
         </div>
       </div>
+      */}
 
       {/* Certifications */}
       <div>
