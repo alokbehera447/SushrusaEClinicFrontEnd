@@ -153,19 +153,18 @@ const FindDoctors = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      {/* Fixed Back Button */}
-      <div className="fixed top-20 left-4 z-50">
-        <Link to="/" className="inline-flex items-center bg-white border-2 border-[#E17726] text-[#E17726] hover:text-white hover:bg-[#E17726] px-4 py-3 rounded-full font-bold transition-all duration-300 shadow-lg hover:shadow-xl">
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back
-        </Link>
-      </div>
-      
       {/* Header */}
       <div className="bg-gradient-to-br from-[#E17726]/10 to-cyan-400/10 py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button - Top Left */}
+          <div className="mb-8">
+            <Link to="/" className="inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-[#E17726] text-[#E17726] hover:text-white hover:bg-[#E17726] px-6 py-3 rounded-full font-bold transition-all duration-300 shadow-lg hover:shadow-xl">
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Home
+            </Link>
+          </div>
+          
           <div className="text-center">
-            
             <h1 className="text-4xl sm:text-5xl font-black text-midnight mb-4">
               Find Your Perfect
               <span className="block text-[#E17726]">Healthcare Partner</span>
