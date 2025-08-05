@@ -22,15 +22,43 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
+    // Debug logging
+    console.log('🚀 API Request:', {
+      method: config.method?.toUpperCase(),
+      url: `${config.baseURL}${config.url}`,
+      params: config.params,
+      hasToken: !!token
+    });
+    
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('❌ API Request Error:', error);
+    return Promise.reject(error);
+  }
 );
 
 // Handle 401 errors and try to refresh token
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Debug logging for successful responses
+    console.log('✅ API Response:', {
+      status: response.status,
+      url: response.config.url,
+      dataType: Array.isArray(response.data) ? 'array' : typeof response.data,
+      dataLength: Array.isArray(response.data) ? response.data.length : Object.keys(response.data || {}).length
+    });
+    return response;
+  },
   async (error) => {
+    // Debug logging for error responses
+    console.error('❌ API Response Error:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      message: error.message,
+      data: error.response?.data
+    });
     const originalRequest = error.config;
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

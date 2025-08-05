@@ -388,10 +388,27 @@ export const patientApi = {
   
   // Get patient medical records
   getPatientMedicalRecords: async (patientId: string, params?: any): Promise<MedicalRecord[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(
-      `/api/patients/${patientId}/medical-records/`, { params }
-    );
-    return response.data.data.results;
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(
+        `/api/patients/${patientId}/medical-records/`, { params }
+      );
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // If data structure is different, try direct results
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching medical records:', error);
+      return [];
+    }
   },
 
   // Create medical record
@@ -507,11 +524,28 @@ export const patientApi = {
   
   // Get patient consultations
   getPatientConsultations: async (patientId?: string, params?: any): Promise<Consultation[]> => {
-    const url = patientId 
-      ? `/api/consultations/?patient=${patientId}` 
-      : '/api/consultations/';
-    const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(url, { params });
-    return response.data.data.results;
+    try {
+      const url = patientId 
+        ? `/api/consultations/?patient=${patientId}` 
+        : '/api/consultations/';
+      const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(url, { params });
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // If data structure is different, try direct results
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching consultations:', error);
+      return [];
+    }
   },
 
   // Create consultation
@@ -559,8 +593,25 @@ export const patientApi = {
   
   // Get patient prescriptions
   getPatientPrescriptions: async (params?: any): Promise<Prescription[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<Prescription>>>('/api/prescriptions/', { params });
-    return response.data.data.results;
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<Prescription>>>('/api/prescriptions/', { params });
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // If data structure is different, try direct results
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+      return [];
+    }
   },
 
   // Get consultation prescriptions
