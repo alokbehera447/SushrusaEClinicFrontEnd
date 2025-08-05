@@ -83,7 +83,7 @@ const CoverageLocations = () => (
         ))}
       </div>
 
-      {/* CTA Section */}
+      {/* CTA Section - COMMENTED OUT
       <div className="text-center">
         <div className="bg-gradient-to-r from-[#E17726]/10 to-cyan-400/10 rounded-3xl p-6 sm:p-8 lg:p-12">
           <h3 className="text-2xl sm:text-3xl font-bold text-midnight mb-4">
@@ -98,6 +98,7 @@ const CoverageLocations = () => (
           </Button>
         </div>
       </div>
+      */}
     </div>
   </section>
 );
