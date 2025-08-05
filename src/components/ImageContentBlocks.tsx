@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Heart, Users, Award, Clock, Sparkles, Star, Shield } from 'lucide-react';
 import WhyChooseSushrusaModal from '@/components/detail-pages/WhyChooseSushrusaModal';
-import TechnologyShowcaseModal from '@/components/detail-pages/TechnologyShowcaseModal';
+import EClinicPage from '@/components/detail-pages/EClinicPage';
 
 const ImageContentBlocks = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const [showWhyChooseModal, setShowWhyChooseModal] = useState(false);
-  const [showTechnologyModal, setShowTechnologyModal] = useState(false);
+  const [showEClinicPage, setShowEClinicPage] = useState(false);
 
   const contentBlocks = [
     {
@@ -41,14 +41,14 @@ const ImageContentBlocks = () => {
     },
     {
       id: 3,
-      title: "Advanced medical technology",
-      subtitle: "Innovation meets compassion",
-      description: "Our state-of-the-art digital platform combines cutting-edge technology with personalized care to deliver exceptional healthcare experiences.",
-      buttonText: "Explore our technology",
-      image: "/medical-technology.svg",
-      imagePlaceholder: "Medical technology and innovation",
+      title: "Sushrusa Healthcare & Research Center",
+      subtitle: "Comprehensive care for all communities",
+      description: "Dedicated to providing high-quality, comprehensive healthcare services to individuals and communities through our innovative E-Clinic platform.",
+      buttonText: "Learn about E-Clinic",
+      image: "/img3.jpeg",
+      imagePlaceholder: "Healthcare research and rural outreach",
       reversed: false,
-      badge: "INNOVATION",
+      badge: "E-CLINIC",
       stats: []
     }
   ];
@@ -149,8 +149,8 @@ const ImageContentBlocks = () => {
                 onClick={() => {
                   if (block.buttonText === "Why choose SUSHRUSA") {
                     setShowWhyChooseModal(true);
-                  } else if (block.buttonText === "Explore our technology") {
-                    setShowTechnologyModal(true);
+                  } else if (block.buttonText === "Learn about E-Clinic") {
+                    setShowEClinicPage(true);
                   }
                 }}
                 className={`${
@@ -268,9 +268,9 @@ const ImageContentBlocks = () => {
       isOpen={showWhyChooseModal} 
       onClose={() => setShowWhyChooseModal(false)} 
     />
-    <TechnologyShowcaseModal 
-      isOpen={showTechnologyModal} 
-      onClose={() => setShowTechnologyModal(false)} 
+    <EClinicPage 
+      isOpen={showEClinicPage} 
+      onClose={() => setShowEClinicPage(false)} 
     />
   </>
   );

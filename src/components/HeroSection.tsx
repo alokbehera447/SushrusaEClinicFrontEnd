@@ -3,13 +3,11 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Calendar, Video, Shield, Star, Users, Clock, Play, Heart, ArrowRight, Sparkles, Zap, Award } from 'lucide-react';
 import BookConsultationModal from '@/components/detail-pages/BookConsultationModal';
-import FindDoctorsPage from '@/components/detail-pages/FindDoctorsPage';
 
 const HeroSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [showDoctorsPage, setShowDoctorsPage] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -116,15 +114,16 @@ const HeroSection = () => {
                 Book Consultation
               </Button>
               
-              <Button 
-                size="lg" 
-                variant="outline" 
-                onClick={() => setShowDoctorsPage(true)}
-                className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border-2 border-cyan-400/60 text-cyan-600 hover:bg-cyan-500 hover:text-white hover:border-cyan-500 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl group"
-              >
-                <Video className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:scale-110 transition-transform duration-300" />
-                Find Doctors
-              </Button>
+              <Link to="/find-doctors" className="group">
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border-2 border-cyan-400/60 text-cyan-600 hover:bg-cyan-500 hover:text-white hover:border-cyan-500 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  <Video className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:scale-110 transition-transform duration-300" />
+                  Find Doctors
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -215,10 +214,6 @@ const HeroSection = () => {
       <BookConsultationModal 
         isOpen={showBookingModal} 
         onClose={() => setShowBookingModal(false)} 
-      />
-      <FindDoctorsPage 
-        isOpen={showDoctorsPage} 
-        onClose={() => setShowDoctorsPage(false)} 
       />
     </section>
   );
