@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,17 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  patientApi, 
-  doctorApi, 
-  prescriptionApi,
-  Consultation as APIConsultation, 
-  Prescription as APIPrescription,
-  EnhancedPrescription,
-  CreatePrescriptionData,
-  PrescriptionMedication as APIMedication,
-  PrescriptionVitalSigns as APIVitalSigns
-} from '@/lib/api';
+import { patientApi, doctorApi } from '@/lib/api';
 import { 
   User,
   Phone,
@@ -50,36 +40,66 @@ import {
 // Interfaces
 interface Consultation {
   id: string;
-  patient: string; // Patient ID - this is what we need for prescriptions!
-  doctor: string; // Doctor ID
   patient_name: string;
+  patient_phone: string;
+  patient_email: string;
+  patient_age: number;
+  patient_gender: string;
   doctor_name: string;
-  patient_phone?: string;
-  patient_email?: string;
-  patient_age?: number;
-  patient_gender?: string;
   scheduled_date: string;
   scheduled_time: string;
   duration: number;
   consultation_type: string;
-  consultation_fee?: number;
+  consultation_fee: number;
   status: string;
   chief_complaint: string;
-  symptoms?: string;
+  symptoms: string;
   doctor_meeting_link?: string;
-  doctor_notes?: string;
-  patient_notes?: string;
-  payment_status?: string;
-  is_paid?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  booked_slot?: string;
 }
 
-// Use API interfaces directly
-type Medication = APIMedication;
-type VitalSigns = APIVitalSigns;
-type Prescription = EnhancedPrescription;
+interface Medication {
+  id?: number;
+  name: string;
+  generic_name: string;
+  brand_name: string;
+  strength: string;
+  dosage_form: string;
+  dosage: string;
+  frequency: string;
+  timing: string;
+  duration_days: number;
+  total_quantity: number;
+  special_instructions: string;
+  order: number;
+}
+
+interface VitalSigns {
+  blood_pressure_systolic: string;
+  blood_pressure_diastolic: string;
+  heart_rate: string;
+  temperature: string;
+  respiratory_rate: string;
+  oxygen_saturation: string;
+  weight: string;
+  height: string;
+  bmi: string;
+}
+
+interface Prescription {
+  id?: number;
+  consultation: string;
+  patient_name: string;
+  doctor_name: string;
+  diagnosis: string;
+  symptoms: string;
+  general_instructions: string;
+  issued_date: string;
+  valid_until: string;
+  status: string;
+  is_finalized: boolean;
+  medications: Medication[];
+  vital_signs: VitalSigns;
+}
 
 export default function ConsultationMeeting() {
   const { consultationId } = useParams<{ consultationId: string }>();
@@ -94,9 +114,17 @@ export default function ConsultationMeeting() {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
-  
-  // Ref to track if data has been loaded to prevent multiple calls
-  const dataLoadedRef = useRef(false);
+
+  // Auto-save effect
+  useEffect(() => {
+    const autoSaveTimer = setInterval(() => {
+      if (prescription && autoSaveEnabled && !prescription.is_finalized) {
+        savePrescription(true);
+      }
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(autoSaveTimer);
+  }, [prescription, autoSaveEnabled]);
 
   // Responsive effect
   useEffect(() => {
@@ -109,69 +137,23 @@ export default function ConsultationMeeting() {
     return () => window.removeEventListener('resize', checkMobileView);
   }, []);
 
-  const initializePrescription = useCallback((consultationData?: Consultation) => {
-    const consult = consultationData || consultation;
-    if (!consult) return;
-
-    const newPrescription: Prescription = {
-      consultation: consultationId!,
-      patient: consult.patient, // Use the actual patient ID
-      primary_diagnosis: '',
-      general_instructions: '',
-      is_draft: true,
-      is_finalized: false,
-      medications: [],
-      vital_signs: {
-        blood_pressure_systolic: undefined,
-        blood_pressure_diastolic: undefined,
-        pulse: undefined,
-        temperature: undefined,
-        respiratory_rate: undefined,
-        oxygen_saturation: undefined,
-        weight: undefined,
-        height: undefined
-      },
-      // Additional fields from API
-      secondary_diagnosis: '',
-      clinical_classification: '',
-      fluid_intake: '',
-      diet_instructions: '',
-      lifestyle_advice: '',
-      next_visit: '',
-      follow_up_notes: ''
-    };
-
-    setPrescription(newPrescription);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultationId]); // consultation intentionally excluded to prevent circular dependency
-
-  const loadPrescription = useCallback(async (consultationData?: Consultation) => {
-    try {
-      const prescription = await prescriptionApi.getConsultationPrescription(consultationId!);
-      if (prescription) {
-        setPrescription(prescription);
-      } else {
-        initializePrescription(consultationData);
-      }
-    } catch (error) {
-      console.error('Error loading prescription:', error);
-      // If no prescription exists, initialize a new one
-      initializePrescription(consultationData);
+  // Load data on mount
+  useEffect(() => {
+    if (consultationId) {
+      loadConsultationData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultationId]); // initializePrescription intentionally excluded to prevent circular dependency
+  }, [consultationId]);
 
-  const loadConsultationData = useCallback(async () => {
+  const loadConsultationData = async () => {
     try {
       setLoading(true);
       
       // Load consultation details
       const consultationResponse = await patientApi.getConsultation(consultationId!);
-      const consultationData = consultationResponse as unknown as Consultation;
-      setConsultation(consultationData);
+      setConsultation(consultationResponse);
       
-      // Load existing prescription if any, passing consultation data to avoid dependency
-      await loadPrescription(consultationData);
+      // Load existing prescription if any
+      await loadPrescription();
     } catch (error) {
       console.error('Error loading consultation data:', error);
       toast({
@@ -182,39 +164,79 @@ export default function ConsultationMeeting() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultationId, toast]); // loadPrescription intentionally excluded to prevent circular dependency
+  };
+
+  const loadPrescription = async () => {
+    try {
+      const prescriptions = await patientApi.getConsultationPrescriptions(consultationId!);
+      if (prescriptions && prescriptions.length > 0) {
+        setPrescription(prescriptions[0]);
+      } else {
+        initializePrescription();
+      }
+    } catch (error) {
+      console.error('Error loading prescription:', error);
+      initializePrescription();
+    }
+  };
+
+  const initializePrescription = () => {
+    if (!consultation) return;
+
+    const newPrescription: Prescription = {
+      consultation: consultationId!,
+      patient_name: consultation.patient_name,
+      doctor_name: consultation.doctor_name,
+      diagnosis: '',
+      symptoms: consultation.symptoms || '',
+      general_instructions: '',
+      issued_date: new Date().toISOString().split('T')[0],
+      valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: 'draft',
+      is_finalized: false,
+      medications: [],
+      vital_signs: {
+        blood_pressure_systolic: '',
+        blood_pressure_diastolic: '',
+        heart_rate: '',
+        temperature: '',
+        respiratory_rate: '',
+        oxygen_saturation: '',
+        weight: '',
+        height: '',
+        bmi: ''
+      }
+    };
+
+    setPrescription(newPrescription);
+  };
 
   const addMedication = () => {
     if (!prescription) return;
 
     const newMedication: Medication = {
-      medicine_name: '',
-      composition: '',
+      name: '',
+      generic_name: '',
+      brand_name: '',
+      strength: '',
       dosage_form: 'tablet',
-      morning_dose: 0,
-      afternoon_dose: 0,
-      evening_dose: 0,
-      frequency: 'once_daily',
-      timing: 'after_breakfast',
-      custom_timing: '',
+      dosage: '',
+      frequency: '',
+      timing: 'after_meal',
       duration_days: 7,
-      duration_weeks: 0,
-      duration_months: 0,
-      is_continuous: false,
+      total_quantity: 0,
       special_instructions: '',
-      notes: '',
-      order: (prescription.medications?.length || 0) + 1,
+      order: prescription.medications.length + 1,
     };
 
     setPrescription({
       ...prescription,
-      medications: [...(prescription.medications || []), newMedication],
+      medications: [...prescription.medications, newMedication],
     });
   };
 
-  const updateMedication = (index: number, field: keyof Medication, value: string | number | boolean) => {
-    if (!prescription || !prescription.medications) return;
+  const updateMedication = (index: number, field: keyof Medication, value: string | number) => {
+    if (!prescription) return;
 
     const updatedMedications = [...prescription.medications];
     updatedMedications[index] = {
@@ -229,7 +251,7 @@ export default function ConsultationMeeting() {
   };
 
   const removeMedication = (index: number) => {
-    if (!prescription || !prescription.medications) return;
+    if (!prescription) return;
 
     const updatedMedications = prescription.medications.filter((_, i) => i !== index);
     setPrescription({
@@ -247,86 +269,60 @@ export default function ConsultationMeeting() {
     });
   };
 
-  const updateVitalSigns = (field: keyof VitalSigns, value: string | number) => {
-    if (!prescription) return;
+  const updateVitalSigns = (field: keyof VitalSigns, value: string) => {
+    if (!prescription || !prescription.vital_signs) return;
 
-    const numericValue = typeof value === 'string' ? (value === '' ? undefined : Number(value)) : value;
-    
     setPrescription({
       ...prescription,
       vital_signs: {
         ...prescription.vital_signs,
-        [field]: numericValue,
+        [field]: value,
       },
     });
   };
 
-  const savePrescription = useCallback(async (isAutoSave = false) => {
-    if (!prescription || !consultation) return;
+  const savePrescription = async (isAutoSave = false) => {
+    if (!prescription) return;
 
     try {
       setSaving(true);
 
-      // Prepare prescription data for API
-      const prescriptionData: CreatePrescriptionData = {
-        consultation: consultationId!,
-        patient: consultation.patient, // Use the actual patient ID from consultation
-        primary_diagnosis: prescription.primary_diagnosis || '',
-        secondary_diagnosis: prescription.secondary_diagnosis || '',
-        clinical_classification: prescription.clinical_classification || '',
-        general_instructions: prescription.general_instructions || '',
-        fluid_intake: prescription.fluid_intake || '',
-        diet_instructions: prescription.diet_instructions || '',
-        lifestyle_advice: prescription.lifestyle_advice || '',
-        next_visit: prescription.next_visit || '',
-        follow_up_notes: prescription.follow_up_notes || '',
-        
-        // Vital signs
-        pulse: prescription.vital_signs?.pulse,
-        blood_pressure_systolic: prescription.vital_signs?.blood_pressure_systolic,
-        blood_pressure_diastolic: prescription.vital_signs?.blood_pressure_diastolic,
-        temperature: prescription.vital_signs?.temperature,
-        weight: prescription.vital_signs?.weight,
-        height: prescription.vital_signs?.height,
-        
-        // Medications
-        medications: prescription.medications?.map(med => ({
-          medicine_name: med.medicine_name,
-          composition: med.composition || '',
-          dosage_form: med.dosage_form || 'tablet',
-          morning_dose: med.morning_dose || 0,
-          afternoon_dose: med.afternoon_dose || 0,
-          evening_dose: med.evening_dose || 0,
-          frequency: med.frequency || 'once_daily',
-          timing: med.timing || 'after_breakfast',
-          custom_timing: med.custom_timing || '',
-          duration_days: med.duration_days || 0,
-          duration_weeks: med.duration_weeks || 0,
-          duration_months: med.duration_months || 0,
-          is_continuous: med.is_continuous || false,
-          special_instructions: med.special_instructions || '',
-          notes: med.notes || '',
-          order: med.order || 1
-        })) || []
-      };
-
-      let savedPrescription: EnhancedPrescription;
-      
+      // Use direct API calls since structured endpoints don't exist
+      let response;
       if (prescription.id) {
         // Update existing prescription
-        savedPrescription = await prescriptionApi.partialUpdatePrescription(prescription.id.toString(), prescriptionData);
+        response = await fetch(`/api/prescriptions/${prescription.id}/`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          },
+          body: JSON.stringify(prescription)
+        });
       } else {
         // Create new prescription
-        savedPrescription = await prescriptionApi.createPrescription(prescriptionData);
+        response = await fetch('/api/prescriptions/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          },
+          body: JSON.stringify(prescription)
+        });
       }
 
-      setPrescription(savedPrescription);
-      
-      if (!isAutoSave) {
-        toast({
-          title: 'Success',
-          description: 'Prescription saved successfully',
-        });
+      if (response.ok) {
+        const data = await response.json();
+        setPrescription(data.data || data);
+        
+        if (!isAutoSave) {
+          toast({
+            title: 'Success',
+            description: 'Prescription saved successfully',
+          });
+        }
+      } else {
+        throw new Error('Failed to save prescription');
       }
     } catch (error) {
       console.error('Error saving prescription:', error);
@@ -340,35 +336,7 @@ export default function ConsultationMeeting() {
     } finally {
       setSaving(false);
     }
-  }, [prescription, consultation, consultationId, toast]);
-
-  // Load data on mount - only once
-  useEffect(() => {
-    if (consultationId && !dataLoadedRef.current) {
-      dataLoadedRef.current = true;
-      loadConsultationData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultationId]); // loadConsultationData intentionally excluded to prevent re-renders
-
-  // Auto-save effect - use ref to avoid unnecessary re-renders
-  const prescriptionRef = useRef(prescription);
-  const autoSaveEnabledRef = useRef(autoSaveEnabled);
-  
-  useEffect(() => {
-    prescriptionRef.current = prescription;
-    autoSaveEnabledRef.current = autoSaveEnabled;
-  });
-
-  useEffect(() => {
-    const autoSaveTimer = setInterval(() => {
-      if (prescriptionRef.current && autoSaveEnabledRef.current && !prescriptionRef.current.is_finalized) {
-        savePrescription(true);
-      }
-    }, 30000); // Auto-save every 30 seconds
-
-    return () => clearInterval(autoSaveTimer);
-  }, [savePrescription]); // Only depend on savePrescription
+  };
 
   const finalizePrescription = async () => {
     if (!prescription) return;
@@ -376,22 +344,44 @@ export default function ConsultationMeeting() {
     try {
       setSaving(true);
 
-      // First save the prescription if it doesn't exist
-      if (!prescription.id) {
-        await savePrescription(true); // Save as auto-save to avoid duplicate toast
+      const finalizedPrescription = {
+        ...prescription,
+        is_finalized: true,
+        status: 'active',
+        issued_date: new Date().toISOString().split('T')[0],
+      };
+
+      let response;
+      if (prescription.id) {
+        response = await fetch(`/api/prescriptions/${prescription.id}/`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          },
+          body: JSON.stringify(finalizedPrescription)
+        });
+      } else {
+        response = await fetch('/api/prescriptions/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          },
+          body: JSON.stringify(finalizedPrescription)
+        });
       }
 
-      // Then finalize it
-      if (prescription.id) {
-        const finalizedPrescription = await prescriptionApi.finalizePrescription(prescription.id.toString());
-        setPrescription(finalizedPrescription);
+      if (response.ok) {
+        const data = await response.json();
+        setPrescription(data.data || data);
         
         toast({
           title: 'Success',
           description: 'Prescription finalized successfully',
         });
       } else {
-        throw new Error('Failed to create prescription before finalizing');
+        throw new Error('Failed to finalize prescription');
       }
     } catch (error) {
       console.error('Error finalizing prescription:', error);
@@ -593,22 +583,23 @@ export default function ConsultationMeeting() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div>
-                            <Label htmlFor="primary_diagnosis">Primary Diagnosis</Label>
+                            <Label htmlFor="diagnosis">Diagnosis</Label>
                             <Input
-                              id="primary_diagnosis"
-                              value={prescription.primary_diagnosis || ''}
-                              onChange={(e) => updatePrescription('primary_diagnosis', e.target.value)}
+                              id="diagnosis"
+                              value={prescription.diagnosis}
+                              onChange={(e) => updatePrescription('diagnosis', e.target.value)}
                               placeholder="Primary diagnosis"
                               disabled={prescription.is_finalized}
                             />
                           </div>
                           <div>
-                            <Label htmlFor="secondary_diagnosis">Secondary Diagnosis</Label>
-                            <Input
-                              id="secondary_diagnosis"
-                              value={prescription.secondary_diagnosis || ''}
-                              onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
-                              placeholder="Secondary diagnosis (optional)"
+                            <Label htmlFor="symptoms">Symptoms</Label>
+                            <Textarea
+                              id="symptoms"
+                              value={prescription.symptoms}
+                              onChange={(e) => updatePrescription('symptoms', e.target.value)}
+                              placeholder="Patient symptoms"
+                              rows={3}
                               disabled={prescription.is_finalized}
                             />
                           </div>
@@ -616,7 +607,7 @@ export default function ConsultationMeeting() {
                             <Label htmlFor="instructions">General Instructions</Label>
                             <Textarea
                               id="instructions"
-                              value={prescription.general_instructions || ''}
+                              value={prescription.general_instructions}
                               onChange={(e) => updatePrescription('general_instructions', e.target.value)}
                               placeholder="General instructions for patient"
                               rows={3}
@@ -665,48 +656,36 @@ export default function ConsultationMeeting() {
                                     <div>
                                       <Label>Medicine Name</Label>
                                       <Input
-                                        value={medication.medicine_name || ''}
-                                        onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
+                                        value={medication.name}
+                                        onChange={(e) => updateMedication(index, 'name', e.target.value)}
                                         placeholder="Medicine name"
                                         disabled={prescription.is_finalized}
                                       />
                                     </div>
                                     <div>
-                                      <Label>Composition</Label>
+                                      <Label>Strength</Label>
                                       <Input
-                                        value={medication.composition || ''}
-                                        onChange={(e) => updateMedication(index, 'composition', e.target.value)}
-                                        placeholder="e.g., Paracetamol 500mg"
+                                        value={medication.strength}
+                                        onChange={(e) => updateMedication(index, 'strength', e.target.value)}
+                                        placeholder="e.g., 500mg"
                                         disabled={prescription.is_finalized}
                                       />
                                     </div>
                                     <div>
-                                      <Label>Morning Dose</Label>
+                                      <Label>Dosage</Label>
                                       <Input
-                                        type="number"
-                                        value={medication.morning_dose || 0}
-                                        onChange={(e) => updateMedication(index, 'morning_dose', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
+                                        value={medication.dosage}
+                                        onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
+                                        placeholder="e.g., 1 tablet"
                                         disabled={prescription.is_finalized}
                                       />
                                     </div>
                                     <div>
-                                      <Label>Afternoon Dose</Label>
+                                      <Label>Frequency</Label>
                                       <Input
-                                        type="number"
-                                        value={medication.afternoon_dose || 0}
-                                        onChange={(e) => updateMedication(index, 'afternoon_dose', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Evening Dose</Label>
-                                      <Input
-                                        type="number"
-                                        value={medication.evening_dose || 0}
-                                        onChange={(e) => updateMedication(index, 'evening_dose', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
+                                        value={medication.frequency}
+                                        onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
+                                        placeholder="e.g., Twice daily"
                                         disabled={prescription.is_finalized}
                                       />
                                     </div>
@@ -714,8 +693,17 @@ export default function ConsultationMeeting() {
                                       <Label>Duration (days)</Label>
                                       <Input
                                         type="number"
-                                        value={medication.duration_days || 0}
-                                        onChange={(e) => updateMedication(index, 'duration_days', parseInt(e.target.value) || 0)}
+                                        value={medication.duration_days}
+                                        onChange={(e) => updateMedication(index, 'duration_days', parseInt(e.target.value))}
+                                        disabled={prescription.is_finalized}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label>Total Quantity</Label>
+                                      <Input
+                                        type="number"
+                                        value={medication.total_quantity}
+                                        onChange={(e) => updateMedication(index, 'total_quantity', parseInt(e.target.value))}
                                         disabled={prescription.is_finalized}
                                       />
                                     </div>
@@ -723,7 +711,7 @@ export default function ConsultationMeeting() {
                                   <div>
                                     <Label>Special Instructions</Label>
                                     <Textarea
-                                      value={medication.special_instructions || ''}
+                                      value={medication.special_instructions}
                                       onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
                                       placeholder="Special instructions for this medication"
                                       rows={2}
@@ -742,7 +730,7 @@ export default function ConsultationMeeting() {
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">No Prescription</h3>
                       <p className="text-gray-600 mb-4">Click below to create a new prescription</p>
-                      <Button onClick={() => initializePrescription()}>
+                      <Button onClick={initializePrescription}>
                         <Plus className="h-4 w-4 mr-2" />
                         Create Prescription
                       </Button>
@@ -768,7 +756,7 @@ export default function ConsultationMeeting() {
                               <Heart className="h-4 w-4 text-red-500" />
                               <Input
                                 id="bp_systolic"
-                                value={prescription.vital_signs?.blood_pressure_systolic || ''}
+                                value={prescription.vital_signs.blood_pressure_systolic}
                                 onChange={(e) => updateVitalSigns('blood_pressure_systolic', e.target.value)}
                                 placeholder="120"
                                 disabled={prescription.is_finalized}
@@ -782,7 +770,7 @@ export default function ConsultationMeeting() {
                               <Heart className="h-4 w-4 text-red-500" />
                               <Input
                                 id="bp_diastolic"
-                                value={prescription.vital_signs?.blood_pressure_diastolic || ''}
+                                value={prescription.vital_signs.blood_pressure_diastolic}
                                 onChange={(e) => updateVitalSigns('blood_pressure_diastolic', e.target.value)}
                                 placeholder="80"
                                 disabled={prescription.is_finalized}
@@ -791,13 +779,13 @@ export default function ConsultationMeeting() {
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="pulse">Pulse</Label>
+                            <Label htmlFor="heart_rate">Heart Rate</Label>
                             <div className="flex items-center space-x-2">
                               <Activity className="h-4 w-4 text-green-500" />
                               <Input
-                                id="pulse"
-                                value={prescription.vital_signs?.pulse || ''}
-                                onChange={(e) => updateVitalSigns('pulse', e.target.value)}
+                                id="heart_rate"
+                                value={prescription.vital_signs.heart_rate}
+                                onChange={(e) => updateVitalSigns('heart_rate', e.target.value)}
                                 placeholder="72"
                                 disabled={prescription.is_finalized}
                               />
@@ -810,7 +798,7 @@ export default function ConsultationMeeting() {
                               <Thermometer className="h-4 w-4 text-orange-500" />
                               <Input
                                 id="temperature"
-                                value={prescription.vital_signs?.temperature || ''}
+                                value={prescription.vital_signs.temperature}
                                 onChange={(e) => updateVitalSigns('temperature', e.target.value)}
                                 placeholder="98.6"
                                 disabled={prescription.is_finalized}
@@ -824,7 +812,7 @@ export default function ConsultationMeeting() {
                               <Droplets className="h-4 w-4 text-blue-500" />
                               <Input
                                 id="oxygen_saturation"
-                                value={prescription.vital_signs?.oxygen_saturation || ''}
+                                value={prescription.vital_signs.oxygen_saturation}
                                 onChange={(e) => updateVitalSigns('oxygen_saturation', e.target.value)}
                                 placeholder="98"
                                 disabled={prescription.is_finalized}
@@ -838,7 +826,7 @@ export default function ConsultationMeeting() {
                               <Weight className="h-4 w-4 text-purple-500" />
                               <Input
                                 id="weight"
-                                value={prescription.vital_signs?.weight || ''}
+                                value={prescription.vital_signs.weight}
                                 onChange={(e) => updateVitalSigns('weight', e.target.value)}
                                 placeholder="70"
                                 disabled={prescription.is_finalized}

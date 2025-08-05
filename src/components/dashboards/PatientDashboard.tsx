@@ -65,7 +65,12 @@ import { useAuth } from '@/context/AuthContext';
 import {
   patientApi,
   UserProfile,
+  PatientProfile,
   Consultation,
+  MedicalRecord,
+  PatientDocument,
+  PatientNote,
+  Prescription as APIPrescription,
   formatDate,
   formatDateTime
 } from '@/lib/api';
@@ -84,9 +89,17 @@ import { useToast } from '@/components/ui/use-toast';
 // Import new components
 import PatientOverview from './patient/PatientOverview';
 import PatientConsultations from './patient/PatientConsultations';
-import PatientRecords from './patient/PatientRecords';
+import PatientRecordsManager from './patient/PatientRecordsManager';
 
 // Define interfaces
+interface TransformedPrescription {
+  id: string;
+  doctor_name: string;
+  date: string;
+  medicines: Array<{name: string; dosage: string; frequency: string; duration: string}>;
+  notes: string;
+}
+
 interface EditProfileForm {
   name: string;
   email: string;
@@ -99,6 +112,13 @@ interface EditProfileForm {
   state: string;
   pincode: string;
   country: string;
+  // Health Information fields
+  allergies: string;
+  chronic_conditions: string[];
+  current_medications: string[];
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_relationship: string;
 }
 
 interface Prescription {
@@ -130,17 +150,17 @@ const PatientDashboard = () => {
 
   // State for data - Real API Integration without dummy fallbacks
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [patientProfile, setPatientProfile] = useState<Record<string, unknown> | null>(null);
+  const [patientProfile, setPatientProfile] = useState<PatientProfile | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [prescriptions, setPrescriptions] = useState<Record<string, unknown>[]>([]);
-  const [medicalRecords, setMedicalRecords] = useState<Record<string, unknown>[]>([]);
-  const [documents, setDocuments] = useState<Record<string, unknown>[]>([]);
-  const [notes, setNotes] = useState<Record<string, unknown>[]>([]);
+  const [prescriptions, setPrescriptions] = useState<TransformedPrescription[]>([]);
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [documents, setDocuments] = useState<PatientDocument[]>([]);
+  const [notes, setNotes] = useState<PatientNote[]>([]);
   const [payments, setPayments] = useState<Record<string, unknown>[]>([]);
   const [notifications, setNotifications] = useState<Record<string, unknown>[]>([]);
   const [analytics, setAnalytics] = useState<Record<string, unknown> | null>(null);
   const [sessions, setSessions] = useState<Record<string, unknown>[]>([]);
-  const [healthMetrics, setHealthMetrics] = useState<Record<string, unknown>[]>([]);
+  const [healthMetrics, setHealthMetrics] = useState<Record<string, any>[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -162,7 +182,7 @@ const PatientDashboard = () => {
   // Modal states
   const [bookConsultationOpen, setBookConsultationOpen] = useState(false);
   const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
-  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
+  const [selectedPrescription, setSelectedPrescription] = useState<TransformedPrescription | null>(null);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
 
@@ -179,6 +199,13 @@ const PatientDashboard = () => {
     state: '',
     pincode: '',
     country: '',
+    // Health Information fields
+    allergies: '',
+    chronic_conditions: [],
+    current_medications: [],
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    emergency_contact_relationship: '',
   });
 
   // === REAL API INTEGRATION - NO DUMMY DATA ===
@@ -249,12 +276,12 @@ const PatientDashboard = () => {
       console.log('Prescriptions received:', prescriptionsData);
       
       // Transform API data to match our interface
-      const transformedPrescriptions = prescriptionsData.map((prescription: any) => ({
+      const transformedPrescriptions = prescriptionsData.map((prescription: APIPrescription) => ({
         id: prescription.id,
         doctor_name: prescription.doctor_name || 'Unknown Doctor',
-        date: prescription.created_at ? formatDate(prescription.created_at) : formatDate(new Date().toISOString()),
-        medicines: prescription.medications || [],
-        notes: prescription.notes || ''
+        date: formatDate(prescription.created_at),
+        medicines: [], // We'll need to fetch medications separately if needed
+        notes: prescription.general_instructions || ''
       }));
       
       setPrescriptions(transformedPrescriptions);
@@ -354,21 +381,21 @@ const PatientDashboard = () => {
 
   // Initialize health metrics (will be replaced with real API)
   const initializeHealthMetrics = useCallback(() => {
-    const mockMetrics: HealthMetric[] = [
+    const mockMetrics: Record<string, any>[] = [
       {
         id: '1',
         type: 'blood_pressure',
         value: '120/80',
+        date: new Date().toISOString(),
         unit: 'mmHg',
-        recorded_date: new Date().toISOString(),
         status: 'normal'
       },
       {
         id: '2',
         type: 'weight',
         value: '70',
+        date: new Date().toISOString(),
         unit: 'kg',
-        recorded_date: new Date().toISOString(),
         status: 'normal'
       }
     ];
@@ -434,9 +461,16 @@ const PatientDashboard = () => {
         state: userProfile.state || '',
         pincode: userProfile.pincode || '',
         country: userProfile.country || '',
+        // Health Information fields
+        allergies: patientProfile?.allergies || '',
+        chronic_conditions: patientProfile?.chronic_conditions || [],
+        current_medications: patientProfile?.current_medications || [],
+        emergency_contact_name: patientProfile?.emergency_contact_name || '',
+        emergency_contact_phone: patientProfile?.emergency_contact_phone || '',
+        emergency_contact_relationship: patientProfile?.emergency_contact_relationship || '',
       });
     }
-  }, [userProfile]);
+  }, [userProfile, patientProfile]);
 
   // Get comprehensive stats from all real APIs
   const getQuickStats = () => {
@@ -456,42 +490,7 @@ const PatientDashboard = () => {
 
   const stats = getQuickStats();
 
-  // Action handlers for the component APIs
-  const handleCreateMedicalRecord = async () => {
-    // Placeholder - would open modal/form
-    toast({ title: 'Feature Coming Soon', description: 'Medical record creation will be available soon.' });
-  };
 
-  const handleUploadDocument = async () => {
-    // Placeholder - would open file picker
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,application/pdf,.doc,.docx';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        toast({ title: 'Feature Coming Soon', description: 'Document upload will be available soon.' });
-      }
-    };
-    input.click();
-  };
-
-  const handleCreateNote = async () => {
-    // Placeholder - would open modal/form
-    toast({ title: 'Feature Coming Soon', description: 'Note creation will be available soon.' });
-  };
-
-  const handleDeleteMedicalRecord = async (id: string) => {
-    toast({ title: 'Feature Coming Soon', description: 'Medical record deletion will be available soon.' });
-  };
-
-  const handleDeleteDocument = async (id: string) => {
-    toast({ title: 'Feature Coming Soon', description: 'Document deletion will be available soon.' });
-  };
-
-  const handleDeleteNote = async (id: string) => {
-    toast({ title: 'Feature Coming Soon', description: 'Note deletion will be available soon.' });
-  };
 
   // Helper function to get display name
   const getDisplayName = (profile: UserProfile | null): string => {
@@ -763,22 +762,14 @@ const PatientDashboard = () => {
 
           {/* Records Tab */}
           <TabsContent value="records" className="space-y-6 mt-6">
-            <PatientRecords 
-              medicalRecords={medicalRecords}
-              documents={documents}
-              notes={notes}
-              loading={{
-                medicalRecords: medicalRecordsLoading,
-                documents: documentsLoading,
-                notes: notesLoading
-              }}
-              onCreateMedicalRecord={handleCreateMedicalRecord}
-              onUploadDocument={handleUploadDocument}
-              onCreateNote={handleCreateNote}
-              onDeleteMedicalRecord={handleDeleteMedicalRecord}
-              onDeleteDocument={handleDeleteDocument}
-              onDeleteNote={handleDeleteNote}
-            />
+            {patientProfile?.id ? (
+              <PatientRecordsManager patientId={patientProfile.id} />
+            ) : (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <span className="ml-3">Loading patient information...</span>
+              </div>
+            )}
           </TabsContent>
 
           {/* Profile Tab */}
@@ -1094,6 +1085,61 @@ const PatientDashboard = () => {
                 </div>
               </div>
             </div>
+
+            {/* Health Information */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-gray-800">Health Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Allergies</label>
+                  <Input
+                    value={editForm.allergies}
+                    onChange={(e) => setEditForm({ ...editForm, allergies: e.target.value })}
+                    placeholder="List your allergies (e.g., peanuts, latex)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Chronic Conditions</label>
+                  <Input
+                    value={editForm.chronic_conditions.join(', ')}
+                    onChange={(e) => setEditForm({ ...editForm, chronic_conditions: e.target.value.split(',').map(s => s.trim()) })}
+                    placeholder="List your chronic conditions (e.g., asthma, diabetes)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Current Medications</label>
+                  <Input
+                    value={editForm.current_medications.join(', ')}
+                    onChange={(e) => setEditForm({ ...editForm, current_medications: e.target.value.split(',').map(s => s.trim()) })}
+                    placeholder="List your current medications (e.g., ibuprofen, metformin)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Emergency Contact Name</label>
+                  <Input
+                    value={editForm.emergency_contact_name}
+                    onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })}
+                    placeholder="Enter emergency contact name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Emergency Contact Phone</label>
+                  <Input
+                    value={editForm.emergency_contact_phone}
+                    onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })}
+                    placeholder="Enter emergency contact phone"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Emergency Contact Relationship</label>
+                  <Input
+                    value={editForm.emergency_contact_relationship}
+                    onChange={(e) => setEditForm({ ...editForm, emergency_contact_relationship: e.target.value })}
+                    placeholder="Enter emergency contact relationship"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="flex gap-2">
@@ -1108,8 +1154,41 @@ const PatientDashboard = () => {
               onClick={async () => {
                 try {
                   setEditLoading(true);
-                  // Here you would call the API to update the profile
-                  // await patientApi.updateUserProfile(editForm);
+                  
+                  // Update user profile (basic info)
+                  const userProfileData = {
+                    name: editForm.name,
+                    email: editForm.email,
+                    phone: editForm.phone,
+                    age: parseInt(editForm.age) || null,
+                    gender: editForm.gender,
+                    blood_group: editForm.blood_group,
+                    street: editForm.address,
+                    city: editForm.city,
+                    state: editForm.state,
+                    pincode: editForm.pincode,
+                    country: editForm.country,
+                    emergency_contact_name: editForm.emergency_contact_name,
+                    emergency_contact_phone: editForm.emergency_contact_phone,
+                    emergency_contact_relationship: editForm.emergency_contact_relationship,
+                  };
+                  
+                  await patientApi.updateUserProfile(userProfileData);
+                  
+                  // Update patient profile (health info) if patient profile exists
+                  if (patientProfile?.id) {
+                    const patientProfileData = {
+                      allergies: editForm.allergies,
+                      chronic_conditions: editForm.chronic_conditions,
+                      current_medications: editForm.current_medications,
+                      emergency_contact_name: editForm.emergency_contact_name,
+                      emergency_contact_phone: editForm.emergency_contact_phone,
+                      emergency_contact_relationship: editForm.emergency_contact_relationship,
+                    };
+                    
+                    await patientApi.updatePatientProfile(patientProfile.id, patientProfileData);
+                  }
+                  
                   toast({ 
                     title: 'Profile Updated', 
                     description: 'Your profile has been updated successfully!' 
@@ -1118,6 +1197,7 @@ const PatientDashboard = () => {
                   // Refresh user profile data
                   await fetchUserProfile();
                 } catch (error) {
+                  console.error('Error updating profile:', error);
                   toast({ 
                     title: 'Error', 
                     description: 'Failed to update profile. Please try again.', 

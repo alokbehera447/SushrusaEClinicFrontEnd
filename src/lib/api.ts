@@ -2729,4 +2729,225 @@ export const doctorStatusApi = {
     const response = await api.post<ApiResponse<any>>('/api/doctors/status/offline/');
     return response.data;
   },
+};
+
+// ===== PRESCRIPTION APIs =====
+
+// Enhanced Prescription interfaces to match backend
+export interface PrescriptionMedication {
+  id?: number;
+  medicine_name: string;
+  composition?: string;
+  dosage_form?: string;
+  morning_dose: number;
+  afternoon_dose: number;
+  evening_dose: number;
+  frequency: 'once_daily' | 'twice_daily' | 'thrice_daily' | 'four_times_daily' | 'sos' | 'custom';
+  timing: 'before_breakfast' | 'after_breakfast' | 'before_lunch' | 'after_lunch' | 'before_dinner' | 'after_dinner' | 'bedtime' | 'empty_stomach' | 'with_food' | 'custom';
+  custom_timing?: string;
+  duration_days?: number;
+  duration_weeks?: number;
+  duration_months?: number;
+  is_continuous: boolean;
+  special_instructions?: string;
+  notes?: string;
+  order: number;
+}
+
+export interface PrescriptionVitalSigns {
+  id?: number;
+  pulse?: number;
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  oxygen_saturation?: number;
+  respiratory_rate?: number;
+}
+
+export interface EnhancedPrescription {
+  id?: number;
+  consultation?: string;
+  patient?: string;
+  doctor?: any;
+  consultation_id?: string;
+  consultation_date?: string;
+  consultation_time?: string;
+  patient_age?: number;
+  patient_gender?: string;
+  issued_date?: string;
+  issued_time?: string;
+  
+  // Vital Signs
+  pulse?: number;
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  blood_pressure_display?: string;
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  
+  // Diagnosis
+  primary_diagnosis?: string;
+  secondary_diagnosis?: string;
+  clinical_classification?: string;
+  
+  // Instructions
+  general_instructions?: string;
+  fluid_intake?: string;
+  diet_instructions?: string;
+  lifestyle_advice?: string;
+  
+  // Follow-up
+  next_visit?: string;
+  follow_up_notes?: string;
+  
+  // Status
+  is_draft?: boolean;
+  is_finalized?: boolean;
+  
+  // Related data
+  medications?: PrescriptionMedication[];
+  vital_signs?: PrescriptionVitalSigns;
+  
+  // Metadata
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreatePrescriptionData {
+  consultation: string;
+  patient: string;
+  
+  // Vital Signs
+  pulse?: number;
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  
+  // Diagnosis
+  primary_diagnosis?: string;
+  secondary_diagnosis?: string;
+  clinical_classification?: string;
+  
+  // Instructions
+  general_instructions?: string;
+  fluid_intake?: string;
+  diet_instructions?: string;
+  lifestyle_advice?: string;
+  
+  // Follow-up
+  next_visit?: string;
+  follow_up_notes?: string;
+  
+  // Related data
+  medications?: Omit<PrescriptionMedication, 'id'>[];
+  vital_signs?: Omit<PrescriptionVitalSigns, 'id'>;
+}
+
+export const prescriptionApi = {
+  // Get all prescriptions (with filtering)
+  getPrescriptions: async (params?: {
+    consultation?: string;
+    patient?: string;
+    is_draft?: boolean;
+    is_finalized?: boolean;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ results: EnhancedPrescription[]; count: number; next: string | null; previous: string | null }> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const response = await api.get(`/api/prescriptions/?${queryParams.toString()}`);
+    return response.data.data || response.data;
+  },
+
+  // Get prescription by ID
+  getPrescription: async (prescriptionId: string): Promise<EnhancedPrescription> => {
+    const response = await api.get(`/api/prescriptions/${prescriptionId}/`);
+    return response.data.data;
+  },
+
+  // Get prescription for a specific consultation
+  getConsultationPrescription: async (consultationId: string): Promise<EnhancedPrescription> => {
+    const response = await api.get(`/api/consultations/${consultationId}/prescription/`);
+    return response.data.data;
+  },
+
+  // Create new prescription
+  createPrescription: async (prescriptionData: CreatePrescriptionData): Promise<EnhancedPrescription> => {
+    const response = await api.post('/api/prescriptions/', prescriptionData);
+    return response.data.data;
+  },
+
+  // Update prescription
+  updatePrescription: async (prescriptionId: string, prescriptionData: Partial<CreatePrescriptionData>): Promise<EnhancedPrescription> => {
+    const response = await api.put(`/api/prescriptions/${prescriptionId}/`, prescriptionData);
+    return response.data.data;
+  },
+
+  // Partial update prescription
+  partialUpdatePrescription: async (prescriptionId: string, prescriptionData: Partial<CreatePrescriptionData>): Promise<EnhancedPrescription> => {
+    const response = await api.patch(`/api/prescriptions/${prescriptionId}/`, prescriptionData);
+    return response.data.data;
+  },
+
+  // Save prescription as draft
+  saveDraft: async (prescriptionId: string): Promise<EnhancedPrescription> => {
+    const response = await api.post(`/api/prescriptions/${prescriptionId}/save-draft/`);
+    return response.data.data;
+  },
+
+  // Finalize prescription
+  finalizePrescription: async (prescriptionId: string): Promise<EnhancedPrescription> => {
+    const response = await api.post(`/api/prescriptions/${prescriptionId}/finalize/`);
+    return response.data.data;
+  },
+
+  // Delete prescription
+  deletePrescription: async (prescriptionId: string): Promise<void> => {
+    await api.delete(`/api/prescriptions/${prescriptionId}/`);
+  },
+
+  // Get draft prescriptions
+  getDraftPrescriptions: async (): Promise<EnhancedPrescription[]> => {
+    const response = await api.get('/api/prescriptions/drafts/');
+    return response.data.data;
+  },
+
+  // Get finalized prescriptions
+  getFinalizedPrescriptions: async (): Promise<EnhancedPrescription[]> => {
+    const response = await api.get('/api/prescriptions/finalized/');
+    return response.data.data;
+  },
+
+  // Medication management
+  addMedication: async (prescriptionId: string, medicationData: Omit<PrescriptionMedication, 'id'>): Promise<PrescriptionMedication> => {
+    const response = await api.post(`/api/prescriptions/${prescriptionId}/medications/`, medicationData);
+    return response.data.data;
+  },
+
+  updateMedication: async (prescriptionId: string, medicationId: string, medicationData: Partial<PrescriptionMedication>): Promise<PrescriptionMedication> => {
+    const response = await api.put(`/api/prescriptions/${prescriptionId}/medications/${medicationId}/`, medicationData);
+    return response.data.data;
+  },
+
+  deleteMedication: async (prescriptionId: string, medicationId: string): Promise<void> => {
+    await api.delete(`/api/prescriptions/${prescriptionId}/medications/${medicationId}/`);
+  },
+
+  // Vital signs management
+  updateVitalSigns: async (prescriptionId: string, vitalSignsData: PrescriptionVitalSigns): Promise<PrescriptionVitalSigns> => {
+    const response = await api.put(`/api/prescriptions/${prescriptionId}/vital-signs/`, vitalSignsData);
+    return response.data.data;
+  },
 }; 

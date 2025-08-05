@@ -17,6 +17,17 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   FileText,
   Upload,
   Plus,
@@ -32,8 +43,8 @@ import {
   Search,
   MoreVertical,
   FileImage,
-  FilePdf,
-  FileDoc
+  Save,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -46,38 +57,48 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { patientApi, MedicalRecord, PatientDocument, PatientNote, formatDate } from '@/lib/api';
 
-interface PatientRecordsProps {
+interface PatientRecordsManagerProps {
   patientId: string;
-  medicalRecords: MedicalRecord[];
-  documents: PatientDocument[];
-  notes: PatientNote[];
-  loading: {
-    medicalRecords: boolean;
-    documents: boolean;
-    notes: boolean;
-  };
-  onCreateMedicalRecord: () => void;
-  onUploadDocument: () => void;
-  onCreateNote: () => void;
-  onDeleteMedicalRecord: (id: string) => void;
-  onDeleteDocument: (id: string) => void;
-  onDeleteNote: (id: string) => void;
 }
 
-const PatientRecords: React.FC<PatientRecordsProps> = ({
-  patientId,
-  medicalRecords,
-  documents,
-  notes,
-  loading,
-  onCreateMedicalRecord,
-  onUploadDocument,
-  onCreateNote,
-  onDeleteMedicalRecord,
-  onDeleteDocument,
-  onDeleteNote
-}) => {
+// Form interfaces
+interface MedicalRecordForm {
+  record_type: string;
+  title: string;
+  description: string;
+  date_recorded: string;
+  document?: File;
+}
+
+interface DocumentForm {
+  document_type: string;
+  title: string;
+  description: string;
+  file: File | null;
+}
+
+interface NoteForm {
+  note: string;
+  is_private: boolean;
+}
+
+const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId }) => {
   const { toast } = useToast();
+  
+  // Data states
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [documents, setDocuments] = useState<PatientDocument[]>([]);
+  const [notes, setNotes] = useState<PatientNote[]>([]);
+  
+  // Loading states
+  const [loading, setLoading] = useState({
+    medicalRecords: false,
+    documents: false,
+    notes: false,
+    submitting: false
+  });
+  
+  // UI states
   const [activeTab, setActiveTab] = useState('medical-records');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -87,34 +108,100 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  
+  // Selected item states
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedItemType, setSelectedItemType] = useState<'medical-record' | 'document' | 'note'>('medical-record');
+  const [editingItem, setEditingItem] = useState<any>(null);
   
   // Form states
-  const [medicalRecordForm, setMedicalRecordForm] = useState({
+  const [medicalRecordForm, setMedicalRecordForm] = useState<MedicalRecordForm>({
     record_type: '',
     title: '',
     description: '',
     date_recorded: new Date().toISOString().split('T')[0],
-    document: undefined as File | undefined
+    document: undefined
   });
   
-  const [documentForm, setDocumentForm] = useState({
+  const [documentForm, setDocumentForm] = useState<DocumentForm>({
     document_type: '',
     title: '',
     description: '',
-    file: {} as File
+    file: null
   });
   
-  const [noteForm, setNoteForm] = useState({
+  const [noteForm, setNoteForm] = useState<NoteForm>({
     note: '',
     is_private: false
   });
-  
-  const [submitting, setSubmitting] = useState(false);
+
+  // File input refs
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const documentFileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Fetch functions
+  const fetchMedicalRecords = useCallback(async () => {
+    try {
+      setLoading(prev => ({ ...prev, medicalRecords: true }));
+      const records = await patientApi.getPatientMedicalRecords(patientId);
+      setMedicalRecords(records);
+    } catch (error) {
+      console.error('Error fetching medical records:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch medical records',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, medicalRecords: false }));
+    }
+  }, [patientId, toast]);
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      setLoading(prev => ({ ...prev, documents: true }));
+      const docs = await patientApi.getPatientDocuments(patientId);
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch documents',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, documents: false }));
+    }
+  }, [patientId, toast]);
+
+  const fetchNotes = useCallback(async () => {
+    try {
+      setLoading(prev => ({ ...prev, notes: true }));
+      const patientNotes = await patientApi.getPatientNotes(patientId);
+      setNotes(patientNotes);
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch notes',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, notes: false }));
+    }
+  }, [patientId, toast]);
+
+  // Initial data fetch
+  useEffect(() => {
+    if (patientId) {
+      fetchMedicalRecords();
+      fetchDocuments();
+      fetchNotes();
+    }
+  }, [patientId, fetchMedicalRecords, fetchDocuments, fetchNotes]);
+
+  // Reset forms
   const resetForms = () => {
     setMedicalRecordForm({
       record_type: '',
@@ -127,17 +214,19 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
       document_type: '',
       title: '',
       description: '',
-      file: {} as File
+      file: null
     });
     setNoteForm({
       note: '',
       is_private: false
     });
+    setEditingItem(null);
   };
 
+  // CRUD Operations
   const handleCreateMedicalRecord = async () => {
     try {
-      setSubmitting(true);
+      setLoading(prev => ({ ...prev, submitting: true }));
       
       const formData = new FormData();
       formData.append('record_type', medicalRecordForm.record_type);
@@ -159,7 +248,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
       
       setMedicalRecordModalOpen(false);
       resetForms();
-      onCreateMedicalRecord();
+      fetchMedicalRecords();
     } catch (error) {
       console.error('Error creating medical record:', error);
       toast({
@@ -168,13 +257,22 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
         variant: 'destructive'
       });
     } finally {
-      setSubmitting(false);
+      setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
 
   const handleUploadDocument = async () => {
     try {
-      setSubmitting(true);
+      setLoading(prev => ({ ...prev, submitting: true }));
+      
+      if (!documentForm.file) {
+        toast({
+          title: 'Error',
+          description: 'Please select a file to upload',
+          variant: 'destructive'
+        });
+        return;
+      }
       
       const formData = new FormData();
       formData.append('document_type', documentForm.document_type);
@@ -192,7 +290,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
       
       setDocumentModalOpen(false);
       resetForms();
-      onUploadDocument();
+      fetchDocuments();
     } catch (error) {
       console.error('Error uploading document:', error);
       toast({
@@ -201,13 +299,13 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
         variant: 'destructive'
       });
     } finally {
-      setSubmitting(false);
+      setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
 
   const handleCreateNote = async () => {
     try {
-      setSubmitting(true);
+      setLoading(prev => ({ ...prev, submitting: true }));
       
       await patientApi.createNote(patientId, noteForm);
       
@@ -219,7 +317,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
       
       setNoteModalOpen(false);
       resetForms();
-      onCreateNote();
+      fetchNotes();
     } catch (error) {
       console.error('Error creating note:', error);
       toast({
@@ -228,7 +326,46 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
         variant: 'destructive'
       });
     } finally {
-      setSubmitting(false);
+      setLoading(prev => ({ ...prev, submitting: false }));
+    }
+  };
+
+  const handleEditItem = async () => {
+    try {
+      setLoading(prev => ({ ...prev, submitting: true }));
+      
+      switch (selectedItemType) {
+        case 'medical-record':
+          await patientApi.updateMedicalRecord(patientId, editingItem.id.toString(), editingItem);
+          fetchMedicalRecords();
+          break;
+        case 'document':
+          await patientApi.updateDocument(patientId, editingItem.id.toString(), editingItem);
+          fetchDocuments();
+          break;
+        case 'note':
+          await patientApi.updateNote(patientId, editingItem.id.toString(), editingItem);
+          fetchNotes();
+          break;
+      }
+      
+      toast({
+        title: 'Success',
+        description: `${selectedItemType.replace('-', ' ')} updated successfully!`,
+        variant: 'default'
+      });
+      
+      setEditModalOpen(false);
+      resetForms();
+    } catch (error) {
+      console.error(`Error updating ${selectedItemType}:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to update ${selectedItemType.replace('-', ' ')}. Please try again.`,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
 
@@ -237,15 +374,15 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
       switch (type) {
         case 'medical-record':
           await patientApi.deleteMedicalRecord(patientId, id);
-          onDeleteMedicalRecord(id);
+          fetchMedicalRecords();
           break;
         case 'document':
           await patientApi.deleteDocument(patientId, id);
-          onDeleteDocument(id);
+          fetchDocuments();
           break;
         case 'note':
           await patientApi.deleteNote(patientId, id);
-          onDeleteNote(id);
+          fetchNotes();
           break;
       }
       
@@ -264,9 +401,20 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
     }
   };
 
+  // File handling
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: 'medical-record' | 'document') => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: 'Error',
+          description: 'File size must be less than 10MB',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
       if (type === 'medical-record') {
         setMedicalRecordForm(prev => ({ ...prev, document: file }));
       } else {
@@ -275,14 +423,15 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
     }
   };
 
+  // Utility functions
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     switch (extension) {
       case 'pdf':
-        return <FilePdf className="w-4 h-4 text-red-500" />;
+        return <FileText className="w-4 h-4 text-red-500" />;
       case 'doc':
       case 'docx':
-        return <FileDoc className="w-4 h-4 text-blue-500" />;
+        return <FileText className="w-4 h-4 text-blue-500" />;
       case 'jpg':
       case 'jpeg':
       case 'png':
@@ -312,7 +461,8 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.record_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.document_type?.toLowerCase().includes(searchTerm.toLowerCase())
+        item.document_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.note?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -360,6 +510,8 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
               <SelectItem value="blood_test">Blood Test</SelectItem>
               <SelectItem value="vaccination">Vaccination</SelectItem>
               <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
+              <SelectItem value="insurance">Insurance</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -424,6 +576,14 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setEditingItem({ ...record });
+                            setSelectedItemType('medical-record');
+                            setEditModalOpen(true);
+                          }}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
                           {record.document && (
                             <DropdownMenuItem>
                               <Download className="w-4 h-4 mr-2" />
@@ -431,13 +591,31 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteItem(record.id.toString(), 'medical-record')}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Medical Record</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this medical record? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteItem(record.id.toString(), 'medical-record')}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -520,18 +698,44 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setEditingItem({ ...document });
+                            setSelectedItemType('document');
+                            setEditModalOpen(true);
+                          }}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteItem(document.id.toString(), 'document')}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this document? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteItem(document.id.toString(), 'document')}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -541,12 +745,15 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                         <Calendar className="w-3 h-3 mr-1" />
                         {formatDate(document.uploaded_at)}
                       </Badge>
+                      {document.is_verified && (
+                        <Badge variant="default">Verified</Badge>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-gray-600 line-clamp-2">{document.description}</p>
                     <div className="flex items-center gap-2 mt-3">
-                      <File className="w-4 h-4 text-gray-400" />
+                      {getFileIcon(document.file)}
                       <span className="text-xs text-gray-500">{document.file.split('/').pop()}</span>
                     </div>
                   </CardContent>
@@ -612,14 +819,40 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteItem(note.id.toString(), 'note')}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
+                          <DropdownMenuItem onClick={() => {
+                            setEditingItem({ ...note });
+                            setSelectedItemType('note');
+                            setEditModalOpen(true);
+                          }}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this note? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteItem(note.id.toString(), 'note')}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -673,7 +906,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Record Type</label>
+                <label className="text-sm font-medium">Record Type *</label>
                 <Select value={medicalRecordForm.record_type} onValueChange={(value) => setMedicalRecordForm(prev => ({ ...prev, record_type: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select record type" />
@@ -692,7 +925,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Date Recorded</label>
+                <label className="text-sm font-medium">Date Recorded *</label>
                 <Input
                   type="date"
                   value={medicalRecordForm.date_recorded}
@@ -702,7 +935,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Title</label>
+              <label className="text-sm font-medium">Title *</label>
               <Input
                 value={medicalRecordForm.title}
                 onChange={(e) => setMedicalRecordForm(prev => ({ ...prev, title: e.target.value }))}
@@ -711,7 +944,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+              <label className="text-sm font-medium">Description *</label>
               <Textarea
                 value={medicalRecordForm.description}
                 onChange={(e) => setMedicalRecordForm(prev => ({ ...prev, description: e.target.value }))}
@@ -736,6 +969,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                   <span className="text-sm text-gray-600">{medicalRecordForm.document.name}</span>
                 )}
               </div>
+              <p className="text-xs text-gray-500">Accepted formats: PDF, DOC, DOCX, JPG, JPEG, PNG (Max: 10MB)</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -747,11 +981,17 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMedicalRecordModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setMedicalRecordModalOpen(false);
+              resetForms();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleCreateMedicalRecord} disabled={submitting || !medicalRecordForm.title || !medicalRecordForm.record_type}>
-              {submitting ? (
+            <Button 
+              onClick={handleCreateMedicalRecord} 
+              disabled={loading.submitting || !medicalRecordForm.title || !medicalRecordForm.record_type || !medicalRecordForm.description}
+            >
+              {loading.submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creating...
@@ -780,7 +1020,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Document Type</label>
+                <label className="text-sm font-medium">Document Type *</label>
                 <Select value={documentForm.document_type} onValueChange={(value) => setDocumentForm(prev => ({ ...prev, document_type: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select document type" />
@@ -791,13 +1031,15 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                     <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
                     <SelectItem value="insurance">Insurance Document</SelectItem>
                     <SelectItem value="vaccination">Vaccination Record</SelectItem>
+                    <SelectItem value="xray">X-Ray</SelectItem>
+                    <SelectItem value="mri">MRI</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">File</label>
+                <label className="text-sm font-medium">File *</label>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -808,7 +1050,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                     <Upload className="w-4 h-4" />
                     Choose File
                   </Button>
-                  {documentForm.file.name && (
+                  {documentForm.file && (
                     <span className="text-sm text-gray-600">{documentForm.file.name}</span>
                   )}
                 </div>
@@ -823,7 +1065,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Title</label>
+              <label className="text-sm font-medium">Title *</label>
               <Input
                 value={documentForm.title}
                 onChange={(e) => setDocumentForm(prev => ({ ...prev, title: e.target.value }))}
@@ -832,7 +1074,7 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
+              <label className="text-sm font-medium">Description *</label>
               <Textarea
                 value={documentForm.description}
                 onChange={(e) => setDocumentForm(prev => ({ ...prev, description: e.target.value }))}
@@ -843,11 +1085,17 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDocumentModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setDocumentModalOpen(false);
+              resetForms();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleUploadDocument} disabled={submitting || !documentForm.title || !documentForm.document_type || !documentForm.file.name}>
-              {submitting ? (
+            <Button 
+              onClick={handleUploadDocument} 
+              disabled={loading.submitting || !documentForm.title || !documentForm.document_type || !documentForm.file || !documentForm.description}
+            >
+              {loading.submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Uploading...
@@ -875,12 +1123,12 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Note</label>
+              <label className="text-sm font-medium">Note *</label>
               <Textarea
                 value={noteForm.note}
                 onChange={(e) => setNoteForm(prev => ({ ...prev, note: e.target.value }))}
                 placeholder="Enter your note here..."
-                rows={5}
+                rows={6}
               />
             </div>
             
@@ -899,11 +1147,17 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNoteModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setNoteModalOpen(false);
+              resetForms();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleCreateNote} disabled={submitting || !noteForm.note.trim()}>
-              {submitting ? (
+            <Button 
+              onClick={handleCreateNote} 
+              disabled={loading.submitting || !noteForm.note.trim()}
+            >
+              {loading.submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creating...
@@ -1044,8 +1298,160 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Item Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Edit {selectedItemType === 'medical-record' ? 'Medical Record' : selectedItemType === 'document' ? 'Document' : 'Note'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editingItem && (
+            <div className="space-y-4">
+              {selectedItemType === 'medical-record' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Record Type</label>
+                      <Select 
+                        value={editingItem.record_type} 
+                        onValueChange={(value) => setEditingItem(prev => ({ ...prev, record_type: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lab_report">Lab Report</SelectItem>
+                          <SelectItem value="prescription">Prescription</SelectItem>
+                          <SelectItem value="xray">X-Ray</SelectItem>
+                          <SelectItem value="mri">MRI</SelectItem>
+                          <SelectItem value="blood_test">Blood Test</SelectItem>
+                          <SelectItem value="vaccination">Vaccination</SelectItem>
+                          <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Date Recorded</label>
+                      <Input
+                        type="date"
+                        value={editingItem.date_recorded}
+                        onChange={(e) => setEditingItem(prev => ({ ...prev, date_recorded: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Title</label>
+                    <Input
+                      value={editingItem.title}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      value={editingItem.description}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+
+              {selectedItemType === 'document' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Document Type</label>
+                    <Select 
+                      value={editingItem.document_type} 
+                      onValueChange={(value) => setEditingItem(prev => ({ ...prev, document_type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prescription">Prescription</SelectItem>
+                        <SelectItem value="lab_report">Lab Report</SelectItem>
+                        <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
+                        <SelectItem value="insurance">Insurance Document</SelectItem>
+                        <SelectItem value="vaccination">Vaccination Record</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Title</label>
+                    <Input
+                      value={editingItem.title}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      value={editingItem.description}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+
+              {selectedItemType === 'note' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Note</label>
+                    <Textarea
+                      value={editingItem.note}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, note: e.target.value }))}
+                      rows={6}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="edit-private"
+                      checked={editingItem.is_private}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, is_private: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <label htmlFor="edit-private" className="text-sm font-medium">
+                      Make this note private
+                    </label>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setEditModalOpen(false);
+              resetForms();
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditItem} disabled={loading.submitting}>
+              {loading.submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default PatientRecords;
+export default PatientRecordsManager;
