@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { Heart, ArrowLeft, Phone, Shield, Clock, CheckCircle, ArrowRight, Eye, EyeOff, Lock, User, Smartphone } from 'lucide-react';
 import axios from 'axios';
 import { api } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -96,8 +96,11 @@ const Login = () => {
   // Show loading while checking authentication
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#E17726] border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading your account...</p>
+        </div>
       </div>
     );
   }
@@ -210,28 +213,33 @@ const Login = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen flex flex-col"
-      style={{
-        background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%)'
-      }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-[#E17726]/10 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-cyan-400/10 to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-80 h-80 bg-gradient-to-t from-purple-400/10 to-transparent rounded-full blur-3xl"></div>
+      </div>
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="bg-[#E17726] p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-md">
-                <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+      <div className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-white/20 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="bg-gradient-to-br from-[#E17726] to-[#FF8A56] p-2 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                <Heart className="h-6 w-6 text-white" />
               </div>
               <div>
-                <span className="text-lg sm:text-xl font-bold text-midnight">SUSHRUSA</span>
-                <span className="text-xs sm:text-sm text-gray-500 ml-1">eClinic</span>
+                <span className="text-xl sm:text-2xl font-black text-gray-900">SUSHRUSA</span>
+                <span className="text-sm text-gray-600 ml-1 font-medium">eClinic</span>
               </div>
             </Link>
             <Link to="/">
-              <Button variant="outline" className="border-gray-300 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 h-8 sm:h-10">
-                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <Button 
+                variant="outline" 
+                className="border-gray-300/50 bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white hover:border-[#E17726] hover:text-[#E17726] transition-all duration-300 px-4 py-2 h-10"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Back to Home</span>
                 <span className="sm:hidden">Home</span>
               </Button>
@@ -241,35 +249,48 @@ const Login = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-3 sm:px-4 lg:px-8 py-8 sm:py-12">
-        <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-midnight mb-2">Welcome Back to Sushrusa</h2>
-            <p className="text-gray-600 text-base sm:text-lg">Continue your health journey with us</p>
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="w-full max-w-md lg:max-w-lg space-y-8">
+          {/* Welcome Section */}
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#E17726] to-[#FF8A56] rounded-2xl shadow-lg mb-4">
+              <Shield className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight">
+              Welcome Back to
+              <span className="block text-[#E17726]">Sushrusa eClinic</span>
+            </h1>
+            <p className="text-lg text-gray-600 max-w-sm mx-auto">
+              Continue your health journey with secure, instant access
+            </p>
           </div>
 
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="space-y-1 pb-4 sm:pb-6">
-              <CardTitle className="text-xl sm:text-2xl text-center text-midnight">
-                {step === 'phone' ? 'Sign In Securely' : 'Verify Your Identity'}
+          {/* Login Card */}
+          <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden">
+            <CardHeader className="space-y-2 pb-6 pt-8">
+              <CardTitle className="text-2xl font-bold text-center text-gray-900">
+                {step === 'phone' ? 'Secure Sign In' : 'Verify Your Identity'}
               </CardTitle>
-              <CardDescription className="text-center text-gray-600 text-sm sm:text-base">
+              <CardDescription className="text-center text-gray-600">
                 {step === 'phone' 
-                  ? 'We\'ll send you a secure verification code' 
+                  ? 'We\'ll send you a secure verification code via SMS' 
                   : `Verification code sent to ${phoneNumber}`
                 }
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-8 pb-8">
               {step === 'phone' ? (
-                <form onSubmit={handlePhoneSubmit} className="space-y-4 sm:space-y-6">
-                  {/* Phone Number */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                <form onSubmit={handlePhoneSubmit} className="space-y-6">
+                  {/* Phone Number Input */}
+                  <div className="space-y-3">
+                    <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 flex items-center">
+                      <Smartphone className="w-4 h-4 mr-2" />
                       Mobile Number
                     </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400 group-focus-within:text-[#E17726] transition-colors duration-300" />
+                      </div>
                       <Input
                         id="phone"
                         type="tel"
@@ -280,21 +301,29 @@ const Login = () => {
                             setPhoneNumber(cleaned);
                           }
                         }}
-                        placeholder="Enter your mobile number"
+                        placeholder="Enter your 10-digit mobile number"
                         required
-                        className="w-full pl-10"
+                        className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                         maxLength={12}
                       />
                     </div>
+                    
                     {/* Account Type Message */}
                     {accountType && (
-                      <div className="text-xs sm:text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 mt-1">
-                        This mobile number is registered as: <span className="font-semibold capitalize">{accountType.replace('_', ' ')}</span>
+                      <div className="flex items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                        <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-green-800">
+                          <span className="font-semibold">Account Found:</span> 
+                          <span className="ml-1 capitalize">{accountType.replace('_', ' ')}</span>
+                        </div>
                       </div>
                     )}
                     {accountTypeError && (
-                      <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-1">
-                        {accountTypeError}
+                      <div className="flex items-center p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                        <Shield className="w-5 h-5 text-red-600 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-red-800">
+                          {accountTypeError}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -303,25 +332,39 @@ const Login = () => {
                   <Button
                     type="submit"
                     disabled={phoneNumber.length !== 10 || isSubmitting}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
+                    className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {isSubmitting ? "Sending verification code..." : "Send Verification Code"}
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                        Sending verification code...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <ArrowRight className="w-5 h-5 mr-2" />
+                        Send Verification Code
+                      </div>
+                    )}
                   </Button>
                   
                   {loginError && (
-                    <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">
-                      {loginError}
+                    <div className="flex items-center p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                      <Shield className="w-5 h-5 text-red-600 mr-3 flex-shrink-0" />
+                      <div className="text-sm text-red-800">
+                        {loginError}
+                      </div>
                     </div>
                   )}
                 </form>
               ) : (
                 <form onSubmit={handleOtpSubmit} className="space-y-6">
                   {/* OTP Input */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">
-                      Enter verification code
+                  <div className="space-y-4">
+                    <Label className="text-sm font-semibold text-gray-700 flex items-center justify-center">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Enter 6-digit verification code
                     </Label>
-                    <div className="flex justify-center space-x-2 sm:space-x-3">
+                    <div className="flex justify-center space-x-3">
                       {otp.map((digit, index) => (
                         <Input
                           key={index}
@@ -329,7 +372,7 @@ const Login = () => {
                           type="text"
                           value={digit}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
-                          className="w-10 h-10 sm:w-12 sm:h-12 text-center text-base sm:text-lg font-semibold"
+                          className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-200 focus:border-[#E17726] focus:ring-4 focus:ring-[#E17726]/10 rounded-xl transition-all duration-300 bg-white/50 backdrop-blur-sm"
                           maxLength={1}
                           autoFocus={index === 0}
                         />
@@ -340,15 +383,17 @@ const Login = () => {
                   {/* Resend OTP */}
                   <div className="text-center">
                     {countdown > 0 ? (
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        Resend code in <span className="font-semibold text-[#E17726]">{countdown}s</span>
-                      </p>
+                      <div className="flex items-center justify-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-2" />
+                        Resend code in <span className="font-semibold text-[#E17726] ml-1">{countdown}s</span>
+                      </div>
                     ) : (
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        className="text-xs sm:text-sm text-[#E17726] hover:text-[#c9651e] font-medium"
+                        className="text-sm text-[#E17726] hover:text-[#c9651e] font-semibold transition-colors duration-300 flex items-center justify-center mx-auto"
                       >
+                        <ArrowRight className="w-4 h-4 mr-2" />
                         Resend verification code
                       </button>
                     )}
@@ -358,13 +403,27 @@ const Login = () => {
                   <Button
                     type="submit"
                     disabled={otp.join('').length !== 6 || isSubmitting}
-                    className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base h-11 sm:h-12"
+                    className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    {isSubmitting ? "Verifying..." : "Sign In"}
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                        Verifying...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Sign In Securely
+                      </div>
+                    )}
                   </Button>
+                  
                   {loginError && (
-                    <div className="text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mt-2">
-                      {loginError}
+                    <div className="flex items-center p-3 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
+                      <Shield className="w-5 h-5 text-red-600 mr-3 flex-shrink-0" />
+                      <div className="text-sm text-red-800">
+                        {loginError}
+                      </div>
                     </div>
                   )}
 
@@ -377,24 +436,40 @@ const Login = () => {
                         setOtpSent(false);
                         setOtp(['', '', '', '', '', '']);
                       }}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      className="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors duration-300 flex items-center justify-center mx-auto"
                     >
-                      ← Back to sign in
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to sign in
                     </button>
                   </div>
                 </form>
               )}
 
-              <div className="mt-6 text-center">
-                <p className="text-xs sm:text-sm text-gray-600">
+              {/* Registration Link */}
+              <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                <p className="text-sm text-gray-600">
                   New to Sushrusa?{' '}
-                  <Link to="/register" className="text-[#E17726] hover:text-[#c9651e] font-medium">
+                  <Link to="/register" className="text-[#E17726] hover:text-[#c9651e] font-semibold transition-colors duration-300">
                     Create your account
                   </Link>
                 </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Security Features */}
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center space-x-6 text-sm text-gray-500">
+              <div className="flex items-center">
+                <Shield className="w-4 h-4 mr-2" />
+                <span>Bank-level Security</span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>24/7 Support</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
