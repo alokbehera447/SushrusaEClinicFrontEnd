@@ -157,7 +157,7 @@ const FindDoctors = () => {
       <div className="bg-gradient-to-br from-[#E17726]/10 to-cyan-400/10 py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <Link to="/" className="inline-flex items-center text-[#E17726] hover:text-[#FF8A56] mb-6 font-semibold">
+            <Link to="/" className="inline-flex items-center bg-white/80 backdrop-blur-sm border border-[#E17726]/20 text-[#E17726] hover:text-white hover:bg-[#E17726] px-4 py-2 rounded-full mb-6 font-semibold transition-all duration-300 shadow-soft hover:shadow-lg">
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back to Home
             </Link>
