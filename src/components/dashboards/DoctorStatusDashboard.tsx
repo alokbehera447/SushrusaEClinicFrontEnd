@@ -152,7 +152,7 @@ const DoctorStatusDashboard: React.FC<DoctorStatusDashboardProps> = ({ isDarkMod
     () => {
       console.log('🔗 Doctor-SuperAdmin WebSocket CONNECTED successfully!');
       console.log('👨‍⚕️ User Role:', userRole);
-      console.log('🌐 WebSocket URL: ws://127.0.0.1:8000/ws/doctor-superadmin/');
+      console.log('🌐 WebSocket URL: wss://sushrusaeclinic.com/ws/doctor-superadmin/');
       toast.success('Real-time connection established');
     },
     () => {

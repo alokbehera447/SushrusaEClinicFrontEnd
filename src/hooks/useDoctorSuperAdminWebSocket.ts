@@ -103,7 +103,7 @@ export const useDoctorSuperAdminWebSocket = (
 
     try {
       // Connect to the doctor-superadmin WebSocket
-      const wsUrl = 'ws://127.0.0.1:8000/ws/doctor-superadmin/';
+      const wsUrl = 'wss://sushrusaeclinic.com/ws/doctor-superadmin/';
       console.log('🌐 Connecting to WebSocket URL:', wsUrl);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
