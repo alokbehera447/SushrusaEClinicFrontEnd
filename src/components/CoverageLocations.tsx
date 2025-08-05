@@ -3,18 +3,18 @@ import { MapPin, Globe2, Sparkles, Clock, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const locations = [
-  { city: 'Delhi NCR', patients: '2,500+', icon: '🏛️' },
-  { city: 'Mumbai', patients: '1,800+', icon: '🏙️' },
-  { city: 'Bangalore', patients: '1,600+', icon: '💻' },
-  { city: 'Hyderabad', patients: '1,200+', icon: '🌆' },
-  { city: 'Chennai', patients: '1,100+', icon: '🏭' },
-  { city: 'Kolkata', patients: '900+', icon: '🎭' },
-  { city: 'Pune', patients: '800+', icon: '🎓' },
-  { city: 'Ahmedabad', patients: '700+', icon: '🏪' },
+  { city: 'Bhubaneswar', patients: '2,500+', icon: '🏛️' },
+  { city: 'Cuttack', patients: '1,800+', icon: '🏙️' },
+  { city: 'Puri', patients: '1,600+', icon: '🏖️' },
+  { city: 'Rourkela', patients: '1,200+', icon: '🏭' },
+  { city: 'Sambalpur', patients: '1,100+', icon: '🌳' },
+  { city: 'Berhampur', patients: '900+', icon: '🎭' },
+  { city: 'Balasore', patients: '800+', icon: '🌊' },
+  { city: 'Jharsuguda', patients: '700+', icon: '🏪' },
 ];
 
 const coverageStats = [
-  { number: '50+', label: 'Cities Covered', icon: <MapPin className="w-6 h-6 text-white" /> },
+  { number: '30+', label: 'Districts Covered', icon: <MapPin className="w-6 h-6 text-white" /> },
   { number: '24/7', label: 'Service Available', icon: <Clock className="w-6 h-6 text-white" /> },
   { number: '15min', label: 'Avg Response Time', icon: <CheckCircle className="w-6 h-6 text-white" /> },
 ];
@@ -36,17 +36,17 @@ const CoverageLocations = () => (
             <div className="absolute inset-0 w-3 h-3 bg-[#E17726] rounded-full animate-ping"></div>
           </div>
           <Sparkles className="w-5 h-5 text-[#E17726]" />
-          <span className="text-sm font-bold text-[#E17726] tracking-wide">NATIONWIDE COVERAGE</span>
+          <span className="text-sm font-bold text-[#E17726] tracking-wide">ODISHA COVERAGE</span>
           <Globe2 className="w-5 h-5 text-cyan-600" />
         </div>
         
         <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-midnight leading-tight">
           Available Across
-          <span className="block text-[#E17726]">India</span>
+          <span className="block text-[#E17726]">Odisha</span>
         </h2>
         
         <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mt-4">
-          Get expert healthcare consultation from anywhere in India. 
+          Get expert healthcare consultation from anywhere in Odisha. 
           <span className="text-[#E17726] font-semibold"> 24/7 availability</span> with doctors in your local language.
         </p>
       </div>
