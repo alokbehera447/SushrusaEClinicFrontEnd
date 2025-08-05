@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Star, Quote, ChevronLeft, ChevronRight, Heart, Sparkles, Award, Users, CheckCircle, MapPin, Calendar, X, Minimize2, Maximize2 } from 'lucide-react';
+import { Star, Quote, ChevronLeft, ChevronRight, Heart, Sparkles, Award, Users, CheckCircle, MapPin, Calendar } from 'lucide-react';
 
 const TestimonialsSection = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
 
   const testimonials = [
     {
@@ -98,222 +96,190 @@ const TestimonialsSection = () => {
 
   const currentTest = testimonials[currentTestimonial];
 
-  if (!isVisible) return null;
-
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {isExpanded ? (
-        // Expanded View
-        <Card className="w-96 max-h-[600px] shadow-2xl border border-gray-200 bg-white/95 backdrop-blur-sm">
-          <CardContent className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-gradient-to-r from-[#E17726] to-[#FF8A56] rounded-full animate-pulse"></div>
-                <span className="text-sm font-bold text-[#E17726]">TRUSTED BY THOUSANDS</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-                  className="text-xs text-gray-600 hover:text-[#E17726]"
-                >
-                  {isAutoPlaying ? '⏸️' : '▶️'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsExpanded(false)}
-                  className="text-gray-600 hover:text-[#E17726]"
-                >
-                  <Minimize2 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsVisible(false)}
-                  className="text-gray-600 hover:text-red-500"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+    <section className="py-8 sm:py-12 lg:py-8 bg-gradient-to-b from-white via-gray-50/50 to-white relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-4 sm:left-10 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-br from-[#E17726]/8 to-transparent rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-20 right-4 sm:right-10 w-48 h-48 sm:w-80 sm:h-80 bg-gradient-to-br from-cyan-400/8 to-transparent rounded-full blur-3xl animate-float animation-delay-300"></div>
+      </div>
 
-            {/* Title */}
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-midnight mb-1">
-                Real Stories from <span className="text-[#E17726]">Real People</span>
-              </h3>
-              <p className="text-xs text-gray-600">
-                Discover how SUSHRUSA is transforming healthcare experiences across India
-              </p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center p-2 bg-gray-50 rounded-lg">
-                  <div className={`w-8 h-8 bg-gradient-to-br ${stat.color} rounded-lg flex items-center justify-center mx-auto mb-1`}>
-                    <stat.icon className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="text-sm font-bold text-midnight">{stat.value}</div>
-                  <div className="text-xs text-gray-600">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Testimonial */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-8 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-6">
+          <div className="inline-flex items-center space-x-2 sm:space-x-3 glass px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-[#E17726]/20 hover-glow group cursor-pointer">
             <div className="relative">
-              <div className="bg-gray-50 rounded-lg p-4 mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs bg-[#E17726]/10 text-[#E17726] px-2 py-1 rounded">
-                    {currentTest.category}
-                  </span>
-                  <div className="flex items-center space-x-1">
-                    {[...Array(currentTest.rating)].map((_, i) => (
-                      <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                </div>
-                
-                <p className="text-sm text-gray-700 italic mb-2">
-                  "{currentTest.quote}"
-                </p>
-                
-                <span className="inline-block bg-[#E17726]/10 text-[#E17726] text-xs font-bold px-2 py-1 rounded mb-2">
-                  {currentTest.highlight}
-                </span>
-                
-                <div className="flex items-center">
-                  <img src={currentTest.avatar} alt={currentTest.name} className="w-8 h-8 rounded-full border border-gray-200 mr-2" />
-                  <div>
-                    <div className="text-sm font-semibold text-midnight">{currentTest.name}</div>
-                    <div className="text-xs text-gray-500">{currentTest.role}</div>
-                  </div>
-                  {currentTest.verified && (
-                    <CheckCircle className="w-4 h-4 text-green-500 ml-2" />
-                  )}
-                </div>
-              </div>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between">
-                <Button
-                  onClick={prevTestimonial}
-                  variant="outline"
-                  size="sm"
-                  className="w-8 h-8 p-0"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                
-                <div className="flex space-x-1">
-                  {testimonials.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToTestimonial(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentTestimonial
-                          ? 'bg-[#E17726]'
-                          : 'bg-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-                
-                <Button
-                  onClick={nextTestimonial}
-                  variant="outline"
-                  size="sm"
-                  className="w-8 h-8 p-0"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-orange rounded-full animate-pulse-glow"></div>
+              <div className="absolute inset-0 w-2 h-2 sm:w-3 sm:h-3 bg-[#E17726] rounded-full animate-ping"></div>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        // Collapsed View
-        <Card className="w-80 shadow-2xl border border-gray-200 bg-white/95 backdrop-blur-sm cursor-pointer hover:shadow-xl transition-all duration-300" onClick={() => setIsExpanded(true)}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gradient-to-r from-[#E17726] to-[#FF8A56] rounded-full animate-pulse"></div>
-                <span className="text-xs font-bold text-[#E17726]">TRUSTED BY THOUSANDS</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsVisible(false);
-                }}
-                className="text-gray-600 hover:text-red-500 p-1"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
+            <Quote className="w-4 h-4 text-[#E17726] group-hover:rotate-12 transition-transform duration-300" />
+            <span className="text-xs sm:text-sm lg:text-lg font-bold text-[#E17726] tracking-wide">TRUSTED BY THOUSANDS</span>
+            <Sparkles className="w-4 h-4 text-cyan-600 group-hover:scale-110 transition-transform duration-300" />
+          </div>
+          
+          <div className="space-y-3 sm:space-y-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-midnight leading-tight">
+              <span className="block">Real Stories from</span>
+              <span className="block text-[#E17726] animate-gradient">
+                Real People
+              </span>
+            </h2>
             
-            <div className="mb-3">
-              <h3 className="text-sm font-bold text-midnight mb-1">
-                Real Stories from <span className="text-[#E17726]">Real People</span>
-              </h3>
-              <p className="text-xs text-gray-600">
-                Discover how SUSHRUSA is transforming healthcare experiences
-              </p>
-            </div>
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Discover how <span className="text-[#E17726] font-semibold">SUSHRUSA</span> is transforming healthcare experiences across India
+            </p>
+          </div>
+        </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="text-center">
-                <div className="text-lg font-bold text-midnight">50K+</div>
-                <div className="text-xs text-gray-600">Happy Patients</div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-12">
+          {stats.map((stat, index) => (
+            <div 
+              key={index} 
+              className="group relative overflow-hidden glass p-4 sm:p-6 rounded-xl sm:rounded-2xl text-center hover-lift cursor-pointer transition-all duration-500"
+            >
+              <div className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${stat.color} rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                <stat.icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-midnight">4.9/5</div>
-                <div className="text-xs text-gray-600">Average Rating</div>
+              <div className="text-2xl sm:text-3xl font-black text-midnight group-hover:text-[#E17726] transition-colors duration-300 mb-1 sm:mb-2">
+                {stat.value}
+              </div>
+              <div className="text-xs sm:text-sm font-medium text-gray-600">
+                {stat.label}
               </div>
             </div>
+          ))}
+        </div>
 
-            {/* Current Testimonial Preview */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs bg-[#E17726]/10 text-[#E17726] px-2 py-1 rounded">
-                  {currentTest.category}
+        {/* Main Testimonial Display */}
+        <div className="relative max-w-4xl mx-auto flex items-center justify-center">
+          {/* Redesigned Testimonial Card - Larger and More Balanced */}
+          <Card className="group relative overflow-hidden border border-gray-200 shadow-lg rounded-2xl hover:shadow-xl transition-all duration-300 bg-white/95 w-full">
+            <CardContent className="p-6 sm:p-10">
+              {/* Category and Rating */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="inline-flex items-center bg-[#E17726]/10 text-[#E17726] text-sm font-semibold px-3 py-1 rounded mr-2">
+                  <Quote className="w-4 h-4 mr-1" /> {currentTest.category}
                 </span>
                 <div className="flex items-center space-x-1">
                   {[...Array(currentTest.rating)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
                   ))}
                 </div>
               </div>
-              
-              <p className="text-xs text-gray-700 italic mb-2 line-clamp-2">
+
+              {/* Quote */}
+              <p className="text-base sm:text-lg text-gray-700 leading-relaxed font-normal italic mb-4">
                 "{currentTest.quote}"
               </p>
-              
-              <div className="flex items-center">
-                <img src={currentTest.avatar} alt={currentTest.name} className="w-6 h-6 rounded-full border border-gray-200 mr-2" />
-                <div>
-                  <div className="text-xs font-semibold text-midnight">{currentTest.name}</div>
-                  <div className="text-xs text-gray-500">{currentTest.role}</div>
+
+              {/* Highlight Tag */}
+              <span className="inline-block bg-[#E17726]/10 text-[#E17726] text-sm font-bold px-3 py-1 rounded mb-4">
+                {currentTest.highlight}
+              </span>
+
+              {/* Author Row */}
+              <div className="flex items-center mt-3">
+                <img src={currentTest.avatar} alt={currentTest.name} className="w-12 h-12 rounded-full border border-gray-200 mr-4" />
+                <div className="flex flex-col">
+                  <span className="text-base font-semibold text-midnight">{currentTest.name}</span>
+                  <span className="text-sm text-gray-500">{currentTest.role} • {currentTest.location}</span>
                 </div>
                 {currentTest.verified && (
-                  <CheckCircle className="w-3 h-3 text-green-500 ml-1" />
+                  <span className="ml-3 bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-1" /> Verified
+                  </span>
                 )}
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex items-center justify-center mt-3">
-              <span className="text-xs text-gray-500">Click to expand</span>
-              <Maximize2 className="w-3 h-3 ml-1 text-gray-400" />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          {/* Navigation Buttons - Vertically Centered, Outside Card with Margin */}
+          <div className="absolute left-[-64px] top-1/2 -translate-y-1/2 z-10">
+            <Button
+              onClick={prevTestimonial}
+              variant="outline"
+              size="icon"
+              className="w-12 h-12 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift transition-all duration-300 mb-2"
+              aria-label="Previous testimonial"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+          </div>
+          <div className="absolute right-[-64px] top-1/2 -translate-y-1/2 z-10">
+            <Button
+              onClick={nextTestimonial}
+              variant="outline"
+              size="icon"
+              className="w-12 h-12 rounded-full glass border-2 border-white/50 text-[#E17726] hover:bg-[#E17726] hover:text-white shadow-lg hover-lift transition-all duration-300 mb-2"
+              aria-label="Next testimonial"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Pagination Dots */}
+        <div className="flex justify-center items-center space-x-1.5 sm:space-x-2 mt-8 sm:mt-12">
+          {testimonials.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToTestimonial(index)}
+              className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 hover:scale-110 ${
+                index === currentTestimonial
+                  ? 'bg-gradient-orange shadow-md scale-110'
+                  : 'bg-gray-300/60 hover:bg-[#E17726]/80'
+              }`}
+              aria-label={`Go to testimonial ${index + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Auto-play Control */}
+        <div className="flex justify-center mt-6 sm:mt-8">
+          <Button
+            onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+            variant="outline"
+            className="glass px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-medium text-gray-600 hover:text-[#E17726] transition-colors duration-300 border border-[#E17726]/20 hover:border-[#E17726]"
+          >
+            {isAutoPlaying ? '⏸️ Pause Auto-play' : '▶️ Resume Auto-play'}
+          </Button>
+        </div>
+
+        {/* Additional Testimonials Grid - Only on larger screens */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-4 sm:gap-6 mt-12 sm:mt-16">
+          {testimonials.slice(0, 3).map((testimonial, index) => (
+            <Card 
+              key={testimonial.id} 
+              className="group relative overflow-hidden glass border-0 shadow-modern rounded-2xl hover-lift transition-all duration-500 cursor-pointer"
+              onClick={() => goToTestimonial(index)}
+            >
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center space-x-1 mb-3 sm:mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                
+                <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-3 italic">
+                  "{testimonial.quote}"
+                </p>
+                
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#E17726]/20 to-cyan-400/20 rounded-full flex items-center justify-center">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#E17726]" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs sm:text-sm font-bold text-midnight">{testimonial.name}</h5>
+                    <p className="text-xs text-gray-600">{testimonial.role}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 };
 
