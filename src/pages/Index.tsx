@@ -9,6 +9,13 @@ import ImageContentBlocks from '@/components/ImageContentBlocks';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import Footer from '@/components/Footer';
 import { ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react';
+import StatsTrustIndicators from '@/components/StatsTrustIndicators';
+import DoctorShowcase from '@/components/DoctorShowcase';
+import SecurityPrivacy from '@/components/SecurityPrivacy';
+import CoverageLocations from '@/components/CoverageLocations';
+import BlogResources from '@/components/BlogResources';
+import PartnershipsCertifications from '@/components/PartnershipsCertifications';
+import ContactSupport from '@/components/ContactSupport';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState(0);
@@ -121,31 +128,52 @@ const Index = () => {
         <section id="hero" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
           <HeroSection />
         </section>
+
+        {/* Optimal UI/UX Order */}
         
-        {/* Image Content Blocks - Three Component Sections */}
+        {/* Trust Building First */}
+        <StatsTrustIndicators />
+        
+        {/* Core Value Proposition */}
         <section id="content-blocks" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
           <ImageContentBlocks />
         </section>
         
-        {/* Services Section - Mobile Slider */}
+        {/* Services Overview */}
         <section id="services" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
           <ServicesSection />
         </section>
         
-        {/* Specialties Showcase - Mobile Slider */}
+        {/* Doctor Showcase - Main CTA */}
+        <DoctorShowcase />
+        
+        {/* Specialties */}
         <section id="specialties" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
           <SpecialtiesShowcase />
         </section>
         
-        {/* About Section - Condensed */}
+        {/* Security & Trust */}
+        <SecurityPrivacy />
+        
+        {/* Coverage & Availability */}
+        <CoverageLocations />
+        
+        {/* Social Proof */}
+        <section id="testimonials" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
+          <TestimonialsSection />
+        </section>
+        
+        {/* About Us */}
         <section id="about" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
           <AboutSection />
         </section>
         
-        {/* Testimonials Section - Mobile Slider */}
-        <section id="testimonials" className={`fade-in-section ${isMobile ? 'is-visible' : ''}`}>
-          <TestimonialsSection />
-        </section>
+        {/* Additional Resources */}
+        <BlogResources />
+        <PartnershipsCertifications />
+        
+        {/* Final CTA */}
+        <ContactSupport />
       </main>
       
       <Footer />
