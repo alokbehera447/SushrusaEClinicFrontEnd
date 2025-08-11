@@ -1,0 +1,67 @@
+[
+  {
+    "test": "Frontend Server",
+    "success": true,
+    "message": "Server is running and responding"
+  },
+  {
+    "test": "Backend Server",
+    "success": false,
+    "message": "Server returned status 404"
+  },
+  {
+    "test": "Frontend Content",
+    "success": true,
+    "message": "Found React/Vite indicators: react, vite, script type=\"module\""
+  },
+  {
+    "test": "API Endpoint /api/consultations/statistics/",
+    "success": true,
+    "message": "Returns 401 (expected for unauthenticated)"
+  },
+  {
+    "test": "API Endpoint /api/consultations/analytics/",
+    "success": true,
+    "message": "Returns 401 (expected for unauthenticated)"
+  },
+  {
+    "test": "API Endpoint /api/consultations/real-time-updates/",
+    "success": true,
+    "message": "Returns 401 (expected for unauthenticated)"
+  },
+  {
+    "test": "API Endpoint /api/consultations/doctor/consultations/",
+    "success": true,
+    "message": "Returns 401 (expected for unauthenticated)"
+  },
+  {
+    "test": "Frontend Route /",
+    "success": true,
+    "message": "Route accessible"
+  },
+  {
+    "test": "Frontend Route /doctor-dashboard",
+    "success": true,
+    "message": "Route accessible"
+  },
+  {
+    "test": "Frontend Route /login",
+    "success": true,
+    "message": "Route accessible"
+  },
+  {
+    "test": "Frontend Route /register",
+    "success": true,
+    "message": "Route accessible"
+  },
+  {
+    "test": "Performance",
+    "success": true,
+    "message": "Page loads in 0.01s (fast)"
+  },
+  {
+    "test": "Content Size",
+    "success": true,
+    "message": "Page size: 1.9KB"
+  }
+]

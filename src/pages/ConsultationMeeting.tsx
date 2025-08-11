@@ -27,6 +27,7 @@ import {
   Calendar, 
   Clock, 
   FileText, 
+  FileDown,
   Pill, 
   Plus,
   Trash2,
@@ -44,7 +45,10 @@ import {
   Minimize2,
   Activity,
   Shield,
-  Loader2
+  Loader2,
+  Edit,
+  X,
+  Video
 } from 'lucide-react';
 
 // Interfaces
@@ -94,6 +98,8 @@ export default function ConsultationMeeting() {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isVideoMeetingActive, setIsVideoMeetingActive] = useState(false);
   
   // Ref to track if data has been loaded to prevent multiple calls
   const dataLoadedRef = useRef(false);
@@ -362,13 +368,13 @@ export default function ConsultationMeeting() {
 
   useEffect(() => {
     const autoSaveTimer = setInterval(() => {
-      if (prescriptionRef.current && autoSaveEnabledRef.current && !prescriptionRef.current.is_finalized) {
+      if (prescriptionRef.current && autoSaveEnabledRef.current && (!prescriptionRef.current.is_finalized || isEditing)) {
         savePrescription(true);
       }
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearInterval(autoSaveTimer);
-  }, [savePrescription]); // Only depend on savePrescription
+  }, [savePrescription, isEditing]); // Only depend on savePrescription
 
   const finalizePrescription = async () => {
     if (!prescription) return;
@@ -385,6 +391,7 @@ export default function ConsultationMeeting() {
       if (prescription.id) {
         const finalizedPrescription = await prescriptionApi.finalizePrescription(prescription.id.toString());
         setPrescription(finalizedPrescription);
+        setIsEditing(false); // Exit edit mode when finalized
         
         toast({
           title: 'Success',
@@ -399,6 +406,59 @@ export default function ConsultationMeeting() {
         title: 'Error',
         description: 'Failed to finalize prescription',
         variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleEditMode = () => {
+    const newEditingState = !isEditing;
+    setIsEditing(newEditingState);
+    console.log('Edit mode toggled:', newEditingState);
+    console.log('Prescription finalized:', prescription?.is_finalized);
+    console.log('Fields should be disabled:', prescription?.is_finalized && !newEditingState);
+    
+    if (!isEditing) {
+      toast({
+        title: 'Edit Mode',
+        description: 'You can now edit the finalized prescription',
+      });
+    } else {
+      toast({
+        title: 'View Mode',
+        description: 'Prescription is now in view-only mode',
+      });
+    }
+  };
+
+  const generateNewPDF = async () => {
+    if (!prescription?.id) return;
+
+    try {
+      setSaving(true);
+      
+      // First save any pending changes
+      await savePrescription(true);
+      
+      // Then generate a new PDF with updated data
+      const result = await prescriptionApi.finalizeAndGeneratePDF(prescription.id.toString());
+      
+      toast({
+        title: 'Success',
+        description: `New PDF generated successfully! Version ${result.pdf.version}`,
+      });
+      
+      // Open the new PDF
+      if (result.pdf.url) {
+        window.open(result.pdf.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error generating new PDF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate new PDF. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setSaving(false);
@@ -429,476 +489,791 @@ export default function ConsultationMeeting() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Mobile Header */}
-      {isMobileView && (
-        <div className="bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
+      {/* Enhanced Header */}
+      <div className="bg-white shadow-sm border-b px-6 py-4 sticky top-0 z-20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
             <div>
-              <h1 className="text-lg font-semibold">Consultation</h1>
-              <p className="text-sm text-gray-600">{consultation.patient_name}</p>
+              <h1 className="text-xl font-bold text-gray-900">Consultation Session</h1>
+              <p className="text-sm text-gray-600">Patient: {consultation.patient_name} • ID: {consultationId}</p>
             </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-green-600 font-medium">Active</span>
+            </div>
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="flex items-center space-x-3">
+            {/* Start/Stop Meeting Button */}
+            <Button
+              onClick={() => setIsVideoMeetingActive(!isVideoMeetingActive)}
+              variant={isVideoMeetingActive ? "destructive" : "default"}
+              size="sm"
+              className="hidden md:flex"
+            >
+              {isVideoMeetingActive ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  End Meeting
+                </>
+              ) : (
+                <>
+                  <Video className="h-4 w-4 mr-2" />
+                  Start Meeting
+                </>
+              )}
+            </Button>
+            
             <Button
               onClick={() => setIsPanelMinimized(!isPanelMinimized)}
               variant="outline"
               size="sm"
+              className="hidden md:flex"
             >
-              {isPanelMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+              {isPanelMinimized ? (
+                <>
+                  <Maximize2 className="h-4 w-4 mr-2" />
+                  Show Panel
+                </>
+              ) : (
+                <>
+                  <Minimize2 className="h-4 w-4 mr-2" />
+                  Hide Panel
+                </>
+              )}
             </Button>
           </div>
         </div>
-      )}
+      </div>
 
-      <div className={`flex ${isMobileView ? 'flex-col' : 'flex-row'} h-screen`}>
-        {/* Left Panel - Patient & Prescription Data */}
+      {/* Main Content Area */}
+      <div className="flex h-[calc(100vh-80px)]">
+        {/* Prescription Writing Area - Main Focus (60%) */}
         <div className={`
-          ${isMobileView 
-            ? isPanelMinimized 
-              ? 'h-0 overflow-hidden' 
-              : 'h-1/2' 
-            : 'w-2/5'
-          } 
-          bg-white shadow-xl border-r border-gray-200 flex flex-col
+          ${isMobileView ? 'w-full' : 'w-3/5'} 
+          bg-white flex flex-col
         `}>
-          {/* Desktop Header */}
-          {!isMobileView && (
-            <div className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold">Digital Consultation</h1>
-                  <p className="text-orange-100">Session ID: {consultationId}</p>
+          {/* Prescription Header */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="h-6 w-6 text-blue-600" />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-sm">Active Session</span>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Digital Prescription</h2>
+                  <p className="text-sm text-gray-600">Write prescription for {consultation.patient_name}</p>
+                </div>
+              </div>
+              
+              {/* Prescription Status & Actions */}
+              <div className="flex items-center space-x-3">
+                {prescription?.is_finalized && (
+                  <Badge variant="default" className="bg-green-600">
+                    Finalized
+                  </Badge>
+                )}
+                {isEditing && prescription?.is_finalized && (
+                  <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50">
+                    Editing
+                  </Badge>
+                )}
+                
+                {/* Action Buttons */}
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => savePrescription()}
+                    disabled={saving || (prescription?.is_finalized && !isEditing)}
+                    size="sm"
+                    variant="outline"
+                    className="bg-white hover:bg-gray-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    <span className="ml-2 hidden sm:inline">Save</span>
+                  </Button>
+                  
+                  {prescription?.is_finalized ? (
+                    <Button
+                      onClick={toggleEditMode}
+                      disabled={saving}
+                      size="sm"
+                      variant={isEditing ? "destructive" : "outline"}
+                      className="bg-white hover:bg-gray-50"
+                    >
+                      {isEditing ? (
+                        <>
+                          <X className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Cancel Edit</span>
+                        </>
+                      ) : (
+                        <>
+                          <Edit className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={finalizePrescription}
+                      disabled={saving}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Finalize</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Patient Information */}
-          <div className="p-4 border-b">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5 text-[#E17726]" />
-                  <span>Patient Information</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-semibold">{consultation.patient_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Age</p>
-                    <p className="font-semibold">{consultation.patient_age} years</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Gender</p>
-                    <p className="font-semibold">{consultation.patient_gender}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Phone</p>
-                    <p className="font-semibold">{consultation.patient_phone}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Chief Complaint</p>
-                  <p className="font-semibold">{consultation.chief_complaint}</p>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
-          {/* Prescription & Clinical Data Tabs */}
-          <div className="flex-1 overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <div className="px-4 pt-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger
-                    value="prescription"
-                    className="flex items-center space-x-2"
-                  >
-                    <Pill className="h-4 w-4" />
-                    <span>Prescription</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="vitals"
-                    className="flex items-center space-x-2"
-                  >
-                    <Activity className="h-4 w-4" />
-                    <span>Vitals</span>
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              <ScrollArea className="flex-1">
-                {/* Prescription Tab */}
-                <TabsContent value="prescription" className="p-4 space-y-4 m-0">
-                  {prescription ? (
-                    <div className="space-y-4">
-                      {/* Prescription Header with Actions */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-5 w-5 text-[#E17726]" />
-                          <span className="font-semibold">Digital Prescription</span>
-                          {prescription.is_finalized && (
-                            <Badge variant="default" className="bg-green-600">
-                              Finalized
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            onClick={() => savePrescription()}
-                            disabled={saving || prescription.is_finalized}
-                            size="sm"
-                            variant="outline"
-                          >
-                            {saving ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Save className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            onClick={finalizePrescription}
-                            disabled={saving || prescription.is_finalized}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            {prescription.is_finalized ? 'Finalized' : 'Finalize'}
-                          </Button>
-                        </div>
+          {/* Prescription Content */}
+          <div className="flex-1 overflow-auto p-6">
+            {prescription ? (
+              <div className="space-y-6">
+                {/* Diagnosis Section */}
+                <Card className="border-0 shadow-sm bg-gray-50/50">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center space-x-2 text-lg">
+                      <Stethoscope className="h-5 w-5 text-blue-600" />
+                      <span>Diagnosis & Assessment</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="primary_diagnosis" className="text-sm font-medium">
+                          Primary Diagnosis
+                        </Label>
+                        <Textarea
+                          id="primary_diagnosis"
+                          value={prescription.primary_diagnosis || ''}
+                          onChange={(e) => updatePrescription('primary_diagnosis', e.target.value)}
+                          placeholder="Enter primary diagnosis..."
+                          className="min-h-[80px] resize-none"
+                          disabled={prescription.is_finalized && !isEditing}
+                        />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="secondary_diagnosis" className="text-sm font-medium">
+                          Secondary Diagnosis
+                        </Label>
+                        <Textarea
+                          id="secondary_diagnosis"
+                          value={prescription.secondary_diagnosis || ''}
+                          onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
+                          placeholder="Enter secondary diagnosis (if any)..."
+                          className="min-h-[80px] resize-none"
+                          disabled={prescription.is_finalized && !isEditing}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="clinical_classification" className="text-sm font-medium">
+                        Clinical Classification
+                      </Label>
+                      <Input
+                        id="clinical_classification"
+                        value={prescription.clinical_classification || ''}
+                        onChange={(e) => updatePrescription('clinical_classification', e.target.value)}
+                        placeholder="e.g., Acute, Chronic, Emergency"
+                        disabled={prescription.is_finalized && !isEditing}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                      {/* Auto-save indicator */}
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>Auto-save: {autoSaveEnabled ? 'On' : 'Off'}</span>
+                {/* Instructions Section */}
+                <Card className="border-0 shadow-sm bg-gray-50/50">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center space-x-2 text-lg">
+                      <Shield className="h-5 w-5 text-green-600" />
+                      <span>Instructions & Advice</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="general_instructions" className="text-sm font-medium">
+                        General Instructions
+                      </Label>
+                      <Textarea
+                        id="general_instructions"
+                        value={prescription.general_instructions || ''}
+                        onChange={(e) => updatePrescription('general_instructions', e.target.value)}
+                        placeholder="Enter general instructions for the patient..."
+                        className="min-h-[100px] resize-none"
+                        disabled={prescription.is_finalized && !isEditing}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="diet_instructions" className="text-sm font-medium">
+                          Diet Instructions
+                        </Label>
+                        <Textarea
+                          id="diet_instructions"
+                          value={prescription.diet_instructions || ''}
+                          onChange={(e) => updatePrescription('diet_instructions', e.target.value)}
+                          placeholder="Dietary recommendations..."
+                          className="min-h-[80px] resize-none"
+                          disabled={prescription.is_finalized && !isEditing}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lifestyle_advice" className="text-sm font-medium">
+                          Lifestyle Advice
+                        </Label>
+                        <Textarea
+                          id="lifestyle_advice"
+                          value={prescription.lifestyle_advice || ''}
+                          onChange={(e) => updatePrescription('lifestyle_advice', e.target.value)}
+                          placeholder="Lifestyle modifications..."
+                          className="min-h-[80px] resize-none"
+                          disabled={prescription.is_finalized && !isEditing}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Medications Section */}
+                <Card className="border-0 shadow-sm bg-gray-50/50">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-lg">
+                        <Pill className="h-5 w-5 text-purple-600" />
+                        <span>Medications</span>
+                      </div>
+                      {!prescription.is_finalized || isEditing ? (
                         <Button
-                          onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
-                          variant="ghost"
+                          onClick={addMedication}
                           size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
                         >
-                          {autoSaveEnabled ? 'Disable' : 'Enable'} Auto-save
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Medication
                         </Button>
+                      ) : null}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {prescription.medications && prescription.medications.length > 0 ? (
+                      <div className="space-y-4">
+                        {prescription.medications.map((medication, index) => (
+                          <Card key={index} className="border border-gray-200 bg-white">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-base flex items-center space-x-2">
+                                  <Pill className="h-4 w-4 text-purple-600" />
+                                  <span>Medication {index + 1}</span>
+                                </CardTitle>
+                                {(!prescription.is_finalized || isEditing) && (
+                                  <Button
+                                    onClick={() => removeMedication(index)}
+                                    size="sm"
+                                    variant="destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Medicine Name</Label>
+                                  <Input
+                                    value={medication.medicine_name}
+                                    onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
+                                    placeholder="Enter medicine name"
+                                    disabled={prescription.is_finalized && !isEditing}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Dosage Form</Label>
+                                  <Input
+                                    value={medication.dosage_form || ''}
+                                    onChange={(e) => updateMedication(index, 'dosage_form', e.target.value)}
+                                    placeholder="e.g., tablet, syrup, injection"
+                                    disabled={prescription.is_finalized && !isEditing}
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Morning Dose</Label>
+                                  <Input
+                                    type="number"
+                                    value={medication.morning_dose || ''}
+                                    onChange={(e) => updateMedication(index, 'morning_dose', parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    disabled={prescription.is_finalized && !isEditing}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Afternoon Dose</Label>
+                                  <Input
+                                    type="number"
+                                    value={medication.afternoon_dose || ''}
+                                    onChange={(e) => updateMedication(index, 'afternoon_dose', parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    disabled={prescription.is_finalized && !isEditing}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Evening Dose</Label>
+                                  <Input
+                                    type="number"
+                                    value={medication.evening_dose || ''}
+                                    onChange={(e) => updateMedication(index, 'evening_dose', parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    disabled={prescription.is_finalized && !isEditing}
+                                  />
+                                </div>
+                              </div>
+                              
+
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Pill className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">No medications added yet</p>
+                        {(!prescription.is_finalized || isEditing) && (
+                          <Button
+                            onClick={addMedication}
+                            className="mt-4 bg-purple-600 hover:bg-purple-700"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add First Medication
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                      {/* Basic Information */}
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base">Basic Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div>
-                            <Label htmlFor="primary_diagnosis">Primary Diagnosis</Label>
-                            <Input
-                              id="primary_diagnosis"
-                              value={prescription.primary_diagnosis || ''}
-                              onChange={(e) => updatePrescription('primary_diagnosis', e.target.value)}
-                              placeholder="Primary diagnosis"
-                              disabled={prescription.is_finalized}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="secondary_diagnosis">Secondary Diagnosis</Label>
-                            <Input
-                              id="secondary_diagnosis"
-                              value={prescription.secondary_diagnosis || ''}
-                              onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
-                              placeholder="Secondary diagnosis (optional)"
-                              disabled={prescription.is_finalized}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="instructions">General Instructions</Label>
-                            <Textarea
-                              id="instructions"
-                              value={prescription.general_instructions || ''}
-                              onChange={(e) => updatePrescription('general_instructions', e.target.value)}
-                              placeholder="General instructions for patient"
-                              rows={3}
-                              disabled={prescription.is_finalized}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Medications */}
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-base">Medications</CardTitle>
-                            <Button
-                              onClick={addMedication}
-                              size="sm"
-                              variant="outline"
-                              disabled={prescription.is_finalized}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Add Medicine
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {prescription.medications.length === 0 ? (
-                            <p className="text-center text-gray-500 py-4">No medications added yet</p>
-                          ) : (
-                            prescription.medications.map((medication, index) => (
-                              <Card key={index} className="border border-gray-200">
-                                <CardContent className="p-4 space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-medium">Medicine {index + 1}</span>
-                                    <Button
-                                      onClick={() => removeMedication(index)}
-                                      size="sm"
-                                      variant="ghost"
-                                      className="text-red-600 hover:text-red-700"
-                                      disabled={prescription.is_finalized}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div>
-                                      <Label>Medicine Name</Label>
-                                      <Input
-                                        value={medication.medicine_name || ''}
-                                        onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
-                                        placeholder="Medicine name"
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Composition</Label>
-                                      <Input
-                                        value={medication.composition || ''}
-                                        onChange={(e) => updateMedication(index, 'composition', e.target.value)}
-                                        placeholder="e.g., Paracetamol 500mg"
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Morning Dose</Label>
-                                      <Input
-                                        type="number"
-                                        value={medication.morning_dose || 0}
-                                        onChange={(e) => updateMedication(index, 'morning_dose', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Afternoon Dose</Label>
-                                      <Input
-                                        type="number"
-                                        value={medication.afternoon_dose || 0}
-                                        onChange={(e) => updateMedication(index, 'afternoon_dose', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Evening Dose</Label>
-                                      <Input
-                                        type="number"
-                                        value={medication.evening_dose || 0}
-                                        onChange={(e) => updateMedication(index, 'evening_dose', parseInt(e.target.value) || 0)}
-                                        placeholder="0"
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label>Duration (days)</Label>
-                                      <Input
-                                        type="number"
-                                        value={medication.duration_days || 0}
-                                        onChange={(e) => updateMedication(index, 'duration_days', parseInt(e.target.value) || 0)}
-                                        disabled={prescription.is_finalized}
-                                      />
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <Label>Special Instructions</Label>
-                                    <Textarea
-                                      value={medication.special_instructions || ''}
-                                      onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
-                                      placeholder="Special instructions for this medication"
-                                      rows={2}
-                                      disabled={prescription.is_finalized}
-                                    />
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))
-                          )}
-                        </CardContent>
-                      </Card>
+                {/* Vital Signs Section */}
+                <Card className="border-0 shadow-sm bg-gray-50/50">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center space-x-2 text-lg">
+                      <Activity className="h-5 w-5 text-red-600" />
+                      <span>Vital Signs</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Doctor's Note:</strong> Record the patient's vital signs during the consultation. 
+                        These measurements help in diagnosis and treatment planning.
+                      </p>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Prescription</h3>
-                      <p className="text-gray-600 mb-4">Click below to create a new prescription</p>
-                      <Button onClick={() => initializePrescription()}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Prescription
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Vitals Tab */}
-                <TabsContent value="vitals" className="p-4 space-y-4 m-0">
-                  {prescription && prescription.vital_signs ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Stethoscope className="h-5 w-5 text-[#E17726]" />
-                          <span>Vital Signs</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="bp_systolic">Blood Pressure (Systolic)</Label>
-                            <div className="flex items-center space-x-2">
-                              <Heart className="h-4 w-4 text-red-500" />
-                              <Input
-                                id="bp_systolic"
-                                value={prescription.vital_signs?.blood_pressure_systolic || ''}
-                                onChange={(e) => updateVitalSigns('blood_pressure_systolic', e.target.value)}
-                                placeholder="120"
-                                disabled={prescription.is_finalized}
-                              />
-                              <span className="text-sm text-gray-500">mmHg</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="bp_diastolic">Blood Pressure (Diastolic)</Label>
-                            <div className="flex items-center space-x-2">
-                              <Heart className="h-4 w-4 text-red-500" />
-                              <Input
-                                id="bp_diastolic"
-                                value={prescription.vital_signs?.blood_pressure_diastolic || ''}
-                                onChange={(e) => updateVitalSigns('blood_pressure_diastolic', e.target.value)}
-                                placeholder="80"
-                                disabled={prescription.is_finalized}
-                              />
-                              <span className="text-sm text-gray-500">mmHg</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="pulse">Pulse</Label>
-                            <div className="flex items-center space-x-2">
-                              <Activity className="h-4 w-4 text-green-500" />
-                              <Input
-                                id="pulse"
-                                value={prescription.vital_signs?.pulse || ''}
-                                onChange={(e) => updateVitalSigns('pulse', e.target.value)}
-                                placeholder="72"
-                                disabled={prescription.is_finalized}
-                              />
-                              <span className="text-sm text-gray-500">bpm</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="temperature">Temperature</Label>
-                            <div className="flex items-center space-x-2">
-                              <Thermometer className="h-4 w-4 text-orange-500" />
-                              <Input
-                                id="temperature"
-                                value={prescription.vital_signs?.temperature || ''}
-                                onChange={(e) => updateVitalSigns('temperature', e.target.value)}
-                                placeholder="98.6"
-                                disabled={prescription.is_finalized}
-                              />
-                              <span className="text-sm text-gray-500">°F</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="oxygen_saturation">Oxygen Saturation</Label>
-                            <div className="flex items-center space-x-2">
-                              <Droplets className="h-4 w-4 text-blue-500" />
-                              <Input
-                                id="oxygen_saturation"
-                                value={prescription.vital_signs?.oxygen_saturation || ''}
-                                onChange={(e) => updateVitalSigns('oxygen_saturation', e.target.value)}
-                                placeholder="98"
-                                disabled={prescription.is_finalized}
-                              />
-                              <span className="text-sm text-gray-500">%</span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="weight">Weight</Label>
-                            <div className="flex items-center space-x-2">
-                              <Weight className="h-4 w-4 text-purple-500" />
-                              <Input
-                                id="weight"
-                                value={prescription.vital_signs?.weight || ''}
-                                onChange={(e) => updateVitalSigns('weight', e.target.value)}
-                                placeholder="70"
-                                disabled={prescription.is_finalized}
-                              />
-                              <span className="text-sm text-gray-500">kg</span>
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="bp_systolic" className="text-sm font-medium">
+                            Blood Pressure (Systolic)
+                          </Label>
+                          <div className="flex items-center space-x-2">
+                            <Heart className="h-4 w-4 text-red-500" />
+                            <Input
+                              id="bp_systolic"
+                              type="number"
+                              value={prescription.vital_signs?.blood_pressure_systolic || ''}
+                              onChange={(e) => updateVitalSigns('blood_pressure_systolic', e.target.value)}
+                              placeholder="120"
+                              disabled={prescription.is_finalized && !isEditing}
+                            />
+                            <span className="text-sm text-gray-500">mmHg</span>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Stethoscope className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vital Signs</h3>
-                      <p className="text-gray-600">Create a prescription first to record vital signs</p>
-                    </div>
-                  )}
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
-          </div>
-        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="bp_diastolic" className="text-sm font-medium">
+                            Blood Pressure (Diastolic)
+                          </Label>
+                          <div className="flex items-center space-x-2">
+                            <Heart className="h-4 w-4 text-red-500" />
+                            <Input
+                              id="bp_diastolic"
+                              type="number"
+                              value={prescription.vital_signs?.blood_pressure_diastolic || ''}
+                              onChange={(e) => updateVitalSigns('blood_pressure_diastolic', e.target.value)}
+                              placeholder="80"
+                              disabled={prescription.is_finalized && !isEditing}
+                            />
+                            <span className="text-sm text-gray-500">mmHg</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="pulse" className="text-sm font-medium">
+                            Pulse Rate
+                          </Label>
+                          <div className="flex items-center space-x-2">
+                            <Activity className="h-4 w-4 text-green-500" />
+                            <Input
+                              id="pulse"
+                              type="number"
+                              value={prescription.vital_signs?.pulse || ''}
+                              onChange={(e) => updateVitalSigns('pulse', e.target.value)}
+                              placeholder="72"
+                              disabled={prescription.is_finalized && !isEditing}
+                            />
+                            <span className="text-sm text-gray-500">bpm</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="temperature" className="text-sm font-medium">
+                            Temperature
+                          </Label>
+                          <div className="flex items-center space-x-2">
+                            <Thermometer className="h-4 w-4 text-orange-500" />
+                            <Input
+                              id="temperature"
+                              type="number"
+                              step="0.1"
+                              value={prescription.vital_signs?.temperature || ''}
+                              onChange={(e) => updateVitalSigns('temperature', e.target.value)}
+                              placeholder="98.6"
+                              disabled={prescription.is_finalized && !isEditing}
+                            />
+                            <span className="text-sm text-gray-500">°F</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="oxygen_saturation" className="text-sm font-medium">
+                            Oxygen Saturation
+                          </Label>
+                          <div className="flex items-center space-x-2">
+                            <Droplets className="h-4 w-4 text-blue-500" />
+                            <Input
+                              id="oxygen_saturation"
+                              type="number"
+                              value={prescription.vital_signs?.oxygen_saturation || ''}
+                              onChange={(e) => updateVitalSigns('oxygen_saturation', e.target.value)}
+                              placeholder="98"
+                              disabled={prescription.is_finalized && !isEditing}
+                            />
+                            <span className="text-sm text-gray-500">%</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="weight" className="text-sm font-medium">
+                            Weight
+                          </Label>
+                          <div className="flex items-center space-x-2">
+                            <Weight className="h-4 w-4 text-purple-500" />
+                            <Input
+                              id="weight"
+                              type="number"
+                              step="0.1"
+                              value={prescription.vital_signs?.weight || ''}
+                              onChange={(e) => updateVitalSigns('weight', e.target.value)}
+                              placeholder="70"
+                              disabled={prescription.is_finalized && !isEditing}
+                            />
+                            <span className="text-sm text-gray-500">kg</span>
+                          </div>
+                        </div>
+                      </div>
+                  </CardContent>
+                </Card>
 
-        {/* Right Panel - Video Meeting */}
-        <div className={`
-          ${isMobileView 
-            ? isPanelMinimized 
-              ? 'flex-1' 
-              : 'h-1/2' 
-            : 'w-3/5'
-          } 
-          bg-gray-900 flex flex-col
-        `}>
-          {/* Simplified Video Container */}
-          <div className="flex-1 relative">
-            {consultation.doctor_meeting_link ? (
-              <iframe
-                src={consultation.doctor_meeting_link}
-                className="w-full h-full border-0"
-                allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                allowFullScreen
-                title="Video Meeting"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-camera allow-microphone allow-display-capture"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                <div className="text-center max-w-md mx-auto p-8">
-                  <div className="bg-gray-700 p-8 rounded-full w-32 h-32 mx-auto mb-8 flex items-center justify-center">
-                    <Shield className="h-16 w-16 text-gray-400" />
+                {/* PDF Actions */}
+                {prescription.is_finalized && prescription.id && (
+                  <div className="flex items-center justify-center space-x-4 pt-4 border-t border-gray-200">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          type PDFVersion = { id: string; is_current: boolean; file_url: string; version: number; generated_at: string; generated_by: { name: string } };
+                          const pdfs = await prescriptionApi.getPDFVersions(prescription.id.toString());
+                          const current = (pdfs.versions as PDFVersion[]).find((v) => v.is_current);
+                          if (current && current.file_url) {
+                            window.open(current.file_url, '_blank');
+                          } else {
+                            toast({
+                              title: 'PDF Not Found',
+                              description: 'No PDF available for this prescription yet.',
+                              variant: 'destructive',
+                            });
+                          }
+                        } catch (err) {
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to fetch prescription PDF.',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                    >
+                      <FileText className="h-5 w-5 mr-2" />
+                      View/Download PDF
+                    </Button>
+                    
+                    {isEditing && (
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                        onClick={generateNewPDF}
+                        disabled={saving}
+                      >
+                        {saving ? (
+                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        ) : (
+                          <FileDown className="h-5 w-5 mr-2" />
+                        )}
+                        Generate New PDF
+                      </Button>
+                    )}
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">Meeting Link Not Available</h3>
-                  <p className="text-gray-400 text-lg">
-                    The meeting link has not been configured for this consultation.
-                  </p>
-                </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Prescription Created</h3>
+                <p className="text-gray-600 mb-6">Start by creating a prescription for this consultation</p>
+                <Button 
+                  onClick={() => initializePrescription()}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create Prescription
+                </Button>
               </div>
             )}
           </div>
         </div>
+
+        {/* Video Meeting & Patient Info Panel - Right Side (40%) */}
+        <div className={`
+          ${isMobileView ? 'w-full' : 'w-2/5'} 
+          ${isPanelMinimized && !isMobileView ? 'w-16' : ''}
+          bg-white border-l border-gray-200 flex flex-col transition-all duration-300
+        `}>
+          {isPanelMinimized && !isMobileView ? (
+            <div className="p-4">
+              <Button
+                onClick={() => setIsPanelMinimized(false)}
+                variant="ghost"
+                size="sm"
+                className="w-full"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Video Meeting Section */}
+              {isVideoMeetingActive && (
+                <div className="bg-gray-900 flex flex-col">
+                  {/* Video Header */}
+                  <div className="bg-gray-800 px-4 py-3 border-b border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-white text-sm font-medium">Live Meeting</span>
+                      </div>
+                      <Button
+                        onClick={() => setIsVideoMeetingActive(false)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-white hover:bg-gray-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Video Container */}
+                  <div className="flex-1 relative min-h-[300px]">
+                    {consultation.doctor_meeting_link ? (
+                      <iframe
+                        src={consultation.doctor_meeting_link}
+                        className="w-full h-full border-0"
+                        allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                        allowFullScreen
+                        title="Video Meeting"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-camera allow-microphone allow-display-capture"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                        <div className="text-center max-w-md mx-auto p-6">
+                          <div className="bg-gray-700 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                            <Video className="h-12 w-12 text-gray-400" />
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-3">Meeting Link Not Available</h3>
+                          <p className="text-gray-400 text-sm">
+                            The meeting link has not been configured for this consultation.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Patient Info Section */}
+              <div className="flex-1 flex flex-col">
+                {/* Patient Info Header */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Patient Information</h3>
+                    {!isMobileView && (
+                      <Button
+                        onClick={() => setIsPanelMinimized(true)}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <Minimize2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Patient Info Content */}
+                <div className="flex-1 overflow-auto p-4 space-y-4">
+                {/* Basic Patient Info */}
+                <Card className="border-0 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center space-x-2 text-base">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <span>Basic Information</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-600">Name</p>
+                      <p className="font-semibold">{consultation.patient_name}</p>
+                    </div>
+                    {consultation.patient_phone && (
+                      <div>
+                        <p className="text-sm text-gray-600">Phone</p>
+                        <p className="font-medium">{consultation.patient_phone}</p>
+                      </div>
+                    )}
+                    {consultation.patient_email && (
+                      <div>
+                        <p className="text-sm text-gray-600">Email</p>
+                        <p className="font-medium">{consultation.patient_email}</p>
+                      </div>
+                    )}
+                    {consultation.patient_age && (
+                      <div>
+                        <p className="text-sm text-gray-600">Age</p>
+                        <p className="font-medium">{consultation.patient_age} years</p>
+                      </div>
+                    )}
+                    {consultation.patient_gender && (
+                      <div>
+                        <p className="text-sm text-gray-600">Gender</p>
+                        <p className="font-medium">{consultation.patient_gender}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Consultation Details */}
+                <Card className="border-0 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center space-x-2 text-base">
+                      <Calendar className="h-4 w-4 text-green-600" />
+                      <span>Consultation Details</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-600">Date</p>
+                      <p className="font-medium">{new Date(consultation.scheduled_date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Time</p>
+                      <p className="font-medium">{consultation.scheduled_time}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Type</p>
+                      <p className="font-medium">{consultation.consultation_type}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Chief Complaint</p>
+                      <p className="font-medium">{consultation.chief_complaint}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Access Buttons */}
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {/* TODO: Open patient records modal */}}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Medical Records
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {/* TODO: Open patient notes modal */}}
+                  >
+                    <Stethoscope className="h-4 w-4 mr-2" />
+                    Patient Notes
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {/* TODO: Open patient documents modal */}}
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Documents
+                  </Button>
+                </div>
+
+                {/* Auto-save Status */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Auto-save:</span>
+                    <span className={autoSaveEnabled ? 'text-green-600' : 'text-gray-400'}>
+                      {autoSaveEnabled ? 'On' : 'Off'}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-2"
+                  >
+                    {autoSaveEnabled ? 'Disable' : 'Enable'} Auto-save
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
+  </div>
   );
 }

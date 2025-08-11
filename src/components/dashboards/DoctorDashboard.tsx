@@ -47,12 +47,14 @@ import {
 } from 'lucide-react';
 import DoctorAvailabilitySlots from '@/components/workflow/DoctorAvailabilitySlots';
 import PrescriptionWriter from '@/components/workflow/PrescriptionWriter';
+import PrescriptionManagement from '@/components/prescriptions/PrescriptionManagement';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation, DoctorProfile } from '@/lib/api';
+import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation, DoctorProfile, DoctorEarnings } from '@/lib/api';
 import { useDoctorSuperAdminWebSocket } from '@/hooks/useDoctorSuperAdminWebSocket';
 import DoctorConsultationTab from './DoctorConsultationTab';
+import EnhancedConsultationDashboard from './EnhancedConsultationDashboard';
 
 // Define Slot type
 interface Slot {
@@ -91,6 +93,11 @@ const DoctorDashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [earnings, setEarnings] = useState<DoctorEarnings | null>(null);
+  const [loadingEarnings, setLoadingEarnings] = useState(true);
+  const [earningsPeriod, setEarningsPeriod] = useState<'week' | 'month' | 'year'>('month');
+
+
 
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -173,7 +180,8 @@ const DoctorDashboard = () => {
     async function fetchStats() {
       setLoadingStats(true);
       try {
-        const data = await doctorAnalyticsApi.getPerformanceStats();
+        const today = new Date().toISOString().slice(0, 10);
+        const data = await doctorAnalyticsApi.getDoctorPerformance(today);
         setStats(data);
       } catch (error) {
         console.error('Error fetching doctor stats:', error);
@@ -185,6 +193,50 @@ const DoctorDashboard = () => {
     fetchStats();
   }, []);
 
+  // Fetch earnings data
+  useEffect(() => {
+    async function fetchEarnings() {
+      console.log('🔍 DoctorDashboard - Fetching earnings for period:', earningsPeriod);
+      setLoadingEarnings(true);
+      try {
+        const earningsData = await doctorAnalyticsApi.getDoctorEarnings({ period: earningsPeriod });
+        console.log('🔍 DoctorDashboard - Earnings data received:', earningsData);
+        setEarnings(earningsData);
+      } catch (error) {
+        console.error('Error fetching earnings:', error);
+        // Set a default earnings object to prevent crashes
+        const defaultEarnings = {
+          overview: {
+            total_earnings: 0,
+            total_consultations: 0,
+            avg_per_consultation: 0,
+            earnings_growth: 0,
+            growth_type: 'positive' as const
+          },
+          monthly_breakdown: [],
+          payment_status: {
+            received_payments: 0,
+            pending_payments: 0,
+            processing_payments: 0,
+            next_payout_amount: 0,
+            next_payout_date: ''
+          },
+          payment_methods: {},
+          recent_transactions: [],
+          period: {
+            start_date: '',
+            end_date: '',
+            period_type: 'month'
+          }
+        };
+        console.log('🔍 DoctorDashboard - Setting default earnings:', defaultEarnings);
+        setEarnings(defaultEarnings);
+      } finally {
+        setLoadingEarnings(false);
+      }
+    }
+    fetchEarnings();
+  }, [earningsPeriod]);
 
 
   // Helper function to get display name from profile
@@ -261,7 +313,7 @@ const DoctorDashboard = () => {
     },
     { 
       label: "Today's Earnings", 
-      value: loadingStats ? '...' : (stats ? `₹${stats.total_revenue}` : '₹0'), 
+      value: loadingStats ? '...' : (stats?.total_revenue ? `₹${stats.total_revenue}` : '₹0'), 
       icon: DollarSign, 
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
@@ -541,7 +593,7 @@ const DoctorDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+          <TabsList className="grid w-full grid-cols-5 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
             <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Activity className="w-4 h-4 mr-2" />
               Overview
@@ -550,6 +602,10 @@ const DoctorDashboard = () => {
               <Video className="w-4 h-4 mr-2" />
               Consultations
             </TabsTrigger>
+            {/* <TabsTrigger value="prescriptions" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <FileText className="w-4 h-4 mr-2" />
+              Prescriptions
+            </TabsTrigger> */}
             <TabsTrigger value="slot-booking" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Clock className="w-4 h-4 mr-2" />
               Slot Booking
@@ -697,13 +753,180 @@ const DoctorDashboard = () => {
                 </Card>
               </div>
             </div>
+
+            {/* Payment Methods Distribution */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Payment Methods</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                ) : earnings?.payment_methods && Object.keys(earnings.payment_methods).length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(earnings.payment_methods).map(([method, amount]) => (
+                      <div key={method} className="p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-midnight capitalize">{method.replace('_', ' ')}</p>
+                            <p className="text-sm text-gray-600">Total</p>
+                          </div>
+                          <p className="font-bold text-[#E17726]">₹{(amount as number).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No payment method data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Transactions */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                                ) : earnings?.recent_transactions && earnings.recent_transactions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm text-gray-600">Showing {earnings.recent_transactions.length} recent transactions</p>
+                      <p className="text-sm font-semibold text-[#E17726]">
+                        Total: ₹{earnings.recent_transactions.reduce((sum, t) => sum + (t.amount ?? 0), 0).toLocaleString()}
+                      </p>
+                    </div>
+                    {earnings.recent_transactions.map((transaction, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-[#E17726]/10 rounded-full flex items-center justify-center">
+                            <DollarSign className="w-5 h-5 text-[#E17726]" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-midnight">{transaction.patient_name}</p>
+                            <p className="text-sm text-gray-600 capitalize">
+                              {transaction.consultation_type?.replace('_', ' ')} • {transaction.payment_method}
+                            </p>
+                            <p className="text-xs text-gray-500">{transaction.processed_at}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-[#E17726]">₹{(transaction.amount ?? 0).toLocaleString()}</p>
+                          <Badge className={`text-xs ${transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {transaction.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No recent transactions</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
           </TabsContent>
 
-          {/* Consultations Tab */}
-           <TabsContent value="consultations">
-            <DoctorConsultationTab />
+                    {/* Consultations Tab */}
+          <TabsContent value="consultations">
+            <EnhancedConsultationDashboard />
           </TabsContent>
+
+          {/* Prescriptions Tab - Temporarily Disabled */}
+          {/* 
+          <TabsContent value="prescriptions">
+            <div className="space-y-6">
+              Prescription Management Header
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl font-bold text-gray-900">Prescription Management</CardTitle>
+                  <div className="flex space-x-2">
+                    <Button 
+                      className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+                      onClick={() => navigate('/prescriptions')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Manage All Prescriptions
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-aqua text-aqua hover:bg-aqua hover:text-white"
+                      onClick={() => navigate('/prescriptions/new')}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create New Prescription
+                    </Button>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              Quick Actions
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/prescriptions')}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-blue-100 rounded-full">
+                        <FileText className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">All Prescriptions</h3>
+                        <p className="text-sm text-gray-600">View and manage all prescriptions</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/prescriptions?tab=drafts')}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-yellow-100 rounded-full">
+                        <Edit className="w-6 h-6 text-yellow-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">Draft Prescriptions</h3>
+                        <p className="text-sm text-gray-600">Continue writing draft prescriptions</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/prescriptions?tab=finalized')}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-green-100 rounded-full">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">Finalized Prescriptions</h3>
+                        <p className="text-sm text-gray-600">View and download finalized PDFs</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              Recent Prescriptions
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-gray-900">Recent Prescriptions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PrescriptionManagement />
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          */}
 
           {/* Schedule Tab */}
           <TabsContent value="schedule">
@@ -1078,6 +1301,75 @@ const DoctorDashboard = () => {
           {/* Earnings Tab */}
           <TabsContent value="earnings">
           <div className="space-y-8">
+
+            {/* Period Filter */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-900">Earnings Analytics</CardTitle>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant={earningsPeriod === 'week' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEarningsPeriod('week')}
+                    className={earningsPeriod === 'week' ? 'bg-[#E17726] hover:bg-[#c9651e]' : ''}
+                  >
+                    Week
+                  </Button>
+                  <Button 
+                    variant={earningsPeriod === 'month' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEarningsPeriod('month')}
+                    className={earningsPeriod === 'month' ? 'bg-[#E17726] hover:bg-[#c9651e]' : ''}
+                  >
+                    Month
+                  </Button>
+                  <Button 
+                    variant={earningsPeriod === 'year' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEarningsPeriod('year')}
+                    className={earningsPeriod === 'year' ? 'bg-[#E17726] hover:bg-[#c9651e]' : ''}
+                  >
+                    Year
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLoadingEarnings(true);
+                      doctorAnalyticsApi.getDoctorEarnings({ period: earningsPeriod })
+                        .then(setEarnings)
+                        .catch(console.error)
+                        .finally(() => setLoadingEarnings(false));
+                    }}
+                    disabled={loadingEarnings}
+                    className="ml-2"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingEarnings ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {earnings?.period && (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div>
+                      <p className="font-semibold text-midnight">Period: {earnings.period.period_type.charAt(0).toUpperCase() + earnings.period.period_type.slice(1)}</p>
+                      <p className="text-sm text-gray-600">
+                        {earnings.period.start_date} to {earnings.period.end_date}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-[#E17726]">
+                        {earnings.overview?.total_consultations ?? 0} consultations
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        ₹{(earnings.overview?.total_earnings ?? 0).toLocaleString()} total
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Earnings Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
@@ -1085,8 +1377,12 @@ const DoctorDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-2">Total Consultations</p>
-                      <p className="text-3xl font-bold text-midnight">156</p>
-                      <p className="text-sm text-green-600 mt-1">+12% this month</p>
+                      <p className="text-3xl font-bold text-midnight">
+                        {loadingEarnings ? '...' : (earnings?.overview?.total_consultations ?? 0)}
+                      </p>
+                      <p className={`text-sm mt-1 ${earnings?.overview?.growth_type === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                        {earnings?.overview?.earnings_growth ? `${earnings.overview.earnings_growth > 0 ? '+' : ''}${earnings.overview.earnings_growth.toFixed(1)}%` : '0%'} this {earningsPeriod}
+                      </p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
                       <Users className="w-6 h-6 text-[#E17726]" />
@@ -1100,8 +1396,12 @@ const DoctorDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-2">Total Earnings</p>
-                      <p className="text-3xl font-bold text-midnight">₹78,000</p>
-                      <p className="text-sm text-green-600 mt-1">+8% this month</p>
+                      <p className="text-3xl font-bold text-midnight">
+                        {loadingEarnings ? '...' : `₹${(earnings?.overview?.total_earnings ?? 0).toLocaleString()}`}
+                      </p>
+                      <p className={`text-sm mt-1 ${earnings?.overview?.growth_type === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                        {earnings?.overview?.earnings_growth ? `${earnings.overview.earnings_growth > 0 ? '+' : ''}${earnings.overview.earnings_growth.toFixed(1)}%` : '0%'} this {earningsPeriod}
+                      </p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
                       <DollarSign className="w-6 h-6 text-green-600" />
@@ -1115,7 +1415,9 @@ const DoctorDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-2">Avg. per Consultation</p>
-                      <p className="text-3xl font-bold text-midnight">₹500</p>
+                      <p className="text-3xl font-bold text-midnight">
+                        {loadingEarnings ? '...' : `₹${(earnings?.overview?.avg_per_consultation ?? 0).toLocaleString()}`}
+                      </p>
                       <p className="text-sm text-aqua mt-1">Standard rate</p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-aqua/10 to-aqua/5 flex items-center justify-center">
@@ -1133,36 +1435,30 @@ const DoctorDashboard = () => {
                   <CardTitle className="text-xl font-bold text-gray-900">Monthly Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-midnight">January 2024</p>
-                      <p className="text-sm text-gray-600">42 consultations</p>
+                  {loadingEarnings ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-[#E17726]">₹21,000</p>
-                      <p className="text-sm text-green-600">+15%</p>
+                  ) : earnings?.monthly_breakdown && earnings.monthly_breakdown.length > 0 ? (
+                    earnings.monthly_breakdown.slice(0, 6).map((month, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div>
+                          <p className="font-semibold text-midnight">{month.month}</p>
+                          <p className="text-sm text-gray-600">{month.consultations} consultations</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-[#E17726]">₹{(month.earnings ?? 0).toLocaleString()}</p>
+                                                      <p className={`text-sm ${month.growth_type === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                              {(month.growth ?? 0) > 0 ? '+' : ''}{(month.growth ?? 0).toFixed(1)}%
+                            </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No earnings data available</p>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-midnight">December 2023</p>
-                      <p className="text-sm text-gray-600">38 consultations</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-[#E17726]">₹19,000</p>
-                      <p className="text-sm text-gray-600">-2%</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <p className="font-semibold text-midnight">November 2023</p>
-                      <p className="text-sm text-gray-600">45 consultations</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-[#E17726]">₹22,500</p>
-                      <p className="text-sm text-green-600">+8%</p>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1171,41 +1467,134 @@ const DoctorDashboard = () => {
                   <CardTitle className="text-xl font-bold text-gray-900">Payment Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-semibold text-green-800">Received Payments</p>
-                        <p className="text-sm text-green-600">Last 30 days</p>
-                      </div>
+                  {loadingEarnings ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
                     </div>
-                    <p className="font-bold text-green-800">₹68,500</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                    <div className="flex items-center space-x-3">
-                      <Clock className="w-5 h-5 text-yellow-600" />
-                      <div>
-                        <p className="font-semibold text-yellow-800">Pending Payments</p>
-                        <p className="text-sm text-yellow-600">Processing</p>
+                  ) : earnings?.payment_status ? (
+                    <>
+                      <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <div>
+                            <p className="font-semibold text-green-800">Received Payments</p>
+                            <p className="text-sm text-green-600">Last 30 days</p>
+                          </div>
+                        </div>
+                                                 <p className="font-bold text-green-800">₹{(earnings.payment_status.received_payments ?? 0).toLocaleString()}</p>
                       </div>
-                    </div>
-                    <p className="font-bold text-yellow-800">₹9,500</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <div className="flex items-center space-x-3">
-                      <DollarSign className="w-5 h-5 text-blue-600" />
-                      <div>
-                        <p className="font-semibold text-blue-800">Next Payout</p>
-                        <p className="text-sm text-blue-600">15th February</p>
+                      
+                      <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                        <div className="flex items-center space-x-3">
+                          <Clock className="w-5 h-5 text-yellow-600" />
+                          <div>
+                            <p className="font-semibold text-yellow-800">Pending Payments</p>
+                            <p className="text-sm text-yellow-600">Processing</p>
+                          </div>
+                        </div>
+                                                 <p className="font-bold text-yellow-800">₹{(earnings.payment_status.pending_payments ?? 0).toLocaleString()}</p>
                       </div>
+                      
+                      <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center space-x-3">
+                          <DollarSign className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="font-semibold text-blue-800">Next Payout</p>
+                            <p className="text-sm text-blue-600">{earnings.payment_status.next_payout_date}</p>
+                          </div>
+                        </div>
+                                                 <p className="font-bold text-blue-800">₹{(earnings.payment_status.next_payout_amount ?? 0).toLocaleString()}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No payment data available</p>
                     </div>
-                    <p className="font-bold text-blue-800">₹9,500</p>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
+
+            {/* Payment Methods Distribution */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Payment Methods</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                ) : earnings?.payment_methods && Object.keys(earnings.payment_methods).length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(earnings.payment_methods).map(([method, amount]) => (
+                      <div key={method} className="p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-midnight capitalize">{method.replace('_', ' ')}</p>
+                            <p className="text-sm text-gray-600">Total</p>
+                          </div>
+                          <p className="font-bold text-[#E17726]">₹{(amount as number).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No payment method data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Transactions */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                ) : earnings?.recent_transactions && earnings.recent_transactions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm text-gray-600">Showing {earnings.recent_transactions.length} recent transactions</p>
+                      <p className="text-sm font-semibold text-[#E17726]">
+                        Total: ₹{earnings.recent_transactions.reduce((sum, t) => sum + (t.amount ?? 0), 0).toLocaleString()}
+                      </p>
+                    </div>
+                    {earnings.recent_transactions.map((transaction, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-[#E17726]/10 rounded-full flex items-center justify-center">
+                            <DollarSign className="w-5 h-5 text-[#E17726]" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-midnight">{transaction.patient_name}</p>
+                            <p className="text-sm text-gray-600 capitalize">
+                              {transaction.consultation_type?.replace('_', ' ')} • {transaction.payment_method}
+                            </p>
+                            <p className="text-xs text-gray-500">{transaction.processed_at}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-[#E17726]">₹{(transaction.amount ?? 0).toLocaleString()}</p>
+                          <Badge className={`text-xs ${transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {transaction.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No recent transactions available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
           </TabsContent>
         </Tabs>

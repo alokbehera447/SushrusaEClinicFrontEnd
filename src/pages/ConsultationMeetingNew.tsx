@@ -34,7 +34,9 @@ import {
   Minimize2,
   Activity,
   Shield,
-  Loader2
+  Loader2,
+  Edit,
+  X
 } from 'lucide-react';
 
 // Interfaces
@@ -114,17 +116,18 @@ export default function ConsultationMeeting() {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [isPanelMinimized, setIsPanelMinimized] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Auto-save effect
   useEffect(() => {
     const autoSaveTimer = setInterval(() => {
-      if (prescription && autoSaveEnabled && !prescription.is_finalized) {
+      if (prescription && autoSaveEnabled && (!prescription.is_finalized || isEditing)) {
         savePrescription(true);
       }
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearInterval(autoSaveTimer);
-  }, [prescription, autoSaveEnabled]);
+  }, [prescription, autoSaveEnabled, isEditing]);
 
   // Responsive effect
   useEffect(() => {
@@ -375,6 +378,7 @@ export default function ConsultationMeeting() {
       if (response.ok) {
         const data = await response.json();
         setPrescription(data.data || data);
+        setIsEditing(false); // Exit edit mode when finalized
         
         toast({
           title: 'Success',
@@ -392,6 +396,26 @@ export default function ConsultationMeeting() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleEditMode = () => {
+    const newEditingState = !isEditing;
+    setIsEditing(newEditingState);
+    console.log('Edit mode toggled:', newEditingState);
+    console.log('Prescription finalized:', prescription?.is_finalized);
+    console.log('Fields should be disabled:', prescription?.is_finalized && !newEditingState);
+    
+    if (!isEditing) {
+      toast({
+        title: 'Edit Mode',
+        description: 'You can now edit the finalized prescription',
+      });
+    } else {
+      toast({
+        title: 'View Mode',
+        description: 'Prescription is now in view-only mode',
+      });
     }
   };
 
@@ -542,7 +566,7 @@ export default function ConsultationMeeting() {
                         <div className="flex space-x-2">
                           <Button
                             onClick={() => savePrescription()}
-                            disabled={saving || prescription.is_finalized}
+                            disabled={saving || (prescription.is_finalized && !isEditing)}
                             size="sm"
                             variant="outline"
                           >
@@ -552,15 +576,36 @@ export default function ConsultationMeeting() {
                               <Save className="h-4 w-4" />
                             )}
                           </Button>
-                          <Button
-                            onClick={finalizePrescription}
-                            disabled={saving || prescription.is_finalized}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            {prescription.is_finalized ? 'Finalized' : 'Finalize'}
-                          </Button>
+                          {prescription.is_finalized ? (
+                            <Button
+                              onClick={toggleEditMode}
+                              disabled={saving}
+                              size="sm"
+                              variant={isEditing ? "destructive" : "outline"}
+                            >
+                              {isEditing ? (
+                                <>
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancel Edit
+                                </>
+                              ) : (
+                                <>
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={finalizePrescription}
+                              disabled={saving}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Finalize
+                            </Button>
+                          )}
                         </div>
                       </div>
 
@@ -589,7 +634,8 @@ export default function ConsultationMeeting() {
                               value={prescription.diagnosis}
                               onChange={(e) => updatePrescription('diagnosis', e.target.value)}
                               placeholder="Primary diagnosis"
-                              disabled={prescription.is_finalized}
+                              disabled={prescription.is_finalized && !isEditing}
+                              className={prescription.is_finalized && !isEditing ? 'bg-gray-100' : ''}
                             />
                           </div>
                           <div>
@@ -600,7 +646,7 @@ export default function ConsultationMeeting() {
                               onChange={(e) => updatePrescription('symptoms', e.target.value)}
                               placeholder="Patient symptoms"
                               rows={3}
-                              disabled={prescription.is_finalized}
+                              disabled={prescription.is_finalized && !isEditing}
                             />
                           </div>
                           <div>
@@ -611,7 +657,7 @@ export default function ConsultationMeeting() {
                               onChange={(e) => updatePrescription('general_instructions', e.target.value)}
                               placeholder="General instructions for patient"
                               rows={3}
-                              disabled={prescription.is_finalized}
+                              disabled={prescription.is_finalized && !isEditing}
                             />
                           </div>
                         </CardContent>
@@ -626,7 +672,7 @@ export default function ConsultationMeeting() {
                               onClick={addMedication}
                               size="sm"
                               variant="outline"
-                              disabled={prescription.is_finalized}
+                              disabled={prescription.is_finalized && !isEditing}
                             >
                               <Plus className="h-4 w-4 mr-1" />
                               Add Medicine
@@ -647,7 +693,7 @@ export default function ConsultationMeeting() {
                                       size="sm"
                                       variant="ghost"
                                       className="text-red-600 hover:text-red-700"
-                                      disabled={prescription.is_finalized}
+                                      disabled={prescription.is_finalized && !isEditing}
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -659,7 +705,7 @@ export default function ConsultationMeeting() {
                                         value={medication.name}
                                         onChange={(e) => updateMedication(index, 'name', e.target.value)}
                                         placeholder="Medicine name"
-                                        disabled={prescription.is_finalized}
+                                        disabled={prescription.is_finalized && !isEditing}
                                       />
                                     </div>
                                     <div>
@@ -668,7 +714,7 @@ export default function ConsultationMeeting() {
                                         value={medication.strength}
                                         onChange={(e) => updateMedication(index, 'strength', e.target.value)}
                                         placeholder="e.g., 500mg"
-                                        disabled={prescription.is_finalized}
+                                        disabled={prescription.is_finalized && !isEditing}
                                       />
                                     </div>
                                     <div>
@@ -677,7 +723,7 @@ export default function ConsultationMeeting() {
                                         value={medication.dosage}
                                         onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
                                         placeholder="e.g., 1 tablet"
-                                        disabled={prescription.is_finalized}
+                                        disabled={prescription.is_finalized && !isEditing}
                                       />
                                     </div>
                                     <div>
@@ -686,7 +732,7 @@ export default function ConsultationMeeting() {
                                         value={medication.frequency}
                                         onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
                                         placeholder="e.g., Twice daily"
-                                        disabled={prescription.is_finalized}
+                                        disabled={prescription.is_finalized && !isEditing}
                                       />
                                     </div>
                                     <div>
@@ -695,7 +741,7 @@ export default function ConsultationMeeting() {
                                         type="number"
                                         value={medication.duration_days}
                                         onChange={(e) => updateMedication(index, 'duration_days', parseInt(e.target.value))}
-                                        disabled={prescription.is_finalized}
+                                        disabled={prescription.is_finalized && !isEditing}
                                       />
                                     </div>
                                     <div>
@@ -704,7 +750,7 @@ export default function ConsultationMeeting() {
                                         type="number"
                                         value={medication.total_quantity}
                                         onChange={(e) => updateMedication(index, 'total_quantity', parseInt(e.target.value))}
-                                        disabled={prescription.is_finalized}
+                                        disabled={prescription.is_finalized && !isEditing}
                                       />
                                     </div>
                                   </div>
@@ -715,7 +761,7 @@ export default function ConsultationMeeting() {
                                       onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
                                       placeholder="Special instructions for this medication"
                                       rows={2}
-                                      disabled={prescription.is_finalized}
+                                      disabled={prescription.is_finalized && !isEditing}
                                     />
                                   </div>
                                 </CardContent>
@@ -759,7 +805,7 @@ export default function ConsultationMeeting() {
                                 value={prescription.vital_signs.blood_pressure_systolic}
                                 onChange={(e) => updateVitalSigns('blood_pressure_systolic', e.target.value)}
                                 placeholder="120"
-                                disabled={prescription.is_finalized}
+                                disabled={prescription.is_finalized && !isEditing}
                               />
                               <span className="text-sm text-gray-500">mmHg</span>
                             </div>
@@ -773,7 +819,7 @@ export default function ConsultationMeeting() {
                                 value={prescription.vital_signs.blood_pressure_diastolic}
                                 onChange={(e) => updateVitalSigns('blood_pressure_diastolic', e.target.value)}
                                 placeholder="80"
-                                disabled={prescription.is_finalized}
+                                disabled={prescription.is_finalized && !isEditing}
                               />
                               <span className="text-sm text-gray-500">mmHg</span>
                             </div>
@@ -787,7 +833,7 @@ export default function ConsultationMeeting() {
                                 value={prescription.vital_signs.heart_rate}
                                 onChange={(e) => updateVitalSigns('heart_rate', e.target.value)}
                                 placeholder="72"
-                                disabled={prescription.is_finalized}
+                                disabled={prescription.is_finalized && !isEditing}
                               />
                               <span className="text-sm text-gray-500">bpm</span>
                             </div>
@@ -801,7 +847,7 @@ export default function ConsultationMeeting() {
                                 value={prescription.vital_signs.temperature}
                                 onChange={(e) => updateVitalSigns('temperature', e.target.value)}
                                 placeholder="98.6"
-                                disabled={prescription.is_finalized}
+                                disabled={prescription.is_finalized && !isEditing}
                               />
                               <span className="text-sm text-gray-500">°F</span>
                             </div>
@@ -815,7 +861,7 @@ export default function ConsultationMeeting() {
                                 value={prescription.vital_signs.oxygen_saturation}
                                 onChange={(e) => updateVitalSigns('oxygen_saturation', e.target.value)}
                                 placeholder="98"
-                                disabled={prescription.is_finalized}
+                                disabled={prescription.is_finalized && !isEditing}
                               />
                               <span className="text-sm text-gray-500">%</span>
                             </div>
@@ -829,7 +875,7 @@ export default function ConsultationMeeting() {
                                 value={prescription.vital_signs.weight}
                                 onChange={(e) => updateVitalSigns('weight', e.target.value)}
                                 placeholder="70"
-                                disabled={prescription.is_finalized}
+                                disabled={prescription.is_finalized && !isEditing}
                               />
                               <span className="text-sm text-gray-500">kg</span>
                             </div>

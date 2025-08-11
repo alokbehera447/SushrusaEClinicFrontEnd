@@ -19,6 +19,7 @@ import AdminDashboardPage from "./pages/AdminDashboard";
 import DoctorDashboardPage from "./pages/DoctorDashboard";
 import PatientDashboardPage from "./pages/PatientDashboard";
 import ConsultationMeeting from "./pages/ConsultationMeeting";
+import ConsultationWorkspace from "./pages/ConsultationWorkspace";
 import SlotManagementPage from "./pages/SlotManagementPage";
 import ConsultationDetailPage from "./pages/ConsultationDetailPage";
 
@@ -26,13 +27,15 @@ import ConsultationDetailPage from "./pages/ConsultationDetailPage";
 import AppointmentBooking from "@/components/workflow/AppointmentBooking";
 import PatientRegistration from "@/components/workflow/PatientRegistration";
 import PaymentProcessing from "@/components/workflow/PaymentProcessing";
-import PrescriptionWriter from "@/components/workflow/PrescriptionWriter";
+import { default as WorkflowPrescriptionWriter } from "@/components/workflow/PrescriptionWriter";
 import QueueManagement from "@/components/workflow/QueueManagement";
 import VideoConsultation from "@/components/workflow/VideoConsultation";
 import DoctorSchedule from "@/components/workflow/DoctorSchedule";
 import AnalyticsDashboard from "@/components/workflow/AnalyticsDashboard";
 import ConsultationCreationPage from "./pages/ConsultationCreationPage";
 import AddPatientPage from "./pages/AddPatientPage";
+import PrescriptionManagement from "./pages/PrescriptionManagement";
+import PrescriptionWriter from "./pages/PrescriptionWriter";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -41,7 +44,7 @@ const queryClient = new QueryClient();
 // Add this wrapper component for PrescriptionWriter to extract consultationId from params
 const PrescriptionWriterPage = () => {
   const { consultationId } = useParams();
-  return <PrescriptionWriter consultationId={consultationId || ''} onClose={() => window.history.back()} />;
+  return <WorkflowPrescriptionWriter consultationId={consultationId || ''} onClose={() => window.history.back()} />;
 };
 
 const App = () => (
@@ -113,9 +116,44 @@ const App = () => (
             <Route path="/workflow/doctor-schedule" element={<DoctorSchedule />} />
             <Route path="/workflow/analytics" element={<AnalyticsDashboard />} />
             <Route path="/prescriptions/new/:consultationId" element={<PrescriptionWriterPage />} />
+            
+            {/* Prescription Management Routes */}
+            <Route path="/prescriptions" element={
+              <ProtectedRoute requiredRole="doctor">
+                <PrescriptionManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/prescriptions/:consultationId" element={
+              <ProtectedRoute requiredRole="doctor">
+                <PrescriptionManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/prescriptions/:prescriptionId/write" element={
+              <ProtectedRoute requiredRole="doctor">
+                <PrescriptionWriter />
+              </ProtectedRoute>
+            } />
+            
             <Route path="/consultation/:consultationId/meeting" element={
               <ProtectedRoute requiredRole="doctor">
                 <ConsultationMeeting />
+              </ProtectedRoute>
+            } />
+            <Route path="/consultation/:consultationId/workspace" element={
+              <ProtectedRoute requiredRole="doctor">
+                <ConsultationWorkspace />
+              </ProtectedRoute>
+            } />
+            
+            {/* Patient Consultation Routes */}
+            <Route path="/patient/consultation/:consultationId/meeting" element={
+              <ProtectedRoute requiredRole="patient">
+                <ConsultationMeeting />
+              </ProtectedRoute>
+            } />
+            <Route path="/patient/consultation/:consultationId/workspace" element={
+              <ProtectedRoute requiredRole="patient">
+                <ConsultationWorkspace />
               </ProtectedRoute>
             } />
             

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,27 +24,51 @@ import {
   Camera,
   Monitor,
   Volume2,
-  VolumeX
+  VolumeX,
+  Download,
+  Save,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
+import { prescriptionApi, EnhancedPrescription, CreatePrescriptionData, PrescriptionMedication } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from '@/lib/toast';
 
-const VideoConsultation = () => {
+interface VideoConsultationProps {
+  consultationId?: string;
+  patientId?: string;
+}
+
+const VideoConsultation = ({ consultationId, patientId }: VideoConsultationProps) => {
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [consultationNotes, setConsultationNotes] = useState('');
-  const [prescription, setPrescription] = useState('');
   const [activeTab, setActiveTab] = useState('patient-info');
+  
+  // Prescription states
+  const [prescription, setPrescription] = useState<EnhancedPrescription | null>(null);
+  const [isLoadingPrescription, setIsLoadingPrescription] = useState(false);
+  const [isSavingPrescription, setIsSavingPrescription] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [prescriptionData, setPrescriptionData] = useState<Partial<CreatePrescriptionData>>({
+    primary_diagnosis: '',
+    general_instructions: '',
+    medications: []
+  });
+
+  const { user } = useAuth();
 
   // Mock data
   const patientInfo = {
-    id: 'PAT12345',
+    id: patientId || 'PAT12345',
     name: 'Rajesh Kumar',
     age: 42,
     gender: 'Male',
     phone: '+91 98765 43210',
     bloodGroup: 'B+',
     allergies: 'Penicillin, Dust',
-    appointmentId: 'APT-2024-001',
+    appointmentId: consultationId || 'APT-2024-001',
     symptoms: 'Chest pain, shortness of breath, fatigue',
     duration: '3 days'
   };
@@ -60,6 +84,142 @@ const VideoConsultation = () => {
     { date: '2024-01-10', doctor: 'Dr. Amit Kumar', diagnosis: 'Hypertension', prescription: 'Amlodipine 5mg' },
     { date: '2023-12-15', doctor: 'Dr. Priya Singh', diagnosis: 'Routine Checkup', prescription: 'Vitamin D3' }
   ];
+
+  // Load prescription for consultation
+  useEffect(() => {
+    if (consultationId) {
+      loadPrescription();
+    }
+  }, [consultationId]);
+
+  const loadPrescription = async () => {
+    if (!consultationId) return;
+    
+    setIsLoadingPrescription(true);
+    try {
+      const prescriptionData = await prescriptionApi.getConsultationPrescription(consultationId);
+      setPrescription(prescriptionData);
+      setPrescriptionData({
+        primary_diagnosis: prescriptionData.primary_diagnosis || '',
+        general_instructions: prescriptionData.general_instructions || '',
+        medications: prescriptionData.medications || []
+      });
+    } catch (error) {
+      console.error('Error loading prescription:', error);
+      // If no prescription exists, we'll create one when needed
+    } finally {
+      setIsLoadingPrescription(false);
+    }
+  };
+
+  const savePrescription = async () => {
+    if (!consultationId || !patientId) {
+      toast.error('Consultation ID and Patient ID are required');
+      return;
+    }
+
+    setIsSavingPrescription(true);
+    try {
+      if (prescription?.id) {
+        // Update existing prescription
+        const updatedPrescription = await prescriptionApi.partialUpdatePrescription(
+          prescription.id.toString(),
+          prescriptionData
+        );
+        setPrescription(updatedPrescription);
+        toast.success('Prescription saved successfully');
+      } else {
+        // Create new prescription
+        const newPrescription = await prescriptionApi.createPrescription({
+          consultation: consultationId,
+          patient: patientId,
+          ...prescriptionData
+        });
+        setPrescription(newPrescription);
+        toast.success('Prescription created successfully');
+      }
+    } catch (error) {
+      console.error('Error saving prescription:', error);
+      toast.error('Failed to save prescription');
+    } finally {
+      setIsSavingPrescription(false);
+    }
+  };
+
+  const generatePrescriptionPDF = async () => {
+    if (!prescription?.id) {
+      toast.error('Please save the prescription first');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      const result = await prescriptionApi.finalizeAndGeneratePDF(
+        prescription.id.toString(),
+        prescriptionData
+      );
+      
+      // Update prescription with finalized data
+      setPrescription(result.prescription);
+      
+      // Download the PDF
+      if (result.pdf.url) {
+        const link = document.createElement('a');
+        link.href = result.pdf.url;
+        link.download = `prescription_${consultationId}_${new Date().toISOString().split('T')[0]}.pdf`;
+        link.target = '_blank'; // Open in new tab for signed URLs
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      toast.success('Prescription PDF generated and downloaded successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate prescription PDF');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const addMedication = () => {
+    const newMedication: Omit<PrescriptionMedication, 'id'> = {
+      medicine_name: '',
+      composition: '',
+      dosage_form: 'tablet',
+      morning_dose: 0,
+      afternoon_dose: 0,
+      evening_dose: 0,
+      frequency: 'once_daily',
+      timing: 'after_breakfast',
+      duration_days: 7,
+      is_continuous: true,
+      special_instructions: '',
+      notes: '',
+      order: (prescriptionData.medications?.length || 0) + 1
+    };
+
+    setPrescriptionData(prev => ({
+      ...prev,
+      medications: [...(prev.medications || []), newMedication]
+    }));
+  };
+
+  const updateMedication = (index: number, field: keyof PrescriptionMedication, value: string | number) => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      medications: prev.medications?.map((med, i) => 
+        i === index ? { ...med, [field]: value } : med
+      )
+    }));
+  };
+
+  const removeMedication = (index: number) => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      medications: prev.medications?.filter((_, i) => i !== index)
+    }));
+  };
 
   const getVitalStatus = (status: string) => {
     switch (status) {
@@ -331,17 +491,177 @@ const VideoConsultation = () => {
                 {/* Prescription Tab */}
                 {activeTab === 'prescription' && (
                   <div className="space-y-4">
-                    <h3 className="font-bold text-midnight">Write Prescription</h3>
-                    <Textarea
-                      placeholder="Enter prescription details..."
-                      value={prescription}
-                      onChange={(e) => setPrescription(e.target.value)}
-                      className="min-h-32 rounded-xl border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
-                    />
-                    <Button className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white rounded-xl">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Generate Prescription
-                    </Button>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-midnight">Write Prescription</h3>
+                      {prescription?.is_finalized && (
+                        <Badge className="bg-green-100 text-green-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Finalized
+                        </Badge>
+                      )}
+                    </div>
+
+                    {isLoadingPrescription ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726] mx-auto"></div>
+                        <p className="text-sm text-gray-600 mt-2">Loading prescription...</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Diagnosis */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Primary Diagnosis
+                          </label>
+                          <Input
+                            placeholder="Enter diagnosis..."
+                            value={prescriptionData.primary_diagnosis || ''}
+                            onChange={(e) => setPrescriptionData(prev => ({
+                              ...prev,
+                              primary_diagnosis: e.target.value
+                            }))}
+                            className="rounded-xl border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+                          />
+                        </div>
+
+                        {/* General Instructions */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            General Instructions
+                          </label>
+                          <Textarea
+                            placeholder="Enter general instructions..."
+                            value={prescriptionData.general_instructions || ''}
+                            onChange={(e) => setPrescriptionData(prev => ({
+                              ...prev,
+                              general_instructions: e.target.value
+                            }))}
+                            className="min-h-20 rounded-xl border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+                          />
+                        </div>
+
+                        {/* Medications */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Medications
+                            </label>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={addMedication}
+                              className="bg-[#E17726] hover:bg-[#c9651e] text-white rounded-lg"
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            {prescriptionData.medications?.map((medication, index) => (
+                              <div key={index} className="p-3 border border-gray-200 rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    Medication {index + 1}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => removeMedication(index)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Input
+                                    placeholder="Medicine name"
+                                    value={medication.medicine_name}
+                                    onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
+                                    className="text-sm"
+                                  />
+                                  
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <Input
+                                      placeholder="Morning"
+                                      type="number"
+                                      value={medication.morning_dose}
+                                      onChange={(e) => updateMedication(index, 'morning_dose', parseInt(e.target.value) || 0)}
+                                      className="text-sm"
+                                    />
+                                    <Input
+                                      placeholder="Afternoon"
+                                      type="number"
+                                      value={medication.afternoon_dose}
+                                      onChange={(e) => updateMedication(index, 'afternoon_dose', parseInt(e.target.value) || 0)}
+                                      className="text-sm"
+                                    />
+                                    <Input
+                                      placeholder="Evening"
+                                      type="number"
+                                      value={medication.evening_dose}
+                                      onChange={(e) => updateMedication(index, 'evening_dose', parseInt(e.target.value) || 0)}
+                                      className="text-sm"
+                                    />
+                                  </div>
+                                  
+                                  <Input
+                                    placeholder="Special instructions"
+                                    value={medication.special_instructions || ''}
+                                    onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
+                                    className="text-sm"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="space-y-2">
+                          <Button
+                            onClick={savePrescription}
+                            disabled={isSavingPrescription}
+                            className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white rounded-xl"
+                          >
+                            {isSavingPrescription ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-4 h-4 mr-2" />
+                                Save Prescription
+                              </>
+                            )}
+                          </Button>
+
+                          {prescription?.id && (
+                            <Button
+                              onClick={generatePrescriptionPDF}
+                              disabled={isGeneratingPDF}
+                              variant="outline"
+                              className="w-full border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white rounded-xl"
+                            >
+                              {isGeneratingPDF ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#E17726] mr-2"></div>
+                                  Generating PDF...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Generate & Download PDF
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </CardContent>

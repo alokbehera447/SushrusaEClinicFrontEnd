@@ -40,7 +40,10 @@ const Register = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.post('/api/auth/send-otp/', { phone: phoneNumber });
+      await api.post('/api/auth/send-otp/', { 
+        phone: phoneNumber,
+        purpose: 'registration'
+      });
       setStep('info');
     } catch (err) {
       setError('Failed to send OTP. Please check your number and try again.');
@@ -79,7 +82,19 @@ const Register = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await api.post('/api/auth/verify-otp/', { phone: phoneNumber, otp: otpString });
+      // For registration, include user info
+      const requestData = {
+        phone: phoneNumber,
+        otp: otpString,
+        purpose: 'registration',
+        user_info: {
+          name: `${userInfo.firstName} ${userInfo.lastName}`.trim(),
+          date_of_birth: userInfo.dateOfBirth,
+          role: 'patient'
+        }
+      };
+      
+      const res = await api.post('/api/auth/verify-otp/', requestData);
       if (res.data && res.data.success && res.data.data && res.data.data.user) {
         const user = res.data.data.user;
         const access = res.data.data.access;
@@ -101,7 +116,10 @@ const Register = () => {
     setCountdown(30);
     setOtp(['', '', '', '', '', '']);
     try {
-      await api.post('/api/auth/send-otp/', { phone: phoneNumber });
+      await api.post('/api/auth/send-otp/', { 
+        phone: phoneNumber,
+        purpose: 'registration'
+      });
     } catch {
       setError('Failed to resend OTP.');
     }

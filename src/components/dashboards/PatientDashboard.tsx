@@ -62,6 +62,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   patientApi,
   UserProfile,
@@ -147,6 +148,7 @@ const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // State for data - Real API Integration without dummy fallbacks
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -178,6 +180,16 @@ const PatientDashboard = () => {
   const [consultationFilter, setConsultationFilter] = useState('all');
   const [consultationSearch, setConsultationSearch] = useState('');
   const [prescriptionSearch, setPrescriptionSearch] = useState('');
+  
+  // Date filter states
+  const [consultationStartDate, setConsultationStartDate] = useState('');
+  const [consultationEndDate, setConsultationEndDate] = useState('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
 
   // Modal states
   const [bookConsultationOpen, setBookConsultationOpen] = useState(false);
@@ -245,17 +257,88 @@ const PatientDashboard = () => {
   }, [user?.id, toast]);
 
   // Fetch consultations (Real API - no fallbacks)
-  const fetchConsultations = useCallback(async () => {
+  const fetchConsultations = useCallback(async (page: number = 1) => {
     try {
       setConsultationsLoading(true);
       console.log('Fetching consultations for user:', userProfile?.id);
       
-      const consultationsData = await patientApi.getPatientConsultations(userProfile?.id);
-      console.log('Consultations received:', consultationsData);
-      setConsultations(consultationsData || []);
+      const params: {
+        page?: number;
+        page_size?: number;
+        status?: string;
+        search?: string;
+        ordering?: string;
+        start_date?: string;
+        end_date?: string;
+      } = {
+        page: page,
+        page_size: pageSize,
+        ordering: '-scheduled_date'
+      };
+      
+      if (consultationFilter !== 'all') {
+        params.status = consultationFilter;
+      }
+      
+      if (consultationSearch) {
+        params.search = consultationSearch;
+      }
+      
+      // Add date filters
+      if (consultationStartDate) {
+        params.start_date = consultationStartDate;
+      }
+      
+      if (consultationEndDate) {
+        params.end_date = consultationEndDate;
+      }
+      
+      console.log('Sending consultation request with params:', params);
+      console.log('Date filters - Start:', consultationStartDate, 'End:', consultationEndDate);
+      const response = await patientApi.getPatientConsultations(undefined, params);
+      console.log('Consultations response received:', response);
+      
+      // If we have date filters but no consultations, log this specifically
+      if ((consultationStartDate || consultationEndDate) && 
+          (!response || !response.consultations || response.consultations.length === 0)) {
+        console.log('⚠️ Date filter applied but no consultations found in the specified date range');
+      }
+      if (response && response.consultations) {
+        console.log('Filtered consultations:', response.consultations.map(c => ({
+          id: c.id,
+          scheduled_date: c.scheduled_date,
+          doctor_name: c.doctor_name,
+          status: c.status
+        })));
+      }
+      
+      if (response && response.consultations && Array.isArray(response.consultations)) {
+        // Handle new response structure with pagination
+        console.log(`Setting ${response.consultations.length} consultations from API response`);
+        setConsultations(response.consultations);
+        setTotalCount(response.pagination.count || 0);
+        setTotalPages(Math.ceil((response.pagination.count || 0) / pageSize));
+        setCurrentPage(page);
+      } else if (Array.isArray(response)) {
+        // Handle array response from new patient-specific endpoint
+        console.log(`Setting ${response.length} consultations from array response`);
+        setConsultations(response);
+        setTotalCount(response.length || 0);
+        setTotalPages(Math.ceil((response.length || 0) / pageSize));
+        setCurrentPage(page);
+      } else {
+        // Handle other response formats
+        console.log('No consultations found, setting empty array');
+        setConsultations([]);
+        setTotalCount(0);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
     } catch (err) {
       console.error('Error fetching consultations:', err);
       setConsultations([]);
+      setTotalCount(0);
+      setTotalPages(1);
       toast({ 
         title: 'Info', 
         description: 'No consultations found for this account.', 
@@ -264,7 +347,7 @@ const PatientDashboard = () => {
     } finally {
       setConsultationsLoading(false);
     }
-  }, [userProfile?.id, toast]);
+  }, [userProfile?.id, pageSize, consultationFilter, consultationSearch, consultationStartDate, consultationEndDate, toast]);
 
   // Fetch prescriptions (Real API - no fallbacks)
   const fetchPrescriptions = useCallback(async () => {
@@ -299,7 +382,7 @@ const PatientDashboard = () => {
       setMedicalRecordsLoading(true);
       if (userProfile?.id) {
         console.log('Fetching medical records for user:', userProfile.id);
-        const recordsData = await patientApi.getPatientMedicalRecords(userProfile.id);
+        const recordsData = await patientApi.getPatientMedicalRecords();
         console.log('Medical records received:', recordsData);
         setMedicalRecords(recordsData || []);
       }
@@ -317,7 +400,7 @@ const PatientDashboard = () => {
       setDocumentsLoading(true);
       if (userProfile?.id) {
         console.log('Fetching documents for user:', userProfile.id);
-        const documentsData = await patientApi.getPatientDocuments(userProfile.id);
+        const documentsData = await patientApi.getPatientDocuments();
         console.log('Documents received:', documentsData);
         setDocuments(documentsData || []);
       }
@@ -335,7 +418,7 @@ const PatientDashboard = () => {
       setNotesLoading(true);
       if (userProfile?.id) {
         console.log('Fetching notes for user:', userProfile.id);
-        const notesData = await patientApi.getPatientNotes(userProfile.id);
+        const notesData = await patientApi.getPatientNotes();
         console.log('Notes received:', notesData);
         setNotes(notesData || []);
       }
@@ -435,6 +518,38 @@ const PatientDashboard = () => {
     initializeHealthMetrics
   ]);
 
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    fetchConsultations(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const handleConsultationSearch = (value: string) => {
+    setConsultationSearch(value);
+    setCurrentPage(1);
+  };
+
+  const handleConsultationFilter = (value: string) => {
+    setConsultationFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleConsultationStartDateChange = (date: string) => {
+    console.log('Start date changed to:', date);
+    setConsultationStartDate(date);
+    setCurrentPage(1);
+  };
+
+  const handleConsultationEndDateChange = (date: string) => {
+    console.log('End date changed to:', date);
+    setConsultationEndDate(date);
+    setCurrentPage(1);
+  };
+
   // Load data on component mount
   useEffect(() => {
     console.log('PatientDashboard mounted, user:', user);
@@ -445,6 +560,13 @@ const PatientDashboard = () => {
   useEffect(() => {
     fetchSecondaryData();
   }, [fetchSecondaryData]);
+
+  // Refetch consultations when filters or search change
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchConsultations(1);
+    }
+  }, [consultationFilter, consultationSearch, consultationStartDate, consultationEndDate, pageSize, fetchConsultations, userProfile?.id]);
 
   // Update edit form when user profile changes
   useEffect(() => {
@@ -474,16 +596,19 @@ const PatientDashboard = () => {
 
   // Get comprehensive stats from all real APIs
   const getQuickStats = () => {
+    const consultationsArray = Array.isArray(consultations) ? consultations : [];
+    const notificationsArray = Array.isArray(notifications) ? notifications : [];
+    
     return {
-      totalConsultations: consultations.length,
-      upcomingConsultations: consultations.filter(c => c.status === 'scheduled').length,
-      completedConsultations: consultations.filter(c => c.status === 'completed').length,
+      totalConsultations: consultationsArray.length,
+      upcomingConsultations: consultationsArray.filter(c => c.status === 'scheduled').length,
+      completedConsultations: consultationsArray.filter(c => c.status === 'completed').length,
       activePrescriptions: prescriptions.length,
       totalMedicalRecords: medicalRecords.length,
       totalDocuments: documents.length,
       totalNotes: notes.length,
       totalPayments: payments.length,
-      unreadNotifications: notifications.filter(n => !n.is_read).length,
+      unreadNotifications: notificationsArray.filter(n => !n.is_read).length,
       activeSessions: sessions.length || 1 // At least current session
     };
   };
@@ -500,9 +625,10 @@ const PatientDashboard = () => {
   // Recent activity (based on real data)
   const getRecentActivity = () => {
     const activities = [];
+    const consultationsArray = Array.isArray(consultations) ? consultations : [];
     
     // Add recent consultations
-    consultations.slice(0, 3).forEach(consultation => {
+    consultationsArray.slice(0, 3).forEach(consultation => {
       activities.push({
         description: `Consultation with ${consultation.doctor_name}`,
         date: formatDate(consultation.created_at)
@@ -628,10 +754,10 @@ const PatientDashboard = () => {
               <Stethoscope className="w-4 h-4 mr-2" />
               Consultations
             </TabsTrigger>
-            <TabsTrigger value="prescriptions" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#E17726] data-[state=active]:to-[#FF8A56] data-[state=active]:text-white">
+            {/* <TabsTrigger value="prescriptions" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#E17726] data-[state=active]:to-[#FF8A56] data-[state=active]:text-white">
               <Pill className="w-4 h-4 mr-2" />
               Prescriptions
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="records" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#E17726] data-[state=active]:to-[#FF8A56] data-[state=active]:text-white">
               <FileText className="w-4 h-4 mr-2" />
               Records
@@ -658,12 +784,27 @@ const PatientDashboard = () => {
               loading={consultationsLoading}
               searchTerm={consultationSearch}
               filter={consultationFilter}
-              onSearchChange={setConsultationSearch}
-              onFilterChange={setConsultationFilter}
+              onSearchChange={handleConsultationSearch}
+              onFilterChange={handleConsultationFilter}
+              startDate={consultationStartDate}
+              endDate={consultationEndDate}
+              onStartDateChange={handleConsultationStartDateChange}
+              onEndDateChange={handleConsultationEndDateChange}
               onBookConsultation={() => setBookConsultationOpen(true)}
               onJoinConsultation={(id) => {
-                toast({ title: 'Joining Consultation', description: 'Redirecting to consultation room...' });
+                toast({ 
+                  title: 'Joining Consultation', 
+                  description: 'Redirecting to consultation room...' 
+                });
+                // Navigate to the consultation meeting room
+                navigate(`/patient/consultation/${id}/meeting`);
               }}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
             />
           </TabsContent>
 

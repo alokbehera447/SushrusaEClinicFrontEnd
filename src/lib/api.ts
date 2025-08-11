@@ -1,5 +1,8 @@
 import { api } from './utils';
 
+// Export the api instance for use in other modules
+export { api };
+
 // Utility function to extract error messages from backend responses
 export const extractErrorMessage = (error: unknown): string => {
   console.log('Error object:', error);
@@ -130,7 +133,7 @@ export interface Consultation {
   duration: number;
   status: string;
   payment_status: string;
-  consultation_fee: number;
+  consultation_fee: number | string;
   is_paid: boolean;
   payment_method?: string;
   chief_complaint: string;
@@ -149,6 +152,7 @@ export interface Consultation {
   booked_slot?: number;
   created_at: string;
   updated_at: string;
+  doctor_meeting_link?: string;
 }
 
 export interface Prescription {
@@ -387,11 +391,12 @@ export const patientApi = {
   // ===== MEDICAL RECORDS APIs (6 endpoints) =====
   
   // Get patient medical records
-  getPatientMedicalRecords: async (patientId: string, params?: any): Promise<MedicalRecord[]> => {
+  getPatientMedicalRecords: async (patientId?: string, params?: any): Promise<MedicalRecord[]> => {
     try {
-      const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(
-        `/api/patients/${patientId}/medical-records/`, { params }
-      );
+      const url = patientId 
+        ? `/api/patients/${patientId}/medical-records/` 
+        : '/api/patients/medical-records/';
+      const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(url, { params });
       
       // Check if response has the expected structure
       if (response.data && response.data.data && response.data.data.results) {
@@ -412,8 +417,10 @@ export const patientApi = {
   },
 
   // Create medical record
-  createMedicalRecord: async (patientId: string, recordData: Partial<MedicalRecord>): Promise<MedicalRecord> => {
-    const response = await api.post<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/`, recordData);
+  createMedicalRecord: async (patientId: string, recordData: FormData): Promise<MedicalRecord> => {
+    const response = await api.post<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/`, recordData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data.data;
   },
 
@@ -424,8 +431,10 @@ export const patientApi = {
   },
 
   // Update medical record
-  updateMedicalRecord: async (patientId: string, recordId: string, recordData: Partial<MedicalRecord>): Promise<MedicalRecord> => {
-    const response = await api.put<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/${recordId}/`, recordData);
+  updateMedicalRecord: async (patientId: string, recordId: string, recordData: FormData): Promise<MedicalRecord> => {
+    const response = await api.put<ApiResponse<MedicalRecord>>(`/api/patients/${patientId}/medical-records/${recordId}/`, recordData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data.data;
   },
 
@@ -465,8 +474,10 @@ export const patientApi = {
   },
 
   // Update document
-  updateDocument: async (patientId: string, documentId: string, documentData: Partial<PatientDocument>): Promise<PatientDocument> => {
-    const response = await api.put<ApiResponse<PatientDocument>>(`/api/patients/${patientId}/documents/${documentId}/`, documentData);
+  updateDocument: async (patientId: string, documentId: string, documentData: FormData): Promise<PatientDocument> => {
+    const response = await api.put<ApiResponse<PatientDocument>>(`/api/patients/${patientId}/documents/${documentId}/`, documentData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data.data;
   },
 
@@ -485,10 +496,27 @@ export const patientApi = {
   
   // Get patient notes
   getPatientNotes: async (patientId: string, params?: any): Promise<any[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
-      `/api/patients/${patientId}/notes/`, { params }
-    );
-    return response.data.data.results;
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
+        `/api/patients/${patientId}/notes/`, { params }
+      );
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // If data structure is different, try direct results
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching patient notes:', error);
+      return [];
+    }
   },
 
   // Create note
@@ -520,31 +548,62 @@ export const patientApi = {
     await api.delete(`/api/patients/${patientId}/notes/${noteId}/`);
   },
 
+  // Get signed URL for file download
+  getSignedUrl: async (filePath: string): Promise<string> => {
+    try {
+      const response = await api.get<{ signed_url: string }>(`/api/utils/signed-url/?file_path=${encodeURIComponent(filePath)}`);
+      return response.data.signed_url;
+    } catch (error) {
+      console.error('Error getting signed URL:', error);
+      return filePath; // Fallback to original path
+    }
+  },
+
   // ===== CONSULTATIONS APIs (8 endpoints) =====
   
   // Get patient consultations
-  getPatientConsultations: async (patientId?: string, params?: any): Promise<Consultation[]> => {
+  getPatientConsultations: async (patientId?: string, params?: any): Promise<{ consultations: Consultation[]; pagination: { count: number; next: string | null; previous: string | null } }> => {
     try {
-      const url = patientId 
-        ? `/api/consultations/?patient=${patientId}` 
-        : '/api/consultations/';
-      const response = await api.get<ApiResponse<PaginatedResponse<Consultation>>>(url, { params });
+      // Use the patient-specific endpoint
+      const url = '/api/consultations/patient/consultations/';
+      const response = await api.get(url, { params });
       
-      // Check if response has the expected structure
-      if (response.data && response.data.data && response.data.data.results) {
-        return response.data.data.results;
+      console.log('Patient consultations API response:', response);
+      
+      // Handle the actual API response structure
+      // Response structure: { data: { count, next, previous, results: [...] } }
+      if (response && response.data && response.data.results && Array.isArray(response.data.results)) {
+        return {
+          consultations: response.data.results,
+          pagination: {
+            count: response.data.count || 0,
+            next: response.data.next,
+            previous: response.data.previous
+          }
+        };
       }
       
-      // If data structure is different, try direct results
-      if (response.data && Array.isArray(response.data)) {
-        return response.data;
+      // Fallback: if response.data exists and is an array
+      if (response && response.data && Array.isArray(response.data)) {
+        return {
+          consultations: response.data,
+          pagination: { count: response.data.length, next: null, previous: null }
+        };
+      }
+      
+      // Fallback: if response is directly an array
+      if (response && Array.isArray(response)) {
+        return {
+          consultations: response,
+          pagination: { count: response.length, next: null, previous: null }
+        };
       }
       
       // Return empty array if no data
-      return [];
+      return { consultations: [], pagination: { count: 0, next: null, previous: null } };
     } catch (error) {
       console.error('Error fetching consultations:', error);
-      return [];
+      return { consultations: [], pagination: { count: 0, next: null, previous: null } };
     }
   },
 
@@ -616,10 +675,47 @@ export const patientApi = {
 
   // Get consultation prescriptions
   getConsultationPrescriptions: async (consultationId: string): Promise<Prescription[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<Prescription>>>(
-      `/api/prescriptions/?consultation=${consultationId}`
-    );
-    return response.data.data.results;
+    try {
+      const response = await api.get<ApiResponse<Prescription>>(
+        `/api/consultations/${consultationId}/prescription/`
+      );
+      
+      // The backend returns a single prescription object, not an array
+      if (response.data && response.data.data) {
+        return [response.data.data]; // Wrap in array for consistency
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching consultation prescriptions:', error);
+      return [];
+    }
+  },
+
+  // Download prescription PDF
+  downloadPrescriptionPDF: async (prescriptionId: string, version: string | number = 'latest'): Promise<{ download_url: string; filename: string }> => {
+    try {
+      const response = await api.get(`/api/prescriptions/${prescriptionId}/pdf/${version}/`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error downloading prescription PDF:', error);
+      throw error;
+    }
+  },
+
+  // Auto-complete overdue consultations
+  autoCompleteOverdueConsultations: async (hoursOverdue: number = 1, statusFilter: string = 'both'): Promise<any> => {
+    try {
+      const response = await api.post('/api/consultations/patient/consultations/', {
+        hours_overdue: hoursOverdue,
+        status_filter: statusFilter
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error auto-completing overdue consultations:', error);
+      throw error;
+    }
   },
 
   // Get prescription medications
@@ -634,8 +730,25 @@ export const patientApi = {
   
   // Get patient payments
   getPatientPayments: async (params?: any): Promise<any[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/payments/', { params });
-    return response.data.data.results;
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/payments/patient/payments/', { params });
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // If data structure is different, try direct results
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching patient payments:', error);
+      return [];
+    }
   },
 
   // Create payment
@@ -654,8 +767,25 @@ export const patientApi = {
   
   // Get patient notifications
   getPatientNotifications: async (params?: any): Promise<any[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/notifications/', { params });
-    return response.data.data.results;
+    try {
+      const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/notifications/', { params });
+      
+      // Check if response has the expected structure
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // If data structure is different, try direct results
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching patient notifications:', error);
+      return [];
+    }
   },
 
   // Mark notification as read
@@ -670,7 +800,9 @@ export const patientApi = {
   getPatientAnalytics: async (params?: any): Promise<any> => {
     const response = await api.get<ApiResponse<any>>('/api/analytics/patient/', { params });
     return response.data.data;
-  }
+  },
+
+
 };
 
 // --- Patient Interfaces ---
@@ -2029,15 +2161,74 @@ export interface DoctorPerformanceStats {
   updated_at: string;
 }
 
+export interface DoctorEarnings {
+  overview: {
+    total_earnings: number;
+    total_consultations: number;
+    avg_per_consultation: number;
+    earnings_growth: number;
+    growth_type: 'positive' | 'negative';
+  };
+  monthly_breakdown: Array<{
+    month: string;
+    month_key: string;
+    earnings: number;
+    consultations: number;
+    growth: number;
+    growth_type: 'positive' | 'negative';
+  }>;
+  payment_status: {
+    received_payments: number;
+    pending_payments: number;
+    processing_payments: number;
+    next_payout_amount: number;
+    next_payout_date: string;
+  };
+  payment_methods: Record<string, number>;
+  recent_transactions: Array<{
+    id: string;
+    amount: number;
+    payment_method: string;
+    status: string;
+    processed_at: string;
+    patient_name: string;
+    consultation_type: string;
+  }>;
+  period: {
+    start_date: string;
+    end_date: string;
+    period_type: string;
+  };
+}
+
 export const doctorAnalyticsApi = {
-  getPerformanceStats: async (): Promise<DoctorPerformanceStats | null> => {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const response = await api.get<{ data: { results: DoctorPerformanceStats[] } }>(`/api/analytics/doctor-performance/?date=${today}`);
-    if (response.data && response.data.data && response.data.data.results && response.data.data.results.length > 0) {
-      return response.data.data.results[0];
+  // Get doctor performance statistics
+  getDoctorPerformance: async (date?: string): Promise<DoctorPerformanceStats> => {
+    const params = date ? { date } : {};
+    return get<DoctorPerformanceStats>('/api/analytics/doctor-performance/', { params });
+  },
+
+  // Get doctor earnings analytics
+  getDoctorEarnings: async (params?: {
+    period?: 'week' | 'month' | 'year';
+    start_date?: string;
+    end_date?: string;
+  }): Promise<DoctorEarnings> => {
+    const queryParams = new URLSearchParams();
+    if (params?.period) queryParams.append('period', params.period);
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+    
+    const response = await api.get(`/api/analytics/doctor/earnings/?${queryParams.toString()}`);
+    
+    // Handle the API response structure: { success: true, data: {...}, message: "...", timestamp: "..." }
+    if (response.data.success && response.data.data) {
+      return response.data.data;
     }
-    return null;
-  }
+    
+    // Fallback: return the response directly if it doesn't follow the expected structure
+    return response.data;
+  },
 };
 
 // Doctor API service functions
@@ -2367,9 +2558,7 @@ export const doctorApi = {
       });
     }
     const response = await api.get(`/api/consultations/doctor/consultations/?${queryParams.toString()}`);
-    if (response.data && response.data.results) {
-      return response.data.results;
-    }
+    // Return the full paginated response
     return response.data;
   },
 
@@ -2734,6 +2923,19 @@ export const doctorStatusApi = {
 // ===== PRESCRIPTION APIs =====
 
 // Enhanced Prescription interfaces to match backend
+export interface PrescriptionPDF {
+  id: string;
+  version: number;
+  is_current: boolean;
+  generated_at: string;
+  generated_by: {
+    id: string;
+    name: string;
+  };
+  file_url: string;
+  file_size: number;
+}
+
 export interface PrescriptionMedication {
   id?: number;
   medicine_name: string;
@@ -2877,6 +3079,13 @@ export const prescriptionApi = {
     return response.data.data;
   },
 
+  // Get PDF versions for a prescription
+  getPrescriptionPdfVersions: async (prescriptionId: string): Promise<PrescriptionPDF[]> => {
+    const response = await api.get(`/api/prescriptions/${prescriptionId}/pdf-versions/`);
+    // The backend returns { success: true, data: { versions: [...] } }
+    return response.data.data?.versions || response.data.versions || [];
+  },
+
   // Get prescription for a specific consultation
   getConsultationPrescription: async (consultationId: string): Promise<EnhancedPrescription> => {
     const response = await api.get(`/api/consultations/${consultationId}/prescription/`);
@@ -2902,8 +3111,8 @@ export const prescriptionApi = {
   },
 
   // Save prescription as draft
-  saveDraft: async (prescriptionId: string): Promise<EnhancedPrescription> => {
-    const response = await api.post(`/api/prescriptions/${prescriptionId}/save-draft/`);
+  saveDraft: async (prescriptionId: string, prescriptionData?: Partial<CreatePrescriptionData>): Promise<EnhancedPrescription> => {
+    const response = await api.post(`/api/prescriptions/${prescriptionId}/save-draft/`, prescriptionData || {});
     return response.data.data;
   },
 
@@ -2950,4 +3159,225 @@ export const prescriptionApi = {
     const response = await api.put(`/api/prescriptions/${prescriptionId}/vital-signs/`, vitalSignsData);
     return response.data.data;
   },
-}; 
+
+  // Auto-save functionality
+  autoSave: async (prescriptionId: string, prescriptionData: Partial<CreatePrescriptionData>): Promise<{ id: string; auto_saved_at: string }> => {
+    const response = await api.post(`/api/prescriptions/${prescriptionId}/auto-save/`, prescriptionData);
+    return response.data.data;
+  },
+
+  // Finalize and generate PDF
+  finalizeAndGeneratePDF: async (prescriptionId: string, prescriptionData?: Partial<CreatePrescriptionData>): Promise<{
+    prescription: EnhancedPrescription;
+    pdf: {
+      id: string;
+      version: number;
+      url: string;
+      generated_at: string;
+    };
+  }> => {
+    const response = await api.post(`/api/prescriptions/${prescriptionId}/finalize-and-generate-pdf/`, prescriptionData || {});
+    return response.data.data;
+  },
+
+  // Get PDF versions
+  getPDFVersions: async (prescriptionId: string): Promise<{
+    prescription_id: string;
+    total_versions: number;
+    versions: Array<{
+      id: string;
+      version: number;
+      is_current: boolean;
+      generated_at: string;
+      generated_by: {
+        id: string;
+        name: string;
+      };
+      file_url: string;
+      file_size: number;
+    }>;
+  }> => {
+    const response = await api.get(`/api/prescriptions/${prescriptionId}/pdf-versions/`);
+    return response.data.data;
+  },
+
+  // Download PDF
+  downloadPDF: async (prescriptionId: string, version: string | number = 'latest'): Promise<{ download_url: string; filename: string }> => {
+    const response = await api.get(`/api/prescriptions/${prescriptionId}/pdf/${version}/`);
+    return response.data.data;
+  },
+
+  // Get patient PDFs
+  getPatientPDFs: async (patientId: string): Promise<{
+    patient_id: string;
+    total_pdfs: number;
+    pdfs: Array<{
+      id: string;
+      prescription_id: string;
+      consultation_id?: string;
+      version: number;
+      generated_at: string;
+      generated_by: {
+        id: string;
+        name: string;
+      };
+      file_url: string;
+      file_size: number;
+      prescription_date: string;
+      diagnosis: string;
+    }>;
+  }> => {
+    const response = await api.get(`/api/prescriptions/patient/${patientId}/pdfs/`);
+    return response.data.data;
+  },
+
+  // Get draft prescriptions
+  getDrafts: async (): Promise<{ results: EnhancedPrescription[]; count: number }> => {
+    const response = await api.get('/api/prescriptions/drafts/');
+    return response.data.data || response.data;
+  },
+
+  // Get finalized prescriptions
+  getFinalized: async (): Promise<{ results: EnhancedPrescription[]; count: number }> => {
+    const response = await api.get('/api/prescriptions/finalized/');
+    return response.data.data || response.data;
+  },
+};
+
+// Consultation Workflow API Functions
+export const startConsultation = async (consultationId: string): Promise<Consultation> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/start/`);
+  return response.data;
+};
+
+export const completeConsultation = async (consultationId: string): Promise<Consultation> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/complete/`);
+  return response.data;
+};
+
+export const saveConsultationNotes = async (consultationId: string, data: {
+  content: string;
+  is_private?: boolean;
+  category?: string;
+}): Promise<any> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/notes/`, data);
+  return response.data;
+};
+
+export const getConsultationNotes = async (consultationId: string): Promise<any[]> => {
+  const response = await api.get(`/api/consultations/doctor/consultations/${consultationId}/notes/`);
+  return response.data;
+};
+
+export const saveVitalSigns = async (consultationId: string, data: {
+  pulse?: number;
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  oxygen_saturation?: number;
+}): Promise<any> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/vital-signs/`, data);
+  return response.data;
+};
+
+export const getVitalSigns = async (consultationId: string): Promise<any> => {
+  const response = await api.get(`/api/consultations/doctor/consultations/${consultationId}/vital-signs/`);
+  return response.data;
+};
+
+export const saveAssessment = async (consultationId: string, data: {
+  assessment?: {
+    chief_complaint?: string;
+    symptoms?: string;
+  };
+  symptoms?: Array<{
+    symptom: string;
+    severity: string;
+    duration: string;
+  }>;
+}): Promise<any> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/assessment/`, data);
+  return response.data;
+};
+
+export const saveDiagnosis = async (consultationId: string, data: {
+  diagnosis?: {
+    primary_diagnosis?: string;
+    differential_diagnosis?: string;
+    clinical_findings?: string;
+    lab_results?: string;
+    imaging?: string;
+  };
+}): Promise<any> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/diagnosis/`, data);
+  return response.data;
+};
+
+export const savePrescription = async (consultationId: string, data: {
+  prescription: {
+    instructions?: string;
+    follow_up?: string;
+    next_visit?: string;
+    diagnosis?: string;
+    medications?: Array<{
+      name: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+      instructions?: string;
+      before_meal?: boolean;
+      is_generic?: boolean;
+      quantity?: string;
+    }>;
+  };
+}): Promise<any> => {
+  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/prescription/`, data);
+  return response.data;
+};
+
+export const getPatientProfile = async (patientId: string): Promise<PatientProfile> => {
+  const response = await api.get(`/api/patients/${patientId}/profile/`);
+  return response.data;
+};
+
+export const getAllConsultations = async (params?: {
+  status?: string;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<PaginatedResponse<Consultation>> => {
+  const queryParams = new URLSearchParams();
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.ordering) queryParams.append('ordering', params.ordering);
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+  
+  const response = await api.get(`/api/consultations/doctor/consultations/?${queryParams.toString()}`);
+  return response.data;
+};
+
+export const getConsultationDetails = async (consultationId: string): Promise<Consultation> => {
+  const response = await api.get(`/api/consultations/${consultationId}/`);
+  return response.data.success ? response.data.data : response.data;
+};
+
+
+
+// Doctor Consultation API object with consultation methods
+export const doctorConsultationApi = {
+  getAllConsultations,
+  getConsultationDetails,
+  startConsultation,
+  completeConsultation,
+  saveConsultationNotes,
+  getConsultationNotes,
+  saveVitalSigns,
+  getVitalSigns,
+  saveAssessment,
+  saveDiagnosis,
+  savePrescription,
+  getPatientProfile,
+};
+
