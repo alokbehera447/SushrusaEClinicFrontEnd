@@ -115,7 +115,7 @@ const ConsultationManagementFlow = () => {
     const clinicId = assignedClinics[0].id;
     setLoading(true);
     setError(null);
-    adminConsultationApi.getAllConsultations({ page: 1, page_size: 20, clinic: clinicId })
+    adminConsultationApi.getClinicConsultations(clinicId, { page: 1, page_size: 20 })
       .then((res) => {
         let arr = [];
         if (res.results && Array.isArray(res.results.data)) {

@@ -78,9 +78,10 @@ import { useNavigate } from 'react-router-dom';
 // Consultation Management Enhanced Component
 interface ConsultationManagementEnhancedProps {
   isAssignedToClinic?: boolean;
+  clinicId?: string;
 }
 
-const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: ConsultationManagementEnhancedProps) => {
+const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }: ConsultationManagementEnhancedProps) => {
   const navigate = useNavigate();
   
   // State management
@@ -148,7 +149,14 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true }: Consultat
         params.scheduled_date = dateFilter === 'today' ? today : dateFilter;
       }
       
-      const response = await adminConsultationApi.getAllConsultations(params);
+      let response;
+      if (clinicId) {
+        // Use clinic-specific endpoint
+        response = await adminConsultationApi.getClinicConsultations(clinicId, params);
+      } else {
+        // Use general endpoint
+        response = await adminConsultationApi.getAllConsultations(params);
+      }
       setConsultations(response.results);
       setTotalConsultations(response.count);
     } catch (error) {

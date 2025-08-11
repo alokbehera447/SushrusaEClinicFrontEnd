@@ -1055,7 +1055,10 @@ const AdminDashboardEnhanced = () => {
 
         {activeTab === 'consultations' && (
           <div className="space-y-8">
-            <ConsultationManagementEnhanced isAssignedToClinic={isAssignedToClinic} />
+            <ConsultationManagementEnhanced 
+              isAssignedToClinic={isAssignedToClinic} 
+              clinicId={assignedClinics.length > 0 ? assignedClinics[0].id : undefined}
+            />
           </div>
         )}
 

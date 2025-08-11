@@ -1778,7 +1778,8 @@ export const adminConsultationApi = {
     status?: string; 
     consultation_type?: string;
     scheduled_date?: string;
-    ordering?: string 
+    ordering?: string;
+    clinic_id?: string;
   }): Promise<PaginatedResponse<Consultation>> => {
     const queryParams = new URLSearchParams();
     if (params) {
@@ -1813,6 +1814,58 @@ export const adminConsultationApi = {
       };
     } else {
       console.warn('Unexpected response structure for getAllConsultations:', response.data);
+      return {
+        count: 0,
+        next: null,
+        previous: null,
+        results: []
+      };
+    }
+  },
+
+  // Fetch consultations for a specific clinic
+  getClinicConsultations: async (clinicId: string, params?: { 
+    page?: number; 
+    page_size?: number; 
+    search?: string; 
+    status?: string; 
+    consultation_type?: string;
+    scheduled_date?: string;
+    ordering?: string;
+  }): Promise<PaginatedResponse<Consultation>> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && (typeof value !== 'string' || value !== '')) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get(`/api/consultations/clinic/${clinicId}/?${queryParams.toString()}`);
+    
+    // Handle the specific response structure from the API
+    if (response.data && response.data.results && response.data.results.data && Array.isArray(response.data.results.data)) {
+      // Structure: { count, next, previous, results: { success, data: [...], message, timestamp } }
+      return {
+        count: response.data.count,
+        next: response.data.next,
+        previous: response.data.previous,
+        results: response.data.results.data
+      };
+    } else if (response.data && response.data.data && typeof response.data.data === 'object' && 'results' in response.data.data) {
+      return response.data.data;
+    } else if (response.data && 'results' in response.data) {
+      return response.data;
+    } else if (Array.isArray(response.data)) {
+      // If response is a direct array, wrap it in paginated format
+      return {
+        count: response.data.length,
+        next: null,
+        previous: null,
+        results: response.data
+      };
+    } else {
+      console.warn('Unexpected response structure for getClinicConsultations:', response.data);
       return {
         count: 0,
         next: null,
