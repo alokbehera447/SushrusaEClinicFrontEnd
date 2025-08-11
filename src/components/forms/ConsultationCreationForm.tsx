@@ -159,7 +159,7 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
 
 
 // --- Main Component ---
-const NewConsultationPage = ({ onClose }: { onClose: () => void }) => {
+const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => void; assignedClinicId?: string }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     patientId: '',
@@ -338,7 +338,7 @@ const NewConsultationPage = ({ onClose }: { onClose: () => void }) => {
         chief_complaint: formData.chiefComplaint,
         symptoms: formData.symptoms,
         consultation_fee: parseFloat(formData.consultationFee) || 0,
-        clinic_id: 'CLI002', // Use the correct string clinic ID
+        clinic_id: assignedClinicId || 'CLI002', // Use the assigned clinic ID or fallback
         payment_method: formData.paymentMethod,
         payment_status: formData.paymentMethod === 'cash' ? 'paid' : 'pending',
       };
@@ -376,7 +376,7 @@ const NewConsultationPage = ({ onClose }: { onClose: () => void }) => {
       setFormData({
         patientId: '',
         doctorId: '',
-        clinicId: 'CLI002',
+        clinicId: assignedClinicId || 'CLI002',
         consultationType: 'video_call',
         consultationDate: undefined,
         selectedSlot: null,
