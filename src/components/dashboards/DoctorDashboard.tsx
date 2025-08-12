@@ -851,8 +851,12 @@ const DoctorDashboard = () => {
           {/* Profile Tab */}
           <TabsContent value="profile">
             <DoctorProfileTab 
+              key={profile?.id || 'loading'}
               profile={profile as DoctorProfile} 
-              onProfileUpdate={(updatedProfile) => setProfile(updatedProfile)}
+              onProfileUpdate={(updatedProfile) => {
+                console.log('🔄 Updating doctor profile in dashboard:', updatedProfile);
+                setProfile(updatedProfile);
+              }}
             />
           </TabsContent>
 

@@ -50,6 +50,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('🔄 DoctorProfileTab - Profile prop changed:', profile);
     if (profile) {
       setFormData({
         user_name: profile.user_name || '',
@@ -211,7 +212,15 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
       const updatedProfile = await doctorApi.updateCurrentDoctorProfile(formData);
       toast.success('Profile updated successfully');
       setIsEditing(false);
-      onProfileUpdate(updatedProfile);
+      
+      // Refresh the profile data to ensure we have the latest information
+      try {
+        const refreshedProfile = await doctorApi.getCurrentDoctorProfile();
+        onProfileUpdate(refreshedProfile);
+      } catch (refreshError) {
+        console.log('Failed to refresh profile, using updated data:', refreshError);
+        onProfileUpdate(updatedProfile);
+      }
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       
