@@ -91,6 +91,15 @@
   }
 }
 
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
 /* Override for auth pages */
 .auth-page-bg {
   background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%) !important;

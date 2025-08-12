@@ -125,16 +125,7 @@ const HeroSection = () => {
                 </Button>
               </Link>
 
-              <Link to="/nearby-eclinics" className="group">
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="w-full sm:w-auto bg-white/10 backdrop-blur-sm border-2 border-emerald-400/60 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-                >
-                  <MapPin className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:scale-110 transition-transform duration-300" />
-                  Find Nearby E-Clinics
-                </Button>
-              </Link>
+
             </div>
           </div>
 

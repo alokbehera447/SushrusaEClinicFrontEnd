@@ -4,15 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   MapPin, 
   Navigation, 
-  Star, 
-  Phone, 
-  Mail, 
-  Globe, 
   Clock, 
-  Users, 
   CheckCircle,
   AlertCircle,
   Loader2,
@@ -23,10 +19,15 @@ import {
   RefreshCw,
   MapPin as Location,
   Ruler,
-  Star as Rating
+  Star as Rating,
+  Phone,
+  Mail,
+  Globe,
+  Eye,
+  Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { superAdminApi, EClinic } from '@/lib/api';
+import { publicApi, EClinic } from '@/lib/api';
 
 interface NearbyEClinicsProps {
   onClinicSelect?: (clinic: EClinic) => void;
@@ -56,6 +57,8 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
   const [sortBy, setSortBy] = useState<'distance' | 'rating' | 'name'>('distance');
   const [maxDistance, setMaxDistance] = useState(50); // km
   const [showMap, setShowMap] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<ClinicWithDistance | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get user's current location
   const getUserLocation = useCallback(async (): Promise<UserLocation> => {
@@ -144,7 +147,7 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
   const fetchNearbyClinics = async (location?: UserLocation) => {
     setLoading(true);
     try {
-      const response = await superAdminApi.getEClinics({
+      const response = await publicApi.getPublicEClinics({
         page_size: 100, // Get more clinics for better nearby results
         is_active: 'true',
         is_verified: 'true'
@@ -193,9 +196,13 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
 
       setAllClinics(response.results);
       setNearbyClinics(clinicsWithDistance);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching clinics:', error);
-      toast.error('Failed to fetch nearby clinics');
+      toast.error('Failed to fetch nearby clinics. Please try again later.');
+      
+      // Set empty arrays to show no results
+      setAllClinics([]);
+      setNearbyClinics([]);
     } finally {
       setLoading(false);
     }
@@ -386,106 +393,308 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
               </Button>
             </CardContent>
           </Card>
-        ) : (
+        ) : filteredClinics.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredClinics.map((clinic) => (
-              <Card 
-                key={clinic.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => onClinicSelect?.(clinic)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-gray-900 mb-2">
-                        {clinic.name}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{clinic.city}, {clinic.state}</span>
-                      </div>
-                                             {clinic.distance !== Infinity && (
-                         <div className="flex items-center gap-2 text-sm text-blue-600">
-                           <Ruler className="w-4 h-4" />
-                           <span>{clinic.distanceText} away</span>
-                         </div>
-                       )}
+              <Card key={clinic.id} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg overflow-hidden">
+                {/* Cover Image */}
+                <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
+                  {clinic.cover_image && clinic.cover_image !== null ? (
+                    <img
+                      src={clinic.cover_image}
+                      alt={clinic.name || 'Clinic'}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="w-16 h-16 text-gray-400" />
                     </div>
-                    <div className="flex items-center gap-1">
-                      {clinic.is_verified && (
-                        <CheckCircle className="w-5 h-5 text-green-600" title="Verified" />
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Specialties */}
-                  <div className="flex flex-wrap gap-1">
-                    {clinic.specialties.slice(0, 3).map((specialty, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {specialty}
-                      </Badge>
-                    ))}
-                    {clinic.specialties.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{clinic.specialties.length - 3} more
+                  )}
+                  
+                  {/* Status Badges */}
+                  <div className="absolute top-3 left-3 flex flex-col gap-2">
+                    {clinic.is_verified && (
+                      <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Verified
                       </Badge>
                     )}
+                    <Badge variant={clinic.is_active ? "default" : "secondary"} className="text-xs">
+                      {clinic.is_active ? "Active" : "Inactive"}
+                    </Badge>
                   </div>
+                </div>
 
-                  {/* Services */}
-                  <div className="text-sm text-gray-600">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="w-4 h-4" />
-                      <span>Online consultations available</span>
+                {/* Clinic Info */}
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">{clinic.name || 'Unnamed Clinic'}</h3>
                     </div>
-                    {clinic.accepts_online_consultations && (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Accepts online consultations</span>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Contact Info */}
-                  <div className="space-y-1 text-sm">
-                    {clinic.phone && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone className="w-4 h-4" />
-                        <span>{clinic.phone}</span>
+                    {/* Contact Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{clinic.city || 'N/A'}, {clinic.state || 'N/A'}</span>
                       </div>
-                    )}
-                    {clinic.email && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Mail className="w-4 h-4" />
-                        <span>{clinic.email}</span>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{clinic.phone || 'N/A'}</span>
                       </div>
-                    )}
-                    {clinic.website && (
-                      <div className="flex items-center gap-2 text-blue-600">
-                        <Globe className="w-4 h-4" />
-                        <span>Visit Website</span>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{clinic.email || 'N/A'}</span>
                       </div>
-                    )}
-                  </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{clinic.consultation_duration || 15} min consultation</span>
+                      </div>
+                    </div>
 
-                  {/* Action Button */}
-                  <Button 
-                    className="w-full mt-3"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClinicSelect?.(clinic);
-                    }}
-                  >
-                    <Navigation className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
+                    {/* Distance Info */}
+                    {clinic.distance !== Infinity && (
+                      <div className="p-2 bg-blue-50 rounded-md">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Ruler className="w-3 h-3 text-blue-600" />
+                          <span className="text-xs font-medium text-blue-700">Distance</span>
+                        </div>
+                        <p className="text-sm text-blue-800">
+                          {clinic.distanceText} away from your location
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Quick Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedClinic(clinic);
+                          setIsModalOpen(true);
+                        }}
+                        className="flex-1"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+        ) : (
+          <div className="text-center py-12">
+            <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No e-clinics found</h3>
+            <p className="text-gray-600 mb-4">
+              {loading ? 'Loading e-clinics...' : 'No e-clinics match your current filters or location.'}
+            </p>
+            {!loading && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500">
+                  Try adjusting your search filters or location settings.
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCity('all');
+                    setSelectedState('all');
+                    setMaxDistance(50);
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Clinic Details Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              {selectedClinic?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedClinic && (
+            <div className="space-y-6">
+              {/* Cover Image */}
+              {selectedClinic.cover_image && (
+                <div className="relative h-64 w-full overflow-hidden rounded-lg">
+                  <img 
+                    src={selectedClinic.cover_image} 
+                    alt={`${selectedClinic.name} cover`}
+                    className="w-full h-full object-cover"
+                  />
+                  {selectedClinic.is_verified && (
+                    <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Verified
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Location</h3>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <MapPin className="w-5 h-5" />
+                      <span>{selectedClinic.address}, {selectedClinic.city}, {selectedClinic.state}</span>
+                    </div>
+                    {selectedClinic.distance !== Infinity && (
+                      <div className="flex items-center gap-2 text-blue-600 mt-1">
+                        <Ruler className="w-4 h-4" />
+                        <span>{selectedClinic.distanceText} away from your location</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {selectedClinic.description && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">About</h3>
+                      <p className="text-gray-600">{selectedClinic.description}</p>
+                    </div>
+                  )}
+
+                  {/* Specialties */}
+                  {selectedClinic.specialties && selectedClinic.specialties.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Specialties</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedClinic.specialties.map((specialty, index) => (
+                          <Badge key={index} variant="secondary" className="text-sm">
+                            {specialty}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Services */}
+                  {selectedClinic.services && selectedClinic.services.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Services</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedClinic.services.map((service, index) => (
+                          <Badge key={index} variant="outline" className="text-sm">
+                            {service}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Facilities */}
+                  {selectedClinic.facilities && selectedClinic.facilities.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Facilities</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedClinic.facilities.map((facility, index) => (
+                          <Badge key={index} variant="outline" className="text-sm bg-blue-50 text-blue-700">
+                            {facility}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Map Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Location on Map</h3>
+                  <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {selectedClinic.latitude && selectedClinic.longitude ? (
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MapPin className="w-8 h-8 text-white" />
+                        </div>
+                        <p className="text-gray-600 mb-2">Interactive Map</p>
+                        <p className="text-sm text-gray-500">
+                          Coordinates: {selectedClinic.latitude}, {selectedClinic.longitude}
+                        </p>
+                        <Button 
+                          className="mt-3 bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#D1661F] hover:to-[#E67A4A]"
+                          onClick={() => {
+                            const url = `https://www.google.com/maps?q=${selectedClinic.latitude},${selectedClinic.longitude}`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          <Navigation className="w-4 h-4 mr-2" />
+                          Open in Google Maps
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <MapPin className="w-12 h-12 mx-auto mb-2" />
+                        <p>Location coordinates not available</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact Information */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Contact Information</h3>
+                    <div className="space-y-2">
+                      {selectedClinic.phone && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="w-4 h-4" />
+                          <span>{selectedClinic.phone}</span>
+                        </div>
+                      )}
+                      {selectedClinic.email && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="w-4 h-4" />
+                          <span>{selectedClinic.email}</span>
+                        </div>
+                      )}
+                      {selectedClinic.website && (
+                        <div className="flex items-center gap-2 text-blue-600">
+                          <Globe className="w-4 h-4" />
+                          <a href={selectedClinic.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                            Visit Website
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#D1661F] hover:to-[#E67A4A]"
+                  onClick={() => {
+                    // Handle booking or contact action
+                    console.log('Contact clinic:', selectedClinic.name);
+                  }}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Contact Clinic
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

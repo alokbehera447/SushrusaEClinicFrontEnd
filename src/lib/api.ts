@@ -62,6 +62,34 @@ export const post = <T = unknown>(url: string, data?: unknown, config?: Record<s
 export const put = <T = unknown>(url: string, data?: unknown, config?: Record<string, unknown>) => api.put<T>(url, data, config).then(res => res.data);
 export const del = <T = unknown>(url: string, config?: Record<string, unknown>) => api.delete<T>(url, config).then(res => res.data);
 
+// Types for e-clinic data
+export interface EClinic {
+  id: number;
+  name: string;
+  description?: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
+  phone: string;
+  email: string;
+  website?: string;
+  logo?: string;
+  cover_image?: string;
+  is_active: boolean;
+  is_verified: boolean;
+  rating?: number;
+  total_reviews?: number;
+  consultation_fee?: number;
+  services?: string[];
+  working_hours?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Types for patient data
 export interface PatientProfile {
   id: string;
@@ -1646,10 +1674,70 @@ export const superAdminApi = {
     await api.delete(`/api/eclinic/${clinicId}/`);
   },
 
+  // Get nearby clinics
+  getNearbyClinics: async (params: {
+    latitude: number;
+    longitude: number;
+    radius?: number; // in km
+    page?: number;
+    page_size?: number;
+  }): Promise<{ results: EClinic[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('latitude', params.latitude.toString());
+    queryParams.append('longitude', params.longitude.toString());
+    if (params.radius) queryParams.append('radius', params.radius.toString());
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const response = await api.get(`/api/eclinic/nearby/?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  // Search clinics
+  searchEClinics: async (params: {
+    query: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ results: EClinic[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', params.query);
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const response = await api.get(`/api/eclinic/search/?${queryParams.toString()}`);
+    return response.data;
+  },
+
   // Get admin users for e-clinic assignment
   getAdminUsers: async (): Promise<UserProfile[]> => {
     const response = await api.get('/api/auth/admin/users/?type=admins');
     return response.data.data || [];
+  }
+};
+
+// Public API functions (no authentication required)
+export const publicApi = {
+  // Get public e-clinics
+  getPublicEClinics: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    is_active?: string;
+    is_verified?: string;
+    city?: string;
+    state?: string;
+  }): Promise<{ results: EClinic[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.is_active) queryParams.append('is_active', params.is_active);
+    if (params?.is_verified) queryParams.append('is_verified', params.is_verified);
+    if (params?.city) queryParams.append('city', params.city);
+    if (params?.state) queryParams.append('state', params.state);
+    
+    const response = await api.get(`/api/eclinic/public/?${queryParams.toString()}`);
+    return response.data.data;
   }
 };
 
@@ -3477,6 +3565,8 @@ export const getAllConsultations = async (params?: {
   const response = await api.get(`/api/consultations/doctor/consultations/?${queryParams.toString()}`);
   return response.data;
 };
+
+
 
 export const getConsultationDetails = async (consultationId: string): Promise<Consultation> => {
   const response = await api.get(`/api/consultations/${consultationId}/`);

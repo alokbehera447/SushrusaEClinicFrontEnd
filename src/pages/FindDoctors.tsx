@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Search, Filter, MapPin, Star, Calendar, Video, Clock, ArrowRight, ArrowLeft, Heart, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Filter, MapPin, Star, Calendar, Video, Clock, ArrowRight, ArrowLeft, Heart, Loader2, AlertCircle, Users, Building2 } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DoctorDetailsModal from '@/components/DoctorDetailsModal';
+import NearbyEClinics from '@/components/NearbyEClinics';
 import { API_BASE_URL } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -46,6 +47,9 @@ const FindDoctors = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  
+  // State for active tab
+  const [activeTab, setActiveTab] = useState<'doctors' | 'clinics'>('doctors');
   
   // State for doctors data
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -236,105 +240,139 @@ const FindDoctors = () => {
             </h1>
             
             <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
-              Connect with board-certified doctors and specialists. Book consultations, get expert advice, 
-              and receive quality healthcare from the comfort of your home.
+              Connect with board-certified doctors and specialists or discover nearby e-clinics. 
+              Book consultations, get expert advice, and receive quality healthcare from the comfort of your home.
             </p>
             
+            {/* Tab Navigation */}
+            <div className="flex justify-center mb-8">
+              <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg border border-gray-200">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setActiveTab('doctors')}
+                    className={`flex items-center space-x-2 px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
+                      activeTab === 'doctors'
+                        ? 'bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white shadow-lg'
+                        : 'text-gray-600 hover:text-[#E17726] hover:bg-gray-50'
+                    }`}
+                  >
+                    <Users className="w-5 h-5" />
+                    <span>Find Doctors</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('clinics')}
+                    className={`flex items-center space-x-2 px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
+                      activeTab === 'clinics'
+                        ? 'bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white shadow-lg'
+                        : 'text-gray-600 hover:text-[#E17726] hover:bg-gray-50'
+                    }`}
+                  >
+                    <Building2 className="w-5 h-5" />
+                    <span>Find E-Clinics</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <div className="text-sm text-gray-600 bg-white rounded-full px-6 py-2 inline-block shadow-soft">
-              {loading ? 'Loading doctors...' : `${pagination?.count || 0} doctors available`}
+              {activeTab === 'doctors' 
+                ? (loading ? 'Loading doctors...' : `${pagination?.count || 0} doctors available`)
+                : 'Discover nearby e-clinics'
+              }
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-8">
-              <div className="bg-white rounded-2xl shadow-modern p-6 border border-gray-100">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-midnight">Filters</h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="text-xs"
-                  >
-                    Clear All
-                  </Button>
-                </div>
-
-                {/* Search */}
-                <form onSubmit={handleSearch} className="mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Search doctors..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
-                    />
+        {activeTab === 'doctors' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Filters Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-8">
+                <div className="bg-white rounded-2xl shadow-modern p-6 border border-gray-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-midnight">Filters</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-xs"
+                    >
+                      Clear All
+                    </Button>
                   </div>
-                </form>
 
-                {/* Specialty Filter */}
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-midnight mb-2">Specialty</label>
-                  <select
-                    value={selectedSpecialty}
-                    onChange={(e) => {
-                      setSelectedSpecialty(e.target.value);
-                      handleFilterChange();
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
-                  >
-                    {specialties.map(specialty => (
-                      <option key={specialty} value={specialty}>{specialty}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Search */}
+                  <form onSubmit={handleSearch} className="mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search doctors..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
+                      />
+                    </div>
+                  </form>
 
-                {/* Location Filter */}
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-midnight mb-2">Location</label>
-                  <select
-                    value={selectedLocation}
-                    onChange={(e) => {
-                      setSelectedLocation(e.target.value);
-                      handleFilterChange();
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
-                  >
-                    {locations.map(location => (
-                      <option key={location} value={location}>{location}</option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Specialty Filter */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-midnight mb-2">Specialty</label>
+                    <select
+                      value={selectedSpecialty}
+                      onChange={(e) => {
+                        setSelectedSpecialty(e.target.value);
+                        handleFilterChange();
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
+                    >
+                      {specialties.map(specialty => (
+                        <option key={specialty} value={specialty}>{specialty}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Sort By */}
-                <div>
-                  <label className="block text-sm font-semibold text-midnight mb-2">Sort By</label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => {
-                      setSortBy(e.target.value);
-                      handleFilterChange();
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
-                  >
-                    <option value="rating">Highest Rated</option>
-                    <option value="fee">Price: Low to High</option>
-                    <option value="experience">Most Experienced</option>
-                  </select>
+                  {/* Location Filter */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-midnight mb-2">Location</label>
+                    <select
+                      value={selectedLocation}
+                      onChange={(e) => {
+                        setSelectedLocation(e.target.value);
+                        handleFilterChange();
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
+                    >
+                      {locations.map(location => (
+                        <option key={location} value={location}>{location}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Sort By */}
+                  <div>
+                    <label className="block text-sm font-semibold text-midnight mb-2">Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => {
+                        setSortBy(e.target.value);
+                        handleFilterChange();
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
+                    >
+                      <option value="rating">Highest Rated</option>
+                      <option value="fee">Price: Low to High</option>
+                      <option value="experience">Most Experienced</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Doctors List */}
-          <div className="lg:col-span-3">
+            {/* Doctors List */}
+            <div className="lg:col-span-3">
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-12">
@@ -407,12 +445,12 @@ const FindDoctors = () => {
                           <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                             <div className="flex items-center">
                               <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                                                             <span className="font-semibold">{safeNumber(doctor.rating).toFixed(1)}</span>
-                                                             <span className="ml-1">({safeNumber(doctor.total_reviews)})</span>
+                              <span className="font-semibold">{safeNumber(doctor.rating).toFixed(1)}</span>
+                              <span className="ml-1">({safeNumber(doctor.total_reviews)})</span>
                             </div>
                             <div className="flex items-center">
                               <Clock className="w-4 h-4 text-[#E17726] mr-1" />
-                                                             {safeNumber(doctor.experience_years)} Years
+                              {safeNumber(doctor.experience_years)} Years
                             </div>
                             <div className="flex items-center">
                               <MapPin className="w-4 h-4 text-cyan-600 mr-1" />
@@ -420,23 +458,23 @@ const FindDoctors = () => {
                             </div>
                           </div>
 
-                                                     {/* Languages */}
-                           {doctor.languages_spoken && (
-                             <div className="flex flex-wrap gap-1 mb-3">
-                               {Array.isArray(doctor.languages_spoken) 
-                                 ? doctor.languages_spoken.map((language, index) => (
-                                     <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
-                                       {language}
-                                     </span>
-                                   ))
-                                 : doctor.languages_spoken.split(',').map((language, index) => (
-                                     <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
-                                       {language.trim()}
-                                     </span>
-                                   ))
-                               }
-                             </div>
-                           )}
+                          {/* Languages */}
+                          {doctor.languages_spoken && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {Array.isArray(doctor.languages_spoken) 
+                                ? doctor.languages_spoken.map((language, index) => (
+                                    <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+                                      {language}
+                                    </span>
+                                  ))
+                                : doctor.languages_spoken.split(',').map((language, index) => (
+                                    <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+                                      {language.trim()}
+                                    </span>
+                                  ))
+                              }
+                            </div>
+                          )}
 
                           {/* Consultation Types */}
                           <div className="flex flex-wrap gap-1 mb-4">
@@ -450,27 +488,27 @@ const FindDoctors = () => {
                           {/* Price and Actions */}
                           <div className="flex items-center justify-between">
                             <div>
-                                                             <div className="text-2xl font-black text-midnight">₹{safeNumber(doctor.consultation_fee).toLocaleString()}</div>
+                              <div className="text-2xl font-black text-midnight">₹{safeNumber(doctor.consultation_fee).toLocaleString()}</div>
                               <div className="text-xs text-gray-600">per consultation</div>
                             </div>
                             
-                                                         <div className="flex space-x-2">
-                               <Button 
-                                 variant="outline" 
-                                 size="sm"
-                                 className="border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white"
-                                 onClick={() => handleViewDetails(doctor)}
-                               >
-                                 View Details
-                               </Button>
-                               <Button 
-                                 size="sm"
-                                 className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white"
-                                 onClick={() => handleBookNow(doctor)}
-                               >
-                                 Book Now
-                               </Button>
-                             </div>
+                            <div className="flex space-x-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white"
+                                onClick={() => handleViewDetails(doctor)}
+                              >
+                                View Details
+                              </Button>
+                              <Button 
+                                size="sm"
+                                className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white"
+                                onClick={() => handleBookNow(doctor)}
+                              >
+                                Book Now
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -551,6 +589,13 @@ const FindDoctors = () => {
             )}
           </div>
         </div>
+        ) : (
+          /* E-Clinics Tab */
+          <NearbyEClinics onClinicSelect={(clinic) => {
+            // Handle clinic selection - you can add modal or navigation here
+            console.log('Selected clinic:', clinic);
+          }} />
+        )}
       </div>
 
       {/* Doctor Details Modal */}
