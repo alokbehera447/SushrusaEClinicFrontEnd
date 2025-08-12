@@ -2380,6 +2380,7 @@ export interface DoctorProfile {
   user_phone: string;
   user_email: string;
   profile_picture?: string;
+  signature_url?: string;
   license_number: string;
   qualification: string;
   specialization: string;
@@ -2599,6 +2600,12 @@ export const doctorApi = {
   // Get current doctor's profile
   getCurrentDoctorProfile: async (): Promise<DoctorProfile> => {
     const response = await api.get<ApiResponse<DoctorProfile>>('/api/doctors/me/');
+    return response.data.data;
+  },
+
+  // Update current doctor's profile
+  updateCurrentDoctorProfile: async (data: Partial<DoctorProfile>): Promise<DoctorProfile> => {
+    const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/me/', data);
     return response.data.data;
   },
 

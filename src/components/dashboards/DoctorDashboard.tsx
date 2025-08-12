@@ -55,6 +55,7 @@ import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, do
 import { useDoctorSuperAdminWebSocket } from '@/hooks/useDoctorSuperAdminWebSocket';
 import DoctorConsultationTab from './DoctorConsultationTab';
 import EnhancedConsultationDashboard from './EnhancedConsultationDashboard';
+import DoctorProfileTab from './DoctorProfileTab';
 
 // Define Slot type
 interface Slot {
@@ -465,6 +466,7 @@ const DoctorDashboard = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'consultations', label: 'Consultations', icon: Video },
+    { id: 'profile', label: 'Profile', icon: User },
     // { id: 'schedule', label: 'Schedule', icon: Calendar }, // Schedule tab commented out
     { id: 'slot-booking', label: 'Slot Booking', icon: Clock },
     { id: 'earnings', label: 'Earnings', icon: DollarSign }
@@ -593,7 +595,7 @@ const DoctorDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+          <TabsList className="grid w-full grid-cols-6 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
             <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Activity className="w-4 h-4 mr-2" />
               Overview
@@ -601,6 +603,10 @@ const DoctorDashboard = () => {
             <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Video className="w-4 h-4 mr-2" />
               Consultations
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <User className="w-4 h-4 mr-2" />
+              Profile
             </TabsTrigger>
             {/* <TabsTrigger value="prescriptions" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <FileText className="w-4 h-4 mr-2" />
@@ -840,6 +846,14 @@ const DoctorDashboard = () => {
                     {/* Consultations Tab */}
           <TabsContent value="consultations">
             <EnhancedConsultationDashboard />
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile">
+            <DoctorProfileTab 
+              profile={profile as DoctorProfile} 
+              onProfileUpdate={(updatedProfile) => setProfile(updatedProfile)}
+            />
           </TabsContent>
 
           {/* Prescriptions Tab - Temporarily Disabled */}
