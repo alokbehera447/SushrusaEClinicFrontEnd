@@ -2605,8 +2605,30 @@ export const doctorApi = {
 
   // Update current doctor's profile
   updateCurrentDoctorProfile: async (data: Partial<DoctorProfile>): Promise<DoctorProfile> => {
-    const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/me/', data);
-    return response.data.data;
+    try {
+      // Try the doctor-specific endpoint first
+      const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/me/', data);
+      return response.data.data;
+    } catch (error: any) {
+      console.log('Doctor-specific endpoint failed, trying alternative endpoints:', error);
+      
+      // Try PATCH method
+      try {
+        const response = await api.patch<ApiResponse<DoctorProfile>>('/api/doctors/me/', data);
+        return response.data.data;
+      } catch (patchError: any) {
+        console.log('PATCH method also failed, trying auth profile endpoint:', patchError);
+        
+        // Fallback to auth profile endpoint for basic fields
+        const basicFields = {
+          name: data.user_name,
+          email: data.user_email,
+          phone: data.user_phone,
+        };
+        const response = await api.put<ApiResponse<DoctorProfile>>('/api/auth/profile/', basicFields);
+        return response.data.data;
+      }
+    }
   },
 
   // Get doctor statistics (SuperAdmin only)

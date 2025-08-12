@@ -214,7 +214,21 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
       onProfileUpdate(updatedProfile);
     } catch (error: any) {
       console.error('Failed to update profile:', error);
-      const message = error.response?.data?.error?.message || 'Failed to update profile';
+      
+      // Provide more specific error messages
+      let message = 'Failed to update profile';
+      if (error.response?.status === 404) {
+        message = 'Profile update endpoint not found. Please contact support.';
+      } else if (error.response?.status === 403) {
+        message = 'You do not have permission to update your profile.';
+      } else if (error.response?.status === 400) {
+        message = error.response?.data?.message || 'Invalid profile data. Please check your input.';
+      } else if (error.response?.data?.error?.message) {
+        message = error.response.data.error.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+      
       toast.error(message);
     } finally {
       setLoading(false);
