@@ -36,6 +36,7 @@ import ConsultationCreationPage from "./pages/ConsultationCreationPage";
 import AddPatientPage from "./pages/AddPatientPage";
 import PrescriptionManagement from "./pages/PrescriptionManagement";
 import PrescriptionWriter from "./pages/PrescriptionWriter";
+import NearbyEClinicsPage from "./pages/NearbyEClinicsPage";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/find-doctors" element={<FindDoctors />} />
             <Route path="/test-doctors" element={<TestDoctors />} />
+            <Route path="/nearby-eclinics" element={<NearbyEClinicsPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             
