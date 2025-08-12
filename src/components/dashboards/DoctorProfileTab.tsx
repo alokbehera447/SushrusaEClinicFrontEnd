@@ -297,12 +297,12 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
           <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <div className="relative mx-auto mb-4">
-                <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
-                  <AvatarImage src={profile.profile_picture} alt={profile.user_name} />
-                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-[#E17726] to-[#c9651e] text-white">
-                    {profile.user_name?.charAt(0) || 'D'}
-                  </AvatarFallback>
-                </Avatar>
+                                 <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
+                   <AvatarImage src={profile.profile_picture} alt={profile.user_name || 'Doctor'} />
+                   <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-[#E17726] to-[#c9651e] text-white">
+                     {(profile.user_name || 'Doctor').charAt(0)}
+                   </AvatarFallback>
+                 </Avatar>
                 {isEditing && (
                   <Button
                     size="sm"
@@ -320,15 +320,15 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
                     onChange={(e) => handleInputChange('user_name', e.target.value)}
                     className="text-center text-xl font-bold"
                   />
-                ) : (
-                  profile.user_name
-                )}
+                                 ) : (
+                   profile.user_name || 'Doctor'
+                 )}
               </CardTitle>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                <span className="font-semibold">{profile.rating.toFixed(1)}</span>
-                <span className="text-gray-600">({profile.total_reviews} reviews)</span>
-              </div>
+                             <div className="flex items-center justify-center gap-2 mt-2">
+                 <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                 <span className="font-semibold">{(typeof profile.rating === 'number' ? profile.rating : 0).toFixed(1)}</span>
+                 <span className="text-gray-600">({profile.total_reviews || 0} reviews)</span>
+               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Status Badges */}
@@ -616,13 +616,13 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {profile.languages_spoken.map(lang => (
-                      <Badge key={lang} variant="outline">{lang}</Badge>
-                    ))}
-                  </div>
-                )}
+                                 ) : (
+                   <div className="flex flex-wrap gap-2 mt-2">
+                     {(profile.languages_spoken || []).map(lang => (
+                       <Badge key={lang} variant="outline">{lang}</Badge>
+                     ))}
+                   </div>
+                 )}
               </div>
             </CardContent>
           </Card>
