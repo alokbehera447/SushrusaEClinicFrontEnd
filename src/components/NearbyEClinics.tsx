@@ -21,9 +21,9 @@ import {
   Map,
   List,
   RefreshCw,
-  Location,
-  Distance,
-  Rating
+  MapPin as Location,
+  Ruler,
+  Star as Rating
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { superAdminApi, EClinic } from '@/lib/api';
@@ -51,8 +51,8 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
-  const [selectedState, setSelectedState] = useState('');
+  const [selectedCity, setSelectedCity] = useState('all');
+  const [selectedState, setSelectedState] = useState('all');
   const [sortBy, setSortBy] = useState<'distance' | 'rating' | 'name'>('distance');
   const [maxDistance, setMaxDistance] = useState(50); // km
   const [showMap, setShowMap] = useState(false);
@@ -209,8 +209,8 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
                            specialty.toLowerCase().includes(searchQuery.toLowerCase())
                          );
     
-    const matchesCity = !selectedCity || clinic.city === selectedCity;
-    const matchesState = !selectedState || clinic.state === selectedState;
+    const matchesCity = selectedCity === 'all' || !selectedCity || clinic.city === selectedCity;
+    const matchesState = selectedState === 'all' || !selectedState || clinic.state === selectedState;
 
     return matchesSearch && matchesCity && matchesState;
   });
@@ -304,7 +304,7 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
                 <SelectValue placeholder="Select City" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Cities</SelectItem>
+                <SelectItem value="all">All Cities</SelectItem>
                 {cities.map(city => (
                   <SelectItem key={city} value={city}>{city}</SelectItem>
                 ))}
@@ -317,7 +317,7 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
                 <SelectValue placeholder="Select State" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All States</SelectItem>
+                <SelectItem value="all">All States</SelectItem>
                 {states.map(state => (
                   <SelectItem key={state} value={state}>{state}</SelectItem>
                 ))}
@@ -404,12 +404,12 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
                         <MapPin className="w-4 h-4" />
                         <span>{clinic.city}, {clinic.state}</span>
                       </div>
-                      {clinic.distance !== Infinity && (
-                        <div className="flex items-center gap-2 text-sm text-blue-600">
-                          <Distance className="w-4 h-4" />
-                          <span>{clinic.distanceText} away</span>
-                        </div>
-                      )}
+                                             {clinic.distance !== Infinity && (
+                         <div className="flex items-center gap-2 text-sm text-blue-600">
+                           <Ruler className="w-4 h-4" />
+                           <span>{clinic.distanceText} away</span>
+                         </div>
+                       )}
                     </div>
                     <div className="flex items-center gap-1">
                       {clinic.is_verified && (
