@@ -903,8 +903,8 @@ const PatientDashboard = () => {
 
           {/* Records Tab */}
           <TabsContent value="records" className="space-y-6 mt-6">
-            {patientProfile?.id ? (
-              <PatientRecordsManager patientId={patientProfile.id} />
+            {userProfile?.id ? (
+              <PatientRecordsManager patientId={userProfile.id} />
             ) : (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin" />

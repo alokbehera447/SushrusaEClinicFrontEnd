@@ -1,153 +1,218 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Search, Filter, MapPin, Star, Calendar, Video, Clock, ArrowRight, ArrowLeft, Heart } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, Filter, MapPin, Star, Calendar, Video, Clock, ArrowRight, ArrowLeft, Heart, Loader2, AlertCircle } from 'lucide-react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import DoctorDetailsModal from '@/components/DoctorDetailsModal';
+import { API_BASE_URL } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+
+// Utility function to safely convert string to number
+const safeNumber = (value: string | number | null | undefined): number => {
+  if (value === null || value === undefined) return 0;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
 
 interface Doctor {
   id: number;
   name: string;
-  specialty: string;
-  qualification: string;
-  rating: number;
-  reviews: number;
-  experience: string;
-  location: string;
-  price: string;
-  image: string;
-  nextAvailable: string;
-  languages: string[];
-  isOnline: boolean;
+  specialization: string;
+  sub_specialization?: string;
+  experience_years: number | string;
+  consultation_fee: number | string;
+  online_consultation_fee?: number;
+  languages_spoken?: string | string[];
+  bio?: string;
+  rating: number | string;
+  total_reviews: number | string;
+  clinic_name?: string;
+  clinic_address?: string;
+  consultation_types: string[];
+  is_online_consultation_available: boolean;
+  consultation_duration: number;
+  profile_picture?: string;
+}
+
+interface PaginationInfo {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Doctor[];
 }
 
 const FindDoctors = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = useState('All');
-  const [selectedLocation, setSelectedLocation] = useState('All');
-  const [sortBy, setSortBy] = useState('rating');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  
+  // State for doctors data
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // State for modal
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for filters
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [selectedSpecialty, setSelectedSpecialty] = useState(searchParams.get('specialization') || 'All');
+  const [selectedLocation, setSelectedLocation] = useState(searchParams.get('city') || 'All');
+  const [sortBy, setSortBy] = useState(searchParams.get('ordering') || 'rating');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(12);
 
   const specialties = [
     'All', 'Cardiology', 'Dermatology', 'General Medicine', 'Pediatrics', 
-    'Orthopedics', 'Neurology', 'Gynecology', 'Psychiatry', 'Ophthalmology'
+    'Orthopedics', 'Neurology', 'Gynecology', 'Psychiatry', 'Ophthalmology',
+    'ENT', 'Urology', 'Oncology', 'Endocrinology', 'Gastroenterology'
   ];
 
   const locations = [
-    'All', 'Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata', 'Pune'
+    'All', 'Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata', 'Pune',
+    'Ahmedabad', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane'
   ];
 
-  const doctors: Doctor[] = [
-    {
-      id: 1,
-      name: 'Dr. Priya Sharma',
-      specialty: 'Cardiology',
-      qualification: 'MBBS, MD, DM Cardiology',
-      rating: 4.9,
-      reviews: 1247,
-      experience: '12 Years',
-      location: 'Delhi',
-      price: '₹800',
-      image: '/doctor-avatar-1.svg',
-      nextAvailable: 'Today 2:30 PM',
-      languages: ['English', 'Hindi'],
-      isOnline: true
-    },
-    {
-      id: 2,
-      name: 'Dr. Rahul Mehta',
-      specialty: 'Neurology',
-      qualification: 'MBBS, MD, DM Neurology',
-      rating: 4.8,
-      reviews: 892,
-      experience: '10 Years',
-      location: 'Mumbai',
-      price: '₹750',
-      image: '/doctor-avatar-2.svg',
-      nextAvailable: 'Tomorrow 10:00 AM',
-      languages: ['English', 'Hindi', 'Marathi'],
-      isOnline: true
-    },
-    {
-      id: 3,
-      name: 'Dr. Anjali Verma',
-      specialty: 'Pediatrics',
-      qualification: 'MBBS, MD Pediatrics',
-      rating: 4.9,
-      reviews: 1534,
-      experience: '8 Years',
-      location: 'Bangalore',
-      price: '₹600',
-      image: '/doctor-avatar-3.svg',
-      nextAvailable: 'Today 4:00 PM',
-      languages: ['English', 'Hindi', 'Kannada'],
-      isOnline: false
-    },
-    {
-      id: 4,
-      name: 'Dr. Sameer Khan',
-      specialty: 'Orthopedics',
-      qualification: 'MBBS, MS Orthopedics',
-      rating: 4.8,
-      reviews: 967,
-      experience: '15 Years',
-      location: 'Chennai',
-      price: '₹900',
-      image: '/doctor-avatar-1.svg',
-      nextAvailable: 'Tomorrow 11:30 AM',
-      languages: ['English', 'Hindi', 'Tamil'],
-      isOnline: true
-    },
-    {
-      id: 5,
-      name: 'Dr. Neha Singh',
-      specialty: 'Dermatology',
-      qualification: 'MBBS, MD Dermatology',
-      rating: 4.7,
-      reviews: 756,
-      experience: '9 Years',
-      location: 'Hyderabad',
-      price: '₹700',
-      image: '/doctor-avatar-2.svg',
-      nextAvailable: 'Today 3:00 PM',
-      languages: ['English', 'Hindi', 'Telugu'],
-      isOnline: true
-    },
-    {
-      id: 6,
-      name: 'Dr. Vikram Gupta',
-      specialty: 'General Medicine',
-      qualification: 'MBBS, MD Internal Medicine',
-      rating: 4.6,
-      reviews: 1123,
-      experience: '14 Years',
-      location: 'Kolkata',
-      price: '₹500',
-      image: '/doctor-avatar-1.svg',
-      nextAvailable: 'Today 5:30 PM',
-      languages: ['English', 'Hindi', 'Bengali'],
-      isOnline: true
-    }
-  ];
-
-  const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSpecialty = selectedSpecialty === 'All' || doctor.specialty === selectedSpecialty;
-    const matchesLocation = selectedLocation === 'All' || doctor.location === selectedLocation;
+  // Function to fetch doctors from API
+  const fetchDoctors = async (page: number = 1) => {
+    setLoading(true);
+    setError(null);
     
-    return matchesSearch && matchesSpecialty && matchesLocation;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'rating':
-        return b.rating - a.rating;
-      case 'price':
-        return parseInt(a.price.slice(1)) - parseInt(b.price.slice(1));
-      case 'experience':
-        return parseInt(b.experience) - parseInt(a.experience);
-      default:
-        return 0;
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
+        ordering: sortBy === 'rating' ? 'rating' : 
+                  sortBy === 'experience' ? 'experience' : 
+                  sortBy === 'fee' ? 'fee' : 'rating'
+      });
+
+      // Add search filter
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+
+      // Add specialization filter
+      if (selectedSpecialty && selectedSpecialty !== 'All') {
+        params.append('specialization', selectedSpecialty);
+      }
+
+      // Add location filter
+      if (selectedLocation && selectedLocation !== 'All') {
+        params.append('city', selectedLocation);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/doctors/public/?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Handle the nested response structure from the API
+      if (data.results && data.results.success) {
+        const doctorsData = data.results.data || data.results;
+        setDoctors(doctorsData);
+        setPagination({
+          count: data.count || 0,
+          next: data.next,
+          previous: data.previous,
+          results: doctorsData
+        });
+      } else if (data.success) {
+        // Handle direct success response
+        setDoctors(data.data.results || data.data);
+        setPagination({
+          count: data.data.count || 0,
+          next: data.data.next,
+          previous: data.data.previous,
+          results: data.data.results || data.data
+        });
+      } else {
+        throw new Error(data.message || 'Failed to fetch doctors');
+      }
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch doctors');
+    } finally {
+      setLoading(false);
     }
-  });
+  };
+
+  // Effect to fetch doctors when filters change
+  useEffect(() => {
+    fetchDoctors(currentPage);
+  }, [searchTerm, selectedSpecialty, selectedLocation, sortBy, currentPage]);
+
+  // Effect to update URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('search', searchTerm);
+    if (selectedSpecialty !== 'All') params.set('specialization', selectedSpecialty);
+    if (selectedLocation !== 'All') params.set('city', selectedLocation);
+    if (sortBy !== 'rating') params.set('ordering', sortBy);
+    if (currentPage > 1) params.set('page', currentPage.toString());
+    
+    setSearchParams(params);
+  }, [searchTerm, selectedSpecialty, selectedLocation, sortBy, currentPage, setSearchParams]);
+
+  // Handle search
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    fetchDoctors(1);
+  };
+
+  // Handle filter changes
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+  };
+
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Calculate pagination info
+  const totalPages = pagination ? Math.ceil(pagination.count / pageSize) : 0;
+  const hasNextPage = pagination?.next !== null;
+  const hasPrevPage = pagination?.previous !== null;
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedSpecialty('All');
+    setSelectedLocation('All');
+    setSortBy('rating');
+    setCurrentPage(1);
+  };
+
+  // Handle view details
+  const handleViewDetails = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setIsModalOpen(true);
+  };
+
+  // Handle close modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDoctor(null);
+  };
+
+  // Handle book now - redirect to login
+  const handleBookNow = (doctor: Doctor) => {
+    navigate('/login', { 
+      state: { 
+        returnUrl: '/find-doctors',
+        message: 'Please login to book an appointment with Dr. ' + doctor.name 
+      } 
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -176,7 +241,7 @@ const FindDoctors = () => {
             </p>
             
             <div className="text-sm text-gray-600 bg-white rounded-full px-6 py-2 inline-block shadow-soft">
-              {filteredDoctors.length} doctors available
+              {loading ? 'Loading doctors...' : `${pagination?.count || 0} doctors available`}
             </div>
           </div>
         </div>
@@ -193,12 +258,7 @@ const FindDoctors = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setSelectedSpecialty('All');
-                      setSelectedLocation('All');
-                      setSortBy('rating');
-                    }}
+                    onClick={clearFilters}
                     className="text-xs"
                   >
                     Clear All
@@ -206,26 +266,28 @@ const FindDoctors = () => {
                 </div>
 
                 {/* Search */}
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-midnight mb-2">Search</label>
+                <form onSubmit={handleSearch} className="mb-6">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <input
                       type="text"
+                      placeholder="Search doctors..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Doctor name or specialty..."
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
                     />
                   </div>
-                </div>
+                </form>
 
                 {/* Specialty Filter */}
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-midnight mb-2">Specialty</label>
                   <select
                     value={selectedSpecialty}
-                    onChange={(e) => setSelectedSpecialty(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedSpecialty(e.target.value);
+                      handleFilterChange();
+                    }}
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
                   >
                     {specialties.map(specialty => (
@@ -239,7 +301,10 @@ const FindDoctors = () => {
                   <label className="block text-sm font-semibold text-midnight mb-2">Location</label>
                   <select
                     value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedLocation(e.target.value);
+                      handleFilterChange();
+                    }}
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
                   >
                     {locations.map(location => (
@@ -253,11 +318,14 @@ const FindDoctors = () => {
                   <label className="block text-sm font-semibold text-midnight mb-2">Sort By</label>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => {
+                      setSortBy(e.target.value);
+                      handleFilterChange();
+                    }}
                     className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#E17726] focus:ring-2 focus:ring-[#E17726]/20 outline-none"
                   >
                     <option value="rating">Highest Rated</option>
-                    <option value="price">Price: Low to High</option>
+                    <option value="fee">Price: Low to High</option>
                     <option value="experience">Most Experienced</option>
                   </select>
                 </div>
@@ -267,123 +335,231 @@ const FindDoctors = () => {
 
           {/* Doctors List */}
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredDoctors.map((doctor) => (
-                <div key={doctor.id} className="bg-white rounded-2xl shadow-modern p-6 hover:shadow-xl-colored transition-all duration-300 border border-gray-100">
-                  <div className="flex items-start space-x-4">
-                    {/* Doctor Image */}
-                    <div className="relative">
-                      <div className="w-20 h-20 rounded-xl overflow-hidden shadow-lg">
-                        <img src={doctor.image} alt={doctor.name} className="w-full h-full object-cover" />
-                      </div>
-                      {/* Online Status */}
-                      {doctor.isOnline && (
-                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Doctor Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-xl font-bold text-midnight">{doctor.name}</h3>
-                          <div className="text-[#E17726] font-semibold">{doctor.specialty}</div>
-                        </div>
-                        <Button variant="outline" size="sm" className="p-2">
-                          <Heart className="w-4 h-4" />
-                        </Button>
-                      </div>
-
-                      <div className="text-gray-600 text-sm mb-3">{doctor.qualification}</div>
-
-                      {/* Stats */}
-                      <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                          <span className="font-semibold">{doctor.rating}</span>
-                          <span className="ml-1">({doctor.reviews})</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="w-4 h-4 text-[#E17726] mr-1" />
-                          {doctor.experience}
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin className="w-4 h-4 text-cyan-600 mr-1" />
-                          {doctor.location}
-                        </div>
-                      </div>
-
-                      {/* Languages */}
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {doctor.languages.map((language, index) => (
-                          <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
-                            {language}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Availability */}
-                      <div className="bg-green-50 rounded-lg p-2 mb-4">
-                        <div className="text-xs text-green-700 font-medium">Next Available</div>
-                        <div className="text-sm font-bold text-green-800">{doctor.nextAvailable}</div>
-                      </div>
-
-                      {/* Price and Actions */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-2xl font-black text-midnight">{doctor.price}</div>
-                          <div className="text-xs text-gray-600">per consultation</div>
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="px-3 py-2 rounded-lg border-[#E17726]/30 text-[#E17726] hover:bg-[#E17726] hover:text-white"
-                          >
-                            <Video className="w-4 h-4 mr-1" />
-                            Call
-                          </Button>
-                          <Button 
-                            size="sm"
-                            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white hover:shadow-lg"
-                          >
-                            <Calendar className="w-4 h-4 mr-1" />
-                            Book
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#E17726] mx-auto mb-4" />
+                  <p className="text-gray-600">Loading doctors...</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-midnight mb-2">Error loading doctors</h3>
+                  <p className="text-gray-600 mb-6">{error}</p>
+                  <Button 
+                    onClick={() => fetchDoctors(currentPage)}
+                    className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Doctors Grid */}
+            {!loading && !error && doctors.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {doctors.map((doctor) => (
+                    <div key={doctor.id} className="bg-white rounded-2xl shadow-modern p-6 hover:shadow-xl-colored transition-all duration-300 border border-gray-100">
+                      <div className="flex items-start space-x-4">
+                        {/* Doctor Image */}
+                        <div className="relative">
+                          <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200">
+                            {doctor.profile_picture ? (
+                              <img src={doctor.profile_picture} alt={doctor.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-[#E17726] to-[#FF8A56] flex items-center justify-center text-white font-bold text-lg">
+                                {doctor.name.split(' ').map(n => n[0]).join('')}
+                              </div>
+                            )}
+                          </div>
+                          {/* Online Status */}
+                          {doctor.is_online_consultation_available && (
+                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Doctor Info */}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="text-xl font-bold text-midnight">{doctor.name}</h3>
+                              <div className="text-[#E17726] font-semibold">{doctor.specialization}</div>
+                              {doctor.sub_specialization && (
+                                <div className="text-sm text-gray-600">{doctor.sub_specialization}</div>
+                              )}
+                            </div>
+                            <Button variant="outline" size="sm" className="p-2">
+                              <Heart className="w-4 h-4" />
+                            </Button>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                            <div className="flex items-center">
+                              <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                                                             <span className="font-semibold">{safeNumber(doctor.rating).toFixed(1)}</span>
+                                                             <span className="ml-1">({safeNumber(doctor.total_reviews)})</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Clock className="w-4 h-4 text-[#E17726] mr-1" />
+                                                             {safeNumber(doctor.experience_years)} Years
+                            </div>
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 text-cyan-600 mr-1" />
+                              {doctor.clinic_address || 'Location not specified'}
+                            </div>
+                          </div>
+
+                                                     {/* Languages */}
+                           {doctor.languages_spoken && (
+                             <div className="flex flex-wrap gap-1 mb-3">
+                               {Array.isArray(doctor.languages_spoken) 
+                                 ? doctor.languages_spoken.map((language, index) => (
+                                     <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+                                       {language}
+                                     </span>
+                                   ))
+                                 : doctor.languages_spoken.split(',').map((language, index) => (
+                                     <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+                                       {language.trim()}
+                                     </span>
+                                   ))
+                               }
+                             </div>
+                           )}
+
+                          {/* Consultation Types */}
+                          <div className="flex flex-wrap gap-1 mb-4">
+                            {doctor.consultation_types.map((type, index) => (
+                              <span key={index} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                {type === 'in-person' ? 'In-Person' : type === 'video' ? 'Video' : type}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Price and Actions */}
+                          <div className="flex items-center justify-between">
+                            <div>
+                                                             <div className="text-2xl font-black text-midnight">₹{safeNumber(doctor.consultation_fee).toLocaleString()}</div>
+                              <div className="text-xs text-gray-600">per consultation</div>
+                            </div>
+                            
+                                                         <div className="flex space-x-2">
+                               <Button 
+                                 variant="outline" 
+                                 size="sm"
+                                 className="border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white"
+                                 onClick={() => handleViewDetails(doctor)}
+                               >
+                                 View Details
+                               </Button>
+                               <Button 
+                                 size="sm"
+                                 className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white"
+                                 onClick={() => handleBookNow(doctor)}
+                               >
+                                 Book Now
+                               </Button>
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex items-center justify-center space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={!hasPrevPage}
+                      className="flex items-center space-x-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Previous
+                    </Button>
+                    
+                    {/* Page Numbers */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(pageNum)}
+                            className={currentPage === pageNum ? "bg-[#E17726] text-white" : ""}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={!hasNextPage}
+                      className="flex items-center space-x-2"
+                    >
+                      Next
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* No Results */}
-            {filteredDoctors.length === 0 && (
-              <div className="text-center py-12">
-                <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                  <Search className="w-12 h-12 text-gray-400" />
+            {!loading && !error && doctors.length === 0 && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-midnight mb-2">No doctors found</h3>
+                  <p className="text-gray-600 mb-6">Try adjusting your search filters to find more doctors.</p>
+                  <Button 
+                    onClick={clearFilters}
+                    className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white"
+                  >
+                    Clear Filters
+                  </Button>
                 </div>
-                <h3 className="text-xl font-bold text-midnight mb-2">No doctors found</h3>
-                <p className="text-gray-600 mb-6">Try adjusting your search filters to find more doctors.</p>
-                <Button 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedSpecialty('All');
-                    setSelectedLocation('All');
-                  }}
-                  className="bg-gradient-to-r from-[#E17726] to-[#FF8A56] text-white"
-                >
-                  Clear Filters
-                </Button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Doctor Details Modal */}
+      <DoctorDetailsModal
+        doctor={selectedDoctor}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onBookNow={handleBookNow}
+      />
 
       <Footer />
     </div>

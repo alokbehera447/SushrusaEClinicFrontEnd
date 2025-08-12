@@ -336,11 +336,15 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
       
       switch (selectedItemType) {
         case 'medical-record':
-          await patientApi.updateMedicalRecord(patientId, editingItem.id.toString(), editingItem);
+          // Remove document field from editingItem to avoid sending URL as file
+          const { document, ...medicalRecordData } = editingItem;
+          await patientApi.partialUpdateMedicalRecord(patientId, editingItem.id.toString(), medicalRecordData);
           fetchMedicalRecords();
           break;
         case 'document':
-          await patientApi.updateDocument(patientId, editingItem.id.toString(), editingItem);
+          // Remove file field from editingItem to avoid sending URL as file
+          const { file, ...documentData } = editingItem;
+          await patientApi.partialUpdateDocument(patientId, editingItem.id.toString(), documentData);
           fetchDocuments();
           break;
         case 'note':
@@ -401,6 +405,36 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
     }
   };
 
+  // Download handling
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      // Get signed URL for the file
+      const signedUrl = await patientApi.getSignedUrl(fileUrl);
+      
+      // Create a temporary link element to trigger download
+      const link = document.createElement('a');
+      link.href = signedUrl;
+      link.download = fileName || 'download';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: 'Success',
+        description: 'Download started successfully!',
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to download file. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   // File handling
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: 'medical-record' | 'document') => {
     const file = event.target.files?.[0];
@@ -424,7 +458,11 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
   };
 
   // Utility functions
-  const getFileIcon = (fileName: string) => {
+  const getFileIcon = (fileName?: string | null) => {
+    if (!fileName) {
+      return <File className="w-4 h-4 text-gray-500" />;
+    }
+    
     const extension = fileName.split('.').pop()?.toLowerCase();
     switch (extension) {
       case 'pdf':
@@ -585,7 +623,7 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                             Edit
                           </DropdownMenuItem>
                           {record.document && (
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownload(record.document, record.title)}>
                               <Download className="w-4 h-4 mr-2" />
                               Download
                             </DropdownMenuItem>
@@ -706,7 +744,7 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownload(document.file, document.title)}>
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </DropdownMenuItem>
@@ -754,7 +792,9 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                     <p className="text-sm text-gray-600 line-clamp-2">{document.description}</p>
                     <div className="flex items-center gap-2 mt-3">
                       {getFileIcon(document.file)}
-                      <span className="text-xs text-gray-500">{document.file.split('/').pop()}</span>
+                      <span className="text-xs text-gray-500">
+                        {document.file ? document.file.split('/').pop() : 'No file'}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -1217,8 +1257,12 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                       <label className="text-sm font-medium text-gray-600">Attached Document</label>
                       <div className="flex items-center gap-2 mt-1">
                         <File className="w-4 h-4" />
-                        <span className="text-sm">{selectedItem.document.split('/').pop()}</span>
-                        <Button variant="outline" size="sm">
+                        <span className="text-sm">{selectedItem.document ? selectedItem.document.split('/').pop() : 'No file'}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDownload(selectedItem.document, selectedItem.title)}
+                        >
                           <Download className="w-4 h-4 mr-1" />
                           Download
                         </Button>
@@ -1258,8 +1302,12 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                     <label className="text-sm font-medium text-gray-600">File</label>
                     <div className="flex items-center gap-2 mt-1">
                       {getFileIcon(selectedItem.file)}
-                      <span className="text-sm">{selectedItem.file.split('/').pop()}</span>
-                      <Button variant="outline" size="sm">
+                      <span className="text-sm">{selectedItem.file ? selectedItem.file.split('/').pop() : 'No file'}</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownload(selectedItem.file, selectedItem.title)}
+                      >
                         <Download className="w-4 h-4 mr-1" />
                         Download
                       </Button>

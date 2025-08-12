@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,12 @@ import { useAuth } from '@/context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated, user, isLoading } = useAuth();
+  
+  // Get return URL and message from location state
+  const returnUrl = location.state?.returnUrl || '/';
+  const message = location.state?.message;
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -34,7 +39,10 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      if (user.role === 'superadmin') {
+      // If there's a return URL, use it; otherwise use role-based redirect
+      if (returnUrl && returnUrl !== '/') {
+        navigate(returnUrl);
+      } else if (user.role === 'superadmin') {
         navigate('/superadmin/dashboard');
       } else if (user.role === 'admin') {
         navigate('/admin/dashboard');
@@ -44,7 +52,7 @@ const Login = () => {
         navigate('/patient/dashboard');
       }
     }
-  }, [isAuthenticated, user, isLoading, navigate]);
+  }, [isAuthenticated, user, isLoading, navigate, returnUrl]);
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -165,8 +173,10 @@ const Login = () => {
         const access = res.data.data.access;
         const refresh = res.data.data.refresh;
         login(user, access, refresh);
-        // Redirect based on role
-        if (user.role === 'superadmin') {
+        // Redirect based on return URL or role
+        if (returnUrl && returnUrl !== '/') {
+          navigate(returnUrl);
+        } else if (user.role === 'superadmin') {
           navigate('/superadmin/dashboard');
         } else if (user.role === 'admin') {
           navigate('/admin/dashboard');
@@ -263,6 +273,11 @@ const Login = () => {
             <p className="text-lg text-gray-600 max-w-sm mx-auto">
               Continue your health journey with secure, instant access
             </p>
+            {message && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                <p className="text-blue-800 text-sm font-medium">{message}</p>
+              </div>
+            )}
           </div>
 
           {/* Login Card */}

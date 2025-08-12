@@ -63,7 +63,8 @@ import {
   LogOut,
   UserPlus,
   HelpCircle,
-  MessageSquare
+  MessageSquare,
+  Pill
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { superAdminApi, UserProfile, EClinic, CreateEClinicData } from '@/lib/api';
@@ -98,6 +99,8 @@ import NotificationCenter from './NotificationCenter';
 
 import EClinicManagement from './EClinicManagement';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import MedicationManagement from './MedicationManagement';
+import SuperAdminSlotManagement from './SuperAdminSlotManagement';
 import SuperAdminOverview from './SuperAdminOverview';
 import SuperAdminAnalytics from './SuperAdminAnalytics';
 import DoctorStatusDashboard from './DoctorStatusDashboard';
@@ -119,6 +122,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
   const [editingDoctor, setEditingDoctor] = useState<DoctorProfile | null>(null);
   const [deletingDoctor, setDeletingDoctor] = useState<DoctorProfile | null>(null);
   const [viewingDoctor, setViewingDoctor] = useState<DoctorProfile | null>(null);
+  const [managingSlotsFor, setManagingSlotsFor] = useState<DoctorProfile | null>(null);
   const { toast } = useToast();
 
   // Doctor form state
@@ -750,6 +754,20 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                           <Edit className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            console.log('Managing slots for doctor:', doctor);
+                            setManagingSlotsFor(doctor);
+                          }}
+                          className={`border-purple-300 text-purple-600 transition-colors duration-300 ${
+                            isDarkMode ? 'hover:bg-purple-900/20' : 'hover:bg-purple-50'
+                          }`}
+                        >
+                          <Calendar className="w-4 h-4 mr-1" />
+                          Manage Slots
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="outline" className={`transition-colors duration-300 ${
@@ -778,6 +796,12 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                             }`}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Doctor
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setManagingSlotsFor(doctor)} className={`transition-colors duration-300 ${
+                              isDarkMode ? 'text-gray-200 hover:bg-gray-700' : ''
+                            }`}>
+                              <Calendar className="w-4 h-4 mr-2" />
+                              Manage Slots
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className={`transition-colors duration-300 ${
                               isDarkMode ? 'bg-gray-700' : ''
@@ -1253,6 +1277,14 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
         }}
       />
 
+      {/* Slot Management Modal */}
+      <SuperAdminSlotManagement
+        doctor={managingSlotsFor}
+        isOpen={!!managingSlotsFor}
+        onClose={() => setManagingSlotsFor(null)}
+        isDarkMode={isDarkMode}
+      />
+
 
 
       {/* Delete Confirmation Dialog */}
@@ -1501,10 +1533,11 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },
-    { id: 'doctor-status', label: 'Doctor Status', icon: Activity },
+    // { id: 'doctor-status', label: 'Doctor Status', icon: Activity },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'admins', label: 'Admins', icon: UserCog },
     { id: 'clinics', label: 'E-Clinics', icon: Building2 },
+    { id: 'medications', label: 'Medications', icon: Pill },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp }
   ];
 
@@ -1514,14 +1547,16 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
         return <SuperAdminOverview isDarkMode={isDarkMode} />;
       case 'doctors':
         return <DoctorsManagement isDarkMode={isDarkMode} />;
-      case 'doctor-status':
-        return <DoctorStatusDashboard isDarkMode={isDarkMode} />;
+      // case 'doctor-status':
+      //   return <DoctorStatusDashboard isDarkMode={isDarkMode} />;
       case 'patients':
         return <PatientManagement isDarkMode={isDarkMode} />;
       case 'admins':
         return <ManageAdmins isDarkMode={isDarkMode} />;
       case 'clinics':
         return <EClinicManagement isDarkMode={isDarkMode} />;
+      case 'medications':
+        return <MedicationManagement />;
       case 'analytics':
         return <SuperAdminAnalytics isDarkMode={isDarkMode} />;
       default:

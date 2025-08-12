@@ -39,8 +39,10 @@ import {
   Plus,
   Edit,
   ChevronLeft,
-  X
+  X,
+  Search
 } from 'lucide-react';
+import { medicationService, type MedicationSearchResult } from '@/services/medicationService';
 import { prescriptionApi, doctorConsultationApi, api } from '@/lib/api';
 import {
   Dialog,
@@ -200,6 +202,14 @@ const ConsultationWorkspace: React.FC = () => {
     is_generic: true,
     quantity: '',
   });
+
+  // Medication search state
+  const [medicationSearchQuery, setMedicationSearchQuery] = useState('');
+  const [medicationSearchResults, setMedicationSearchResults] = useState<MedicationSearchResult[]>([]);
+  const [isSearchingMedications, setIsSearchingMedications] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState<number>(-1);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -638,6 +648,155 @@ const ConsultationWorkspace: React.FC = () => {
       case 'with_food': return 'With food';
       case 'custom': return custom || 'Custom timing';
       default: return timing;
+    }
+  };
+
+  // Get clinic ID from consultation or doctor's associated clinic
+  const getClinicId = () => {
+    // First try to get from consultation
+    if (consultation?.clinic_id) {
+      return consultation.clinic_id;
+    }
+    
+    // If consultation doesn't have clinic, try to get from doctor's clinic associations
+    // For now, using a default clinic ID - in production, you'd query the doctor's clinic
+    return 'CLI001'; // Using a valid clinic ID from the database
+    
+    // TODO: In production, implement this logic:
+    // const doctorClinics = await api.get(`/api/doctors/${consultation.doctor_id}/clinics/`);
+    // return doctorClinics.data[0]?.clinic_id || 'CLI001';
+  };
+
+  // Search medications when user types
+  const searchMedications = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setMedicationSearchResults([]);
+      setSearchError(null);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearchingMedications(true);
+    setSearchError(null);
+
+    try {
+      const clinicId = getClinicId();
+      const response = await medicationService.searchMedications(clinicId, query, 10);
+      
+      if (response.success) {
+        setMedicationSearchResults(response.data.medications);
+        setShowSearchResults(true);
+        setActiveSearchIndex(-1);
+      } else {
+        setSearchError(response.message || 'Search failed');
+        setMedicationSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Error searching medications:', error);
+      setSearchError('Failed to search medications. Please try again.');
+      setMedicationSearchResults([]);
+      setShowSearchResults(false);
+    } finally {
+      setIsSearchingMedications(false);
+    }
+  };
+
+  // Handle medication search input change with debouncing
+  const handleMedicationSearchChange = (value: string) => {
+    setMedicationSearchQuery(value);
+    
+    // Clear previous timeout
+    if ((window as any).medicationSearchTimeout) {
+      clearTimeout((window as any).medicationSearchTimeout);
+    }
+    
+    // Set new timeout for debounced search
+    (window as any).medicationSearchTimeout = setTimeout(() => {
+      searchMedications(value);
+    }, 300);
+  };
+
+  // Auto-create medication if not found
+  const handleAddNewMedication = async () => {
+    if (!medicationSearchQuery.trim()) return;
+
+    try {
+      const clinicId = getClinicId();
+      const response = await medicationService.autoCreateMedication(clinicId, {
+        name: medicationSearchQuery,
+        dosage_form: 'Tablet'
+      });
+
+      if (response.success) {
+        // Add the newly created medication to the prescription
+        const newMedication = {
+          ...medicationForm,
+          medicine_name: response.data.medications[0].name,
+          dosage: response.data.medications[0].strength,
+          id: Date.now(), // Temporary ID for frontend
+        };
+        
+        setMedications([...medications, newMedication]);
+        setMedicationSearchQuery('');
+        setMedicationSearchResults([]);
+        setShowSearchResults(false);
+        setShowMedicationModal(false);
+        
+        toast({
+          title: 'Success',
+          description: 'Medication added to inventory and prescription',
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('Error creating medication:', error);
+      setSearchError('Failed to create medication. Please try again.');
+    }
+  };
+
+  // Select medication from search results
+  const selectMedication = (medication: MedicationSearchResult) => {
+    setMedicationForm({
+      ...medicationForm,
+      medicine_name: medication.name,
+      dosage: medication.strength,
+    });
+    
+    setMedicationSearchQuery('');
+    setMedicationSearchResults([]);
+    setShowSearchResults(false);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSearchResults || medicationSearchResults.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveSearchIndex(prev => 
+          prev < medicationSearchResults.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveSearchIndex(prev => 
+          prev > 0 ? prev - 1 : medicationSearchResults.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeSearchIndex >= 0 && activeSearchIndex < medicationSearchResults.length) {
+          selectMedication(medicationSearchResults[activeSearchIndex]);
+        } else if (medicationSearchResults.length === 0) {
+          handleAddNewMedication();
+        }
+        break;
+      case 'Escape':
+        setShowSearchResults(false);
+        setActiveSearchIndex(-1);
+        break;
     }
   };
 
@@ -1476,14 +1635,80 @@ const ConsultationWorkspace: React.FC = () => {
           
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="relative">
                 <Label className="text-sm font-medium">Medicine Name *</Label>
-                <Input
-                  value={medicationForm.medicine_name}
-                  onChange={(e) => setMedicationForm({ ...medicationForm, medicine_name: e.target.value })}
-                  placeholder="e.g., Paracetamol"
-                  className="mt-1"
-                />
+                <div className="relative mt-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    value={medicationForm.medicine_name}
+                    onChange={(e) => {
+                      setMedicationForm({ ...medicationForm, medicine_name: e.target.value });
+                      handleMedicationSearchChange(e.target.value);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Search for medications..."
+                    className="pl-10"
+                  />
+                  {isSearchingMedications && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    </div>
+                  )}
+                </div>
+                
+                {searchError && (
+                  <div className="text-red-500 text-sm bg-red-50 p-2 rounded-lg mt-1">
+                    {searchError}
+                  </div>
+                )}
+
+                {showSearchResults && medicationSearchResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {medicationSearchResults.map((medicationResult, resultIndex) => (
+                      <div
+                        key={medicationResult.id}
+                        onClick={() => selectMedication(medicationResult)}
+                        className={`flex items-center justify-between p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                          activeSearchIndex === resultIndex ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{medicationResult.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {medicationResult.strength} • {medicationResult.form}
+                            {medicationResult.source === 'inventory' && medicationResult.stock !== undefined && (
+                              <span className={`ml-2 px-1 py-0.5 rounded text-xs ${
+                                medicationResult.is_low_stock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                              }`}>
+                                Stock: {medicationResult.stock} {medicationResult.unit}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            {medicationResult.source === 'inventory' ? 'In Inventory' : 'Previously Prescribed'}
+                          </p>
+                        </div>
+                        <Plus className="w-4 h-4 text-green-600" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showSearchResults && medicationSearchResults.length === 0 && !isSearchingMedications && !searchError && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+                    <div className="text-center">
+                      <p className="text-gray-500 mb-2">No medications found</p>
+                      <Button 
+                        onClick={handleAddNewMedication}
+                        variant="outline" 
+                        size="sm"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      >
+                        Add "{medicationForm.medicine_name}" to Inventory
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <Label className="text-sm font-medium">Dosage *</Label>

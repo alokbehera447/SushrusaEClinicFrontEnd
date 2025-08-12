@@ -48,8 +48,10 @@ import {
   Loader2,
   Edit,
   X,
-  Video
+  Video,
+  Search
 } from 'lucide-react';
+import { medicationService, type MedicationSearchResult } from '@/services/medicationService';
 
 // Interfaces
 interface Consultation {
@@ -100,6 +102,14 @@ export default function ConsultationMeeting() {
   const [isMobileView, setIsMobileView] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isVideoMeetingActive, setIsVideoMeetingActive] = useState(false);
+  
+  // Add new state for medication search
+  const [medicationSearchQuery, setMedicationSearchQuery] = useState('');
+  const [medicationSearchResults, setMedicationSearchResults] = useState<MedicationSearchResult[]>([]);
+  const [isSearchingMedications, setIsSearchingMedications] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState<number>(-1);
   
   // Ref to track if data has been loaded to prevent multiple calls
   const dataLoadedRef = useRef(false);
@@ -242,6 +252,183 @@ export default function ConsultationMeeting() {
       ...prescription,
       medications: updatedMedications,
     });
+  };
+
+  // Get clinic ID from consultation (you'll need to adjust this based on your data structure)
+  const getClinicId = () => {
+    // This should be extracted from the consultation or doctor profile
+    // For now, using a default value - adjust based on your data structure
+    return consultation?.clinic_id || '1';
+  };
+
+  // Search medications when user types
+  const searchMedications = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setMedicationSearchResults([]);
+      setSearchError(null);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearchingMedications(true);
+    setSearchError(null);
+
+    try {
+      const clinicId = getClinicId();
+      const response = await medicationService.searchMedications(clinicId, query, 10);
+      
+      if (response.success) {
+        setMedicationSearchResults(response.data.medications);
+        setShowSearchResults(true);
+        setActiveSearchIndex(-1);
+      } else {
+        setSearchError(response.message || 'Search failed');
+        setMedicationSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Error searching medications:', error);
+      setSearchError('Failed to search medications. Please try again.');
+      setMedicationSearchResults([]);
+      setShowSearchResults(false);
+    } finally {
+      setIsSearchingMedications(false);
+    }
+  };
+
+  // Handle medication search input change with debouncing
+  const handleMedicationSearchChange = (value: string) => {
+    setMedicationSearchQuery(value);
+    
+    // Clear previous timeout
+    if ((window as any).medicationSearchTimeout) {
+      clearTimeout((window as any).medicationSearchTimeout);
+    }
+    
+    // Set new timeout for debounced search
+    (window as any).medicationSearchTimeout = setTimeout(() => {
+      searchMedications(value);
+    }, 300);
+  };
+
+  // Auto-create medication if not found
+  const handleAddNewMedication = async () => {
+    if (!medicationSearchQuery.trim()) return;
+
+    try {
+      const clinicId = getClinicId();
+      const response = await medicationService.autoCreateMedication(clinicId, {
+        name: medicationSearchQuery,
+        dosage_form: 'Tablet'
+      });
+
+      if (response.success) {
+        // Add the newly created medication to the prescription
+        const newMedication: Medication = {
+          medicine_name: response.data.medications[0].name,
+          composition: response.data.medications[0].strength,
+          dosage_form: response.data.medications[0].form,
+          morning_dose: 0,
+          afternoon_dose: 0,
+          evening_dose: 0,
+          frequency: 'once_daily',
+          timing: 'after_breakfast',
+          custom_timing: '',
+          duration_days: 7,
+          duration_weeks: 0,
+          duration_months: 0,
+          is_continuous: false,
+          special_instructions: '',
+          notes: '',
+          order: (prescription?.medications?.length || 0) + 1,
+        };
+
+        if (prescription) {
+          setPrescription({
+            ...prescription,
+            medications: [...(prescription.medications || []), newMedication],
+          });
+        }
+        
+        setMedicationSearchQuery('');
+        setMedicationSearchResults([]);
+        setShowSearchResults(false);
+        
+        toast({
+          title: 'Success',
+          description: 'Medication added to inventory and prescription',
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('Error creating medication:', error);
+      setSearchError('Failed to create medication. Please try again.');
+    }
+  };
+
+  // Select medication from search results
+  const selectMedication = (medication: MedicationSearchResult) => {
+    const newMedication: Medication = {
+      medicine_name: medication.name,
+      composition: medication.strength,
+      dosage_form: medication.form,
+      morning_dose: 0,
+      afternoon_dose: 0,
+      evening_dose: 0,
+      frequency: 'once_daily',
+      timing: 'after_breakfast',
+      custom_timing: '',
+      duration_days: 7,
+      duration_weeks: 0,
+      duration_months: 0,
+      is_continuous: false,
+      special_instructions: '',
+      notes: '',
+      order: (prescription?.medications?.length || 0) + 1,
+    };
+
+    if (prescription) {
+      setPrescription({
+        ...prescription,
+        medications: [...(prescription.medications || []), newMedication],
+      });
+    }
+    
+    setMedicationSearchQuery('');
+    setMedicationSearchResults([]);
+    setShowSearchResults(false);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSearchResults || medicationSearchResults.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveSearchIndex(prev => 
+          prev < medicationSearchResults.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveSearchIndex(prev => 
+          prev > 0 ? prev - 1 : medicationSearchResults.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeSearchIndex >= 0 && activeSearchIndex < medicationSearchResults.length) {
+          selectMedication(medicationSearchResults[activeSearchIndex]);
+        } else if (medicationSearchResults.length === 0) {
+          handleAddNewMedication();
+        }
+        break;
+      case 'Escape':
+        setShowSearchResults(false);
+        setActiveSearchIndex(-1);
+        break;
+    }
   };
 
   const updatePrescription = (field: keyof Prescription, value: string) => {
@@ -790,12 +977,85 @@ export default function ConsultationMeeting() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <Label>Medicine Name</Label>
-                                  <Input
-                                    value={medication.medicine_name}
-                                    onChange={(e) => updateMedication(index, 'medicine_name', e.target.value)}
-                                    placeholder="Enter medicine name"
-                                    disabled={prescription.is_finalized && !isEditing}
-                                  />
+                                  <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <Input
+                                      value={medication.medicine_name}
+                                      onChange={(e) => {
+                                        updateMedication(index, 'medicine_name', e.target.value);
+                                        handleMedicationSearchChange(e.target.value);
+                                      }}
+                                      onKeyDown={handleKeyDown}
+                                      placeholder="Search for medications..."
+                                      className="pl-10"
+                                      disabled={prescription.is_finalized && !isEditing}
+                                    />
+                                    {isSearchingMedications && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {searchError && (
+                                    <div className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">
+                                      {searchError}
+                                    </div>
+                                  )}
+
+                                  {showSearchResults && medicationSearchResults.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                      {medicationSearchResults.map((medicationResult, resultIndex) => (
+                                        <div
+                                          key={medicationResult.id}
+                                          onClick={() => {
+                                            updateMedication(index, 'medicine_name', medicationResult.name);
+                                            updateMedication(index, 'composition', medicationResult.strength);
+                                            updateMedication(index, 'dosage_form', medicationResult.form);
+                                            setMedicationSearchResults([]);
+                                            setShowSearchResults(false);
+                                          }}
+                                          className={`flex items-center justify-between p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                                            activeSearchIndex === resultIndex ? 'bg-blue-50' : ''
+                                          }`}
+                                        >
+                                          <div className="flex-1">
+                                            <p className="font-medium text-sm">{medicationResult.name}</p>
+                                            <p className="text-xs text-gray-500">
+                                              {medicationResult.strength} • {medicationResult.form}
+                                              {medicationResult.source === 'inventory' && medicationResult.stock !== undefined && (
+                                                <span className={`ml-2 px-1 py-0.5 rounded text-xs ${
+                                                  medicationResult.is_low_stock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                                }`}>
+                                                  Stock: {medicationResult.stock} {medicationResult.unit}
+                                                </span>
+                                              )}
+                                            </p>
+                                            <p className="text-xs text-blue-600">
+                                              {medicationResult.source === 'inventory' ? 'In Inventory' : 'Previously Prescribed'}
+                                            </p>
+                                          </div>
+                                          <Plus className="w-4 h-4 text-green-600" />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {showSearchResults && medicationSearchResults.length === 0 && !isSearchingMedications && !searchError && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+                                      <div className="text-center">
+                                        <p className="text-gray-500 mb-2">No medications found</p>
+                                        <Button 
+                                          onClick={handleAddNewMedication}
+                                          variant="outline" 
+                                          size="sm"
+                                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                                        >
+                                          Add "{medication.medicine_name}" to Inventory
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Dosage Form</Label>

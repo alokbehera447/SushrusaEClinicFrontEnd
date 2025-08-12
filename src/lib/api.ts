@@ -396,14 +396,19 @@ export const patientApi = {
       const url = patientId 
         ? `/api/patients/${patientId}/medical-records/` 
         : '/api/patients/medical-records/';
-      const response = await api.get<ApiResponse<PaginatedResponse<MedicalRecord>>>(url, { params });
+      const response = await api.get(url, { params });
       
-      // Check if response has the expected structure
+      // Handle paginated response (direct format from DRF)
+      if (response.data && response.data.results && Array.isArray(response.data.results)) {
+        return response.data.results;
+      }
+      
+      // Handle wrapped response (non-paginated)
       if (response.data && response.data.data && response.data.data.results) {
         return response.data.data.results;
       }
       
-      // If data structure is different, try direct results
+      // Handle direct array response
       if (response.data && Array.isArray(response.data)) {
         return response.data;
       }
@@ -453,10 +458,30 @@ export const patientApi = {
   
   // Get patient documents
   getPatientDocuments: async (patientId: string, params?: any): Promise<PatientDocument[]> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<PatientDocument>>>(
-      `/api/patients/${patientId}/documents/`, { params }
-    );
-    return response.data.data.results;
+    try {
+      const response = await api.get(`/api/patients/${patientId}/documents/`, { params });
+      
+      // Handle paginated response (direct format from DRF)
+      if (response.data && response.data.results && Array.isArray(response.data.results)) {
+        return response.data.results;
+      }
+      
+      // Handle wrapped response (non-paginated)
+      if (response.data && response.data.data && response.data.data.results) {
+        return response.data.data.results;
+      }
+      
+      // Handle direct array response
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Return empty array if no data
+      return [];
+    } catch (error) {
+      console.error('Error fetching patient documents:', error);
+      return [];
+    }
   },
 
   // Upload document
@@ -497,16 +522,19 @@ export const patientApi = {
   // Get patient notes
   getPatientNotes: async (patientId: string, params?: any): Promise<any[]> => {
     try {
-      const response = await api.get<ApiResponse<PaginatedResponse<any>>>(
-        `/api/patients/${patientId}/notes/`, { params }
-      );
+      const response = await api.get(`/api/patients/${patientId}/notes/`, { params });
       
-      // Check if response has the expected structure
+      // Handle paginated response (direct format from DRF)
+      if (response.data && response.data.results && Array.isArray(response.data.results)) {
+        return response.data.results;
+      }
+      
+      // Handle wrapped response (non-paginated)
       if (response.data && response.data.data && response.data.data.results) {
         return response.data.data.results;
       }
       
-      // If data structure is different, try direct results
+      // Handle direct array response
       if (response.data && Array.isArray(response.data)) {
         return response.data;
       }
@@ -551,8 +579,8 @@ export const patientApi = {
   // Get signed URL for file download
   getSignedUrl: async (filePath: string): Promise<string> => {
     try {
-      const response = await api.get<{ signed_url: string }>(`/api/utils/signed-url/?file_path=${encodeURIComponent(filePath)}`);
-      return response.data.signed_url;
+      const response = await api.get(`/api/utils/signed-url/?file_path=${encodeURIComponent(filePath)}`);
+      return response.data.data.signed_url;
     } catch (error) {
       console.error('Error getting signed URL:', error);
       return filePath; // Fallback to original path
@@ -653,14 +681,19 @@ export const patientApi = {
   // Get patient prescriptions
   getPatientPrescriptions: async (params?: any): Promise<Prescription[]> => {
     try {
-      const response = await api.get<ApiResponse<PaginatedResponse<Prescription>>>('/api/prescriptions/', { params });
+      const response = await api.get('/api/prescriptions/', { params });
       
-      // Check if response has the expected structure
+      // Handle paginated response (direct format from DRF)
+      if (response.data && response.data.results && Array.isArray(response.data.results)) {
+        return response.data.results;
+      }
+      
+      // Handle wrapped response (non-paginated)
       if (response.data && response.data.data && response.data.data.results) {
         return response.data.data.results;
       }
       
-      // If data structure is different, try direct results
+      // Handle direct array response
       if (response.data && Array.isArray(response.data)) {
         return response.data;
       }
@@ -731,14 +764,19 @@ export const patientApi = {
   // Get patient payments
   getPatientPayments: async (params?: any): Promise<any[]> => {
     try {
-      const response = await api.get<ApiResponse<PaginatedResponse<any>>>('/api/payments/patient/payments/', { params });
+      const response = await api.get('/api/payments/patient/payments/', { params });
       
-      // Check if response has the expected structure
+      // Handle paginated response (direct format from DRF)
+      if (response.data && response.data.results && Array.isArray(response.data.results)) {
+        return response.data.results;
+      }
+      
+      // Handle wrapped response (non-paginated)
       if (response.data && response.data.data && response.data.data.results) {
         return response.data.data.results;
       }
       
-      // If data structure is different, try direct results
+      // Handle direct array response
       if (response.data && Array.isArray(response.data)) {
         return response.data;
       }
