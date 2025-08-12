@@ -220,12 +220,14 @@ const MedicationManagement: React.FC = () => {
   const handleAddMedication = async () => {
     try {
       const response = await api.post('/api/eclinic/medications/', formData);
-      if (response.data.success) {
-        toast.success('Medication added successfully');
-        setShowAddForm(false);
-        resetForm();
-        fetchMedications();
-      }
+      console.log('Add medication response:', response);
+      
+      // If we reach here without an error, the request was successful
+      toast.success('Medication added successfully');
+      setShowAddForm(false);
+      resetForm();
+      fetchMedications();
+      
     } catch (error: any) {
       console.error('Failed to add medication:', error);
       const message = error.response?.data?.error?.message || 'Failed to add medication';
@@ -238,12 +240,14 @@ const MedicationManagement: React.FC = () => {
 
     try {
       const response = await api.put(`/api/eclinic/medications/${editingMedication.id}/`, formData);
-      if (response.data.success) {
-        toast.success('Medication updated successfully');
-        setEditingMedication(null);
-        resetForm();
-        fetchMedications();
-      }
+      console.log('Edit medication response:', response);
+      
+      // If we reach here without an error, the request was successful
+      toast.success('Medication updated successfully');
+      setEditingMedication(null);
+      resetForm();
+      fetchMedications();
+      
     } catch (error: any) {
       console.error('Failed to update medication:', error);
       const message = error.response?.data?.error?.message || 'Failed to update medication';
