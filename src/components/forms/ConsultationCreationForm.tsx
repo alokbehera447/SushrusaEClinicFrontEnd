@@ -232,8 +232,16 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   }, 400), []);
 
   const fetchAvailableSlots = async (date: Date) => {
-    if (!selectedDoctor || !selectedClinic) return;
+    console.log('🚀 fetchAvailableSlots called with date:', date);
+    console.log('🚀 selectedDoctor:', selectedDoctor);
+    console.log('🚀 selectedClinic:', selectedClinic);
+    
+    if (!selectedDoctor || !selectedClinic) {
+      console.log('🚀 Early return - missing doctor or clinic');
+      return;
+    }
 
+    console.log('🚀 Starting slot fetch...');
     setSlotLoading(true);
     setDoctorSlots([]);
     try {
@@ -244,11 +252,19 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         date: formattedDate,
       });
       
+      console.log('🚀 About to call calculateAvailableSlots with:', {
+        doctor_id: selectedDoctor.user,
+        clinic_id: selectedClinic.id,
+        date: formattedDate,
+      });
+      
       const result = await calculateAvailableSlots({
         doctor_id: selectedDoctor.user,
         clinic_id: selectedClinic.id,
         date: formattedDate,
       });
+      
+      console.log('🚀 calculateAvailableSlots result:', result);
       
       const frontendSlots: DoctorSlotFrontend[] = result.slots.map((slot: any) => ({
         id: -1, // Temporary ID for calculated slots
@@ -297,10 +313,14 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
           setSelectedClinic(defaultClinic);
           console.log('🚀 Default clinic loaded:', defaultClinic);
         } else {
-          console.error('🚀 Default clinic CLI002 not found');
+          console.error('🚀 Default clinic CLI002 not found, using fallback');
+          // Fallback to a basic clinic object
+          setSelectedClinic({ id: 'CLI002', name: 'Default Clinic' } as EClinic);
         }
       } catch (error) {
         console.error('🚀 Error loading default clinic:', error);
+        // Fallback to a basic clinic object
+        setSelectedClinic({ id: 'CLI002', name: 'Default Clinic' } as EClinic);
       }
     };
     
@@ -308,8 +328,18 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   }, [debouncedPatientSearch, debouncedDoctorSearch]);
 
   useEffect(() => {
+    console.log('🚀 useEffect triggered:', {
+      selectedDoctor: selectedDoctor?.user_name,
+      selectedClinic: selectedClinic?.name,
+      consultationDate: formData.consultationDate,
+      allConditionsMet: !!(selectedDoctor && selectedClinic && formData.consultationDate)
+    });
+    
     if (selectedDoctor && selectedClinic && formData.consultationDate) {
+      console.log('🚀 All conditions met, fetching slots...');
       fetchAvailableSlots(formData.consultationDate);
+    } else {
+      console.log('🚀 Conditions not met, skipping slot fetch');
     }
   }, [selectedDoctor, selectedClinic, formData.consultationDate]);
 
@@ -317,7 +347,12 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
   // --- Handlers ---
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    console.log('🚀 handleInputChange called:', { field, value });
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      console.log('🚀 New form data:', newData);
+      return newData;
+    });
   };
 
   const handlePatientSelect = (patient: PatientProfile) => {
