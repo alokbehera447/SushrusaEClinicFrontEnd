@@ -2850,24 +2850,11 @@ export const calculateAvailableSlots = async (params: {
   clinic_name: string;
 }> => {
   const queryParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    queryParams.append(key, value.toString());
-  });
+  queryParams.append('doctor_id', params.doctor_id.toString());
+  queryParams.append('clinic_id', params.clinic_id.toString());
+  queryParams.append('date', params.date);
   
-  const response = await api.get<ApiResponse<{
-    slots: Array<{
-      start_time: string;
-      end_time: string;
-      duration_minutes: number;
-      clinic_name: string;
-      doctor_name: string;
-      is_available: boolean;
-    }>;
-    clinic_duration: number;
-    date: string;
-    doctor_name: string;
-    clinic_name: string;
-  }>>(`/api/consultations/calculate_available_slots/?${queryParams.toString()}`);
+  const response = await api.get(`/api/consultations/calculate_available_slots/?${queryParams.toString()}`);
   return response.data.data;
 };
 
