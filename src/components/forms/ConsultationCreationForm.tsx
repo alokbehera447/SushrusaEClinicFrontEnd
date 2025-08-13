@@ -160,6 +160,7 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
 
 // --- Main Component ---
 const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => void; assignedClinicId?: string }) => {
+  console.log('🚀 NewConsultationPage props:', { assignedClinicId });
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     patientId: '',
@@ -308,12 +309,14 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     const loadDefaultClinic = async () => {
       try {
         const clinics = await superAdminApi.getEClinics({ page: 1, page_size: 10 });
+        console.log('🚀 All clinics loaded:', clinics.results);
         const defaultClinic = clinics.results.find(clinic => clinic.id === 'CLI002');
         if (defaultClinic) {
           setSelectedClinic(defaultClinic);
           console.log('🚀 Default clinic loaded:', defaultClinic);
         } else {
           console.error('🚀 Default clinic CLI002 not found, using fallback');
+          console.log('🚀 Available clinic IDs:', clinics.results.map(c => c.id));
           // Fallback to a basic clinic object
           setSelectedClinic({ id: 'CLI002', name: 'Default Clinic' } as EClinic);
         }
@@ -405,7 +408,9 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         payment_status: formData.paymentMethod === 'cash' ? 'paid' : 'pending',
       };
 
-      console.log('Creating consultation with data:', consultationData);
+      console.log('🚀 Creating consultation with data:', consultationData);
+      console.log('🚀 Clinic ID being used:', assignedClinicId || 'CLI002');
+      console.log('🚀 selectedClinic.id:', selectedClinic?.id);
       
       // Use the dynamic consultation creation endpoint that doesn't require slot_id
       const response = await api.post('/api/consultations/create-dynamic/', consultationData);
