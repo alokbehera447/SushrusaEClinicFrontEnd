@@ -169,7 +169,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     consultationType: 'video_call', // From original code
     consultationDate: undefined as Date | undefined,
     selectedSlot: null as DoctorSlotFrontend | null,
-    duration: '30',
+    duration: '5', // Default to 5 minutes (doctor's consultation duration)
     chiefComplaint: '',
     symptoms: '',
     consultationFee: '',
@@ -370,7 +370,8 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     setFormData(prev => ({ 
       ...prev, 
       doctorId: doctor.user,
-      consultationFee: doctor.consultation_fee.toString() // Auto-set consultation fee from doctor
+      consultationFee: doctor.consultation_fee.toString(), // Auto-set consultation fee from doctor
+      duration: (doctor.consultation_duration || 5).toString() // Auto-set consultation duration from doctor
     }));
     setDoctorSearch(doctor.user_name);
     setDoctorOptions([]);
@@ -447,7 +448,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         consultationType: 'video_call',
         consultationDate: undefined,
         selectedSlot: null,
-        duration: '30',
+        duration: '5', // Default to 5 minutes
         chiefComplaint: '',
         symptoms: '',
         consultationFee: '',
