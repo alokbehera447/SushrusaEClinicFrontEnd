@@ -185,7 +185,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   // UI State
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
-  const [selectedClinic] = useState<EClinic | null>({ id: 'CLI002', name: 'Default Clinic' } as EClinic); // Set default clinic
+  const [selectedClinic, setSelectedClinic] = useState<EClinic | null>(null);
   const [patientSearch, setPatientSearch] = useState('');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [patientOptions, setPatientOptions] = useState<PatientProfile[]>([]);
@@ -238,6 +238,12 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     setDoctorSlots([]);
     try {
       const formattedDate = format(date, 'yyyy-MM-dd');
+      console.log('🚀 Fetching slots with:', {
+        doctor_id: selectedDoctor.user,
+        clinic_id: selectedClinic.id,
+        date: formattedDate,
+      });
+      
       const result = await calculateAvailableSlots({
         doctor_id: selectedDoctor.user,
         clinic_id: selectedClinic.id,
@@ -260,6 +266,9 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       setFormData(prev => ({ ...prev, duration: result.clinic_duration.toString() }));
     } catch (error) {
       console.error('Error calculating available slots:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error('Error response:', error.response?.data);
+      }
       toast.error("Failed to fetch available slots.");
     } finally {
       setSlotLoading(false);
@@ -278,6 +287,24 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     // Load initial doctors
     console.log('🚀 Loading initial doctors...');
     debouncedDoctorSearch('');
+    
+    // Load default clinic
+    const loadDefaultClinic = async () => {
+      try {
+        const clinics = await superAdminApi.getEClinics({ page: 1, page_size: 10 });
+        const defaultClinic = clinics.results.find(clinic => clinic.id === 'CLI002');
+        if (defaultClinic) {
+          setSelectedClinic(defaultClinic);
+          console.log('🚀 Default clinic loaded:', defaultClinic);
+        } else {
+          console.error('🚀 Default clinic CLI002 not found');
+        }
+      } catch (error) {
+        console.error('🚀 Error loading default clinic:', error);
+      }
+    };
+    
+    loadDefaultClinic();
   }, [debouncedPatientSearch, debouncedDoctorSearch]);
 
   useEffect(() => {
