@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -56,22 +55,6 @@ interface MedicationFormData {
   name: string;
   generic_name: string;
   brand_name: string;
-  composition: string;
-  dosage_form: string;
-  strength: string;
-  medication_type: string;
-  therapeutic_class: string;
-  indication: string;
-  contraindications: string;
-  side_effects: string;
-  dosage_instructions: string;
-  frequency_options: string[];
-  timing_options: string[];
-  manufacturer: string;
-  license_number: string;
-  is_prescription_required: boolean;
-  is_active: boolean;
-  is_verified: boolean;
 }
 
 const MedicationManagement: React.FC = () => {
@@ -85,64 +68,9 @@ const MedicationManagement: React.FC = () => {
     name: '',
     generic_name: '',
     brand_name: '',
-    composition: '',
-    dosage_form: 'tablet',
-    strength: '',
-    medication_type: 'generic',
-    therapeutic_class: '',
-    indication: '',
-    contraindications: '',
-    side_effects: '',
-    dosage_instructions: '',
-    frequency_options: ['once_daily', 'twice_daily', 'thrice_daily'],
-    timing_options: ['after_breakfast', 'after_lunch', 'after_dinner'],
-    manufacturer: '',
-    license_number: '',
-    is_prescription_required: true,
-    is_active: true,
-    is_verified: false,
   });
 
-  const dosageForms = [
-    { value: 'tablet', label: 'Tablet' },
-    { value: 'capsule', label: 'Capsule' },
-    { value: 'syrup', label: 'Syrup' },
-    { value: 'injection', label: 'Injection' },
-    { value: 'cream', label: 'Cream' },
-    { value: 'ointment', label: 'Ointment' },
-    { value: 'drops', label: 'Drops' },
-    { value: 'inhaler', label: 'Inhaler' },
-    { value: 'suppository', label: 'Suppository' },
-    { value: 'other', label: 'Other' },
-  ];
 
-  const medicationTypes = [
-    { value: 'generic', label: 'Generic' },
-    { value: 'branded', label: 'Branded' },
-    { value: 'combination', label: 'Combination' },
-  ];
-
-  const frequencyOptions = [
-    { value: 'once_daily', label: 'Once Daily' },
-    { value: 'twice_daily', label: 'Twice Daily' },
-    { value: 'thrice_daily', label: 'Thrice Daily' },
-    { value: 'four_times_daily', label: 'Four Times Daily' },
-    { value: 'sos', label: 'SOS (As Needed)' },
-    { value: 'custom', label: 'Custom' },
-  ];
-
-  const timingOptions = [
-    { value: 'before_breakfast', label: 'Before Breakfast' },
-    { value: 'after_breakfast', label: 'After Breakfast' },
-    { value: 'before_lunch', label: 'Before Lunch' },
-    { value: 'after_lunch', label: 'After Lunch' },
-    { value: 'before_dinner', label: 'Before Dinner' },
-    { value: 'after_dinner', label: 'After Dinner' },
-    { value: 'bedtime', label: 'Bedtime' },
-    { value: 'empty_stomach', label: 'Empty Stomach' },
-    { value: 'with_food', label: 'With Food' },
-    { value: 'custom', label: 'Custom' },
-  ];
 
   useEffect(() => {
     fetchMedications();
@@ -198,22 +126,6 @@ const MedicationManagement: React.FC = () => {
       name: '',
       generic_name: '',
       brand_name: '',
-      composition: '',
-      dosage_form: 'tablet',
-      strength: '',
-      medication_type: 'generic',
-      therapeutic_class: '',
-      indication: '',
-      contraindications: '',
-      side_effects: '',
-      dosage_instructions: '',
-      frequency_options: ['once_daily', 'twice_daily', 'thrice_daily'],
-      timing_options: ['after_breakfast', 'after_lunch', 'after_dinner'],
-      manufacturer: '',
-      license_number: '',
-      is_prescription_required: true,
-      is_active: true,
-      is_verified: false,
     });
   };
 
@@ -275,22 +187,6 @@ const MedicationManagement: React.FC = () => {
       name: medication.name,
       generic_name: medication.generic_name,
       brand_name: medication.brand_name,
-      composition: medication.composition,
-      dosage_form: medication.dosage_form,
-      strength: medication.strength,
-      medication_type: medication.medication_type,
-      therapeutic_class: medication.therapeutic_class,
-      indication: medication.indication,
-      contraindications: medication.contraindications,
-      side_effects: medication.side_effects,
-      dosage_instructions: medication.dosage_instructions,
-      frequency_options: medication.frequency_options,
-      timing_options: medication.timing_options,
-      manufacturer: medication.manufacturer,
-      license_number: medication.license_number,
-      is_prescription_required: medication.is_prescription_required,
-      is_active: medication.is_active,
-      is_verified: medication.is_verified,
     });
   };
 
@@ -351,197 +247,31 @@ const MedicationManagement: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Basic Information</h3>
-                
-                <div>
-                  <Label>Medication Name *</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Paracetamol"
-                  />
-                </div>
-
-                <div>
-                  <Label>Generic Name</Label>
-                  <Input
-                    value={formData.generic_name}
-                    onChange={(e) => setFormData({ ...formData, generic_name: e.target.value })}
-                    placeholder="e.g., Acetaminophen"
-                  />
-                </div>
-
-                <div>
-                  <Label>Brand Name</Label>
-                  <Input
-                    value={formData.brand_name}
-                    onChange={(e) => setFormData({ ...formData, brand_name: e.target.value })}
-                    placeholder="e.g., Crocin"
-                  />
-                </div>
-
-                <div>
-                  <Label>Strength</Label>
-                  <Input
-                    value={formData.strength}
-                    onChange={(e) => setFormData({ ...formData, strength: e.target.value })}
-                    placeholder="e.g., 500mg, 10mg/ml"
-                  />
-                </div>
-
-                <div>
-                  <Label>Dosage Form</Label>
-                  <Select value={formData.dosage_form} onValueChange={(value) => setFormData({ ...formData, dosage_form: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dosageForms.map(form => (
-                        <SelectItem key={form.value} value={form.value}>
-                          {form.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Medication Type</Label>
-                  <Select value={formData.medication_type} onValueChange={(value) => setFormData({ ...formData, medication_type: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {medicationTypes.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Therapeutic Information */}
-              <div className="space-y-4">
-                <h3 className="font-semibold">Therapeutic Information</h3>
-                
-                <div>
-                  <Label>Therapeutic Class</Label>
-                  <Input
-                    value={formData.therapeutic_class}
-                    onChange={(e) => setFormData({ ...formData, therapeutic_class: e.target.value })}
-                    placeholder="e.g., Analgesic, Antibiotic"
-                  />
-                </div>
-
-                <div>
-                  <Label>Manufacturer</Label>
-                  <Input
-                    value={formData.manufacturer}
-                    onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                    placeholder="e.g., Pfizer, GlaxoSmithKline"
-                  />
-                </div>
-
-                <div>
-                  <Label>License Number</Label>
-                  <Input
-                    value={formData.license_number}
-                    onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                    placeholder="e.g., DCGI-12345"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_prescription_required"
-                    checked={formData.is_prescription_required}
-                    onChange={(e) => setFormData({ ...formData, is_prescription_required: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="is_prescription_required">Prescription Required</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="is_active">Active</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_verified"
-                    checked={formData.is_verified}
-                    onChange={(e) => setFormData({ ...formData, is_verified: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="is_verified">Verified</Label>
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Information */}
             <div className="space-y-4">
-              <h3 className="font-semibold">Detailed Information</h3>
-              
               <div>
-                <Label>Composition</Label>
-                <Textarea
-                  value={formData.composition}
-                  onChange={(e) => setFormData({ ...formData, composition: e.target.value })}
-                  placeholder="Active ingredients and composition"
-                  rows={3}
+                <Label>Medication Name *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Paracetamol"
                 />
               </div>
 
               <div>
-                <Label>Indication</Label>
-                <Textarea
-                  value={formData.indication}
-                  onChange={(e) => setFormData({ ...formData, indication: e.target.value })}
-                  placeholder="What this medication is used for"
-                  rows={3}
+                <Label>Generic Name</Label>
+                <Input
+                  value={formData.generic_name}
+                  onChange={(e) => setFormData({ ...formData, generic_name: e.target.value })}
+                  placeholder="e.g., Acetaminophen"
                 />
               </div>
 
               <div>
-                <Label>Contraindications</Label>
-                <Textarea
-                  value={formData.contraindications}
-                  onChange={(e) => setFormData({ ...formData, contraindications: e.target.value })}
-                  placeholder="When this medication should not be used"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label>Side Effects</Label>
-                <Textarea
-                  value={formData.side_effects}
-                  onChange={(e) => setFormData({ ...formData, side_effects: e.target.value })}
-                  placeholder="Common side effects"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label>Dosage Instructions</Label>
-                <Textarea
-                  value={formData.dosage_instructions}
-                  onChange={(e) => setFormData({ ...formData, dosage_instructions: e.target.value })}
-                  placeholder="General dosage instructions"
-                  rows={3}
+                <Label>Brand Name</Label>
+                <Input
+                  value={formData.brand_name}
+                  onChange={(e) => setFormData({ ...formData, brand_name: e.target.value })}
+                  placeholder="e.g., Crocin"
                 />
               </div>
             </div>
@@ -616,7 +346,7 @@ const MedicationManagement: React.FC = () => {
                        </div>
                        
                        {/* Main medication details */}
-                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                          <div className="bg-gray-50 p-3 rounded-lg">
                            <div className="text-sm font-medium text-gray-500 mb-1">Generic Name</div>
                            <div className="font-semibold">{medication.generic_name || 'N/A'}</div>
@@ -625,45 +355,11 @@ const MedicationManagement: React.FC = () => {
                            <div className="text-sm font-medium text-gray-500 mb-1">Brand Name</div>
                            <div className="font-semibold">{medication.brand_name || 'N/A'}</div>
                          </div>
-                         <div className="bg-gray-50 p-3 rounded-lg">
-                           <div className="text-sm font-medium text-gray-500 mb-1">Strength</div>
-                           <div className="font-semibold">{medication.strength || 'N/A'}</div>
-                         </div>
-                         <div className="bg-gray-50 p-3 rounded-lg">
-                           <div className="text-sm font-medium text-gray-500 mb-1">Dosage Form</div>
-                           <div className="font-semibold">{medication.dosage_form_display}</div>
-                         </div>
-                         <div className="bg-gray-50 p-3 rounded-lg">
-                           <div className="text-sm font-medium text-gray-500 mb-1">Type</div>
-                           <div className="font-semibold">{medication.medication_type_display}</div>
-                         </div>
-                         <div className="bg-gray-50 p-3 rounded-lg">
-                           <div className="text-sm font-medium text-gray-500 mb-1">Therapeutic Class</div>
-                           <div className="font-semibold">{medication.therapeutic_class || 'N/A'}</div>
-                         </div>
                        </div>
 
-                       {/* Additional details */}
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                         {medication.composition && (
-                           <div className="bg-blue-50 p-3 rounded-lg">
-                             <div className="text-sm font-medium text-blue-600 mb-1">Composition</div>
-                             <div className="text-sm">{medication.composition}</div>
-                           </div>
-                         )}
-                         {medication.indication && (
-                           <div className="bg-green-50 p-3 rounded-lg">
-                             <div className="text-sm font-medium text-green-600 mb-1">Indication</div>
-                             <div className="text-sm">{medication.indication}</div>
-                           </div>
-                         )}
-                       </div>
-
-                       {/* Manufacturer and metadata */}
+                       {/* Metadata */}
                        <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
                          <div className="flex items-center gap-4">
-                           <span><strong>Manufacturer:</strong> {medication.manufacturer || 'N/A'}</span>
-                           <span><strong>License:</strong> {medication.license_number || 'N/A'}</span>
                            <span><strong>Created by:</strong> {medication.created_by_name}</span>
                          </div>
                          <div className="text-xs">
