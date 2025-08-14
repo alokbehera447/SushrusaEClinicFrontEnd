@@ -2734,15 +2734,15 @@ export const doctorApi = {
   // Update current doctor's profile
   updateCurrentDoctorProfile: async (data: Partial<DoctorProfile>): Promise<DoctorProfile> => {
     try {
-      // Try the doctor-specific endpoint first
-      const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/me/', data);
+      // Use the correct update endpoint
+      const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', data);
       return response.data.data;
     } catch (error: any) {
-      console.log('Doctor-specific endpoint failed, trying alternative endpoints:', error);
+      console.log('Update endpoint failed, trying PATCH method:', error);
       
-      // Try PATCH method
+      // Try PATCH method as fallback
       try {
-        const response = await api.patch<ApiResponse<DoctorProfile>>('/api/doctors/me/', data);
+        const response = await api.patch<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', data);
         return response.data.data;
       } catch (patchError: any) {
         console.log('PATCH method also failed, trying auth profile endpoint:', patchError);
