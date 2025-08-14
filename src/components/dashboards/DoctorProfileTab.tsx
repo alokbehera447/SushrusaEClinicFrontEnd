@@ -157,11 +157,6 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
 
       if (response.data.success) {
         toast.success('Signature uploaded successfully');
-        // Update formData with the signature file path for the profile update
-        setFormData(prev => ({
-          ...prev,
-          signature: response.data.data.file_path
-        }));
         return response.data.data.file_path;
       }
     } catch (error: any) {
@@ -204,13 +199,24 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
   const handleSave = async () => {
     setLoading(true);
     try {
+      let signatureFilePath = null;
+      
       // First upload signature if selected
       if (signatureFile) {
-        await handleSignatureUpload(signatureFile);
+        signatureFilePath = await handleSignatureUpload(signatureFile);
       }
 
+      // Prepare profile data with signature if uploaded
+      const profileDataToUpdate = {
+        ...formData,
+        ...(signatureFilePath && { signature: signatureFilePath })
+      };
+
+      console.log('🔍 Profile data to update:', profileDataToUpdate);
+      console.log('🔍 Signature file path:', signatureFilePath);
+
       // Update profile data
-      const updatedProfile = await doctorApi.updateCurrentDoctorProfile(formData);
+      const updatedProfile = await doctorApi.updateCurrentDoctorProfile(profileDataToUpdate);
       toast.success('Profile updated successfully');
       setIsEditing(false);
       
