@@ -48,6 +48,8 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
   const [formData, setFormData] = useState<Partial<DoctorProfile>>({});
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('🔄 DoctorProfileTab - Profile prop changed:', profile);
@@ -142,7 +144,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
 
 
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSignatureFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
@@ -170,6 +172,32 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
     }
   };
 
+  const handleProfileImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type (only images)
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file (JPG, PNG, GIF)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+
+      setProfileImageFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -180,8 +208,8 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
           if (Array.isArray(value)) {
-            // Handle arrays (like languages_spoken)
-            value.forEach(item => formDataToSend.append(key, item));
+            // Handle arrays (like languages_spoken) - convert to JSON string
+            formDataToSend.append(key, JSON.stringify(value));
           } else {
             formDataToSend.append(key, value);
           }
@@ -193,8 +221,14 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
         formDataToSend.append('signature', signatureFile);
       }
 
+      // Add profile image file if selected
+      if (profileImageFile) {
+        formDataToSend.append('profile_picture', profileImageFile);
+      }
+
       console.log('🔍 Profile data to update:', Object.fromEntries(formDataToSend));
       console.log('🔍 Signature file included:', !!signatureFile);
+      console.log('🔍 Profile image file included:', !!profileImageFile);
 
       // Update profile data with FormData (includes file upload)
       const updatedProfile = await doctorApi.updateCurrentDoctorProfileWithFile(formDataToSend);
@@ -204,6 +238,8 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
       // Clear signature file and preview
       setSignatureFile(null);
       setSignaturePreview(null);
+      setProfileImageFile(null);
+      setProfileImagePreview(null);
       
       // Refresh the profile data to ensure we have the latest information
       try {
@@ -255,6 +291,8 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
     setIsEditing(false);
     setSignatureFile(null);
     setSignaturePreview(null);
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
     // Reset form data to original profile
     if (profile) {
       setFormData({
@@ -327,20 +365,33 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
           <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <div className="relative mx-auto mb-4">
-                                 <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
-                   <AvatarImage src={profile.profile_picture} alt={profile.user_name || 'Doctor'} />
-                   <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-[#E17726] to-[#c9651e] text-white">
-                     {(profile.user_name || 'Doctor').charAt(0)}
-                   </AvatarFallback>
-                 </Avatar>
+                <Avatar className="w-24 h-24 mx-auto border-4 border-white shadow-lg">
+                  <AvatarImage 
+                    src={profileImagePreview || profile.profile_picture} 
+                    alt={profile.user_name || 'Doctor'} 
+                  />
+                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-[#E17726] to-[#c9651e] text-white">
+                    {(profile.user_name || 'Doctor').charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
                 {isEditing && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0 bg-white border-2 border-[#E17726]"
-                  >
-                    <Camera className="w-4 h-4 text-[#E17726]" />
-                  </Button>
+                  <>
+                    <input
+                      type="file"
+                      id="profile-image-upload"
+                      accept="image/*"
+                      onChange={handleProfileImageSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0 bg-white border-2 border-[#E17726]"
+                      onClick={() => document.getElementById('profile-image-upload')?.click()}
+                    >
+                      <Camera className="w-4 h-4 text-[#E17726]" />
+                    </Button>
+                  </>
                 )}
               </div>
               <CardTitle className="text-xl font-bold text-gray-900">
@@ -424,7 +475,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
                       type="file"
                       id="signature-upload"
                       accept="image/*,.pdf"
-                      onChange={handleFileSelect}
+                      onChange={handleSignatureFileSelect}
                       className="hidden"
                     />
                     <label
