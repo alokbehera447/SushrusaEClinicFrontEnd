@@ -157,12 +157,12 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
 
       if (response.data.success) {
         toast.success('Signature uploaded successfully');
-        // Update formData with the signature URL for the profile update
+        // Update formData with the signature file path for the profile update
         setFormData(prev => ({
           ...prev,
-          signature: response.data.data.url
+          signature: response.data.data.file_path
         }));
-        return response.data.data.url;
+        return response.data.data.file_path;
       }
     } catch (error: any) {
       console.error('Failed to upload signature:', error);
