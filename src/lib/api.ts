@@ -2733,29 +2733,63 @@ export const doctorApi = {
 
   // Update current doctor's profile
   updateCurrentDoctorProfile: async (data: Partial<DoctorProfile>): Promise<DoctorProfile> => {
+    // Clean and format the data before sending
+    const cleanedData: any = {};
+    
+    // Only include fields that have actual values
+    Object.entries(data).forEach(([key, value]) => {
+      // Skip undefined and null values
+      if (value === undefined || value === null) {
+        return;
+      }
+      
+      // Handle string fields - only include non-empty strings
+      if (typeof value === 'string') {
+        if (value.trim() !== '') {
+          cleanedData[key] = value.trim();
+        }
+      }
+      // Handle date fields
+      else if (key === 'date_of_birth' || key === 'date_of_anniversary') {
+        if (value && typeof value === 'string' && value.trim() !== '') {
+          cleanedData[key] = value.trim();
+        }
+      }
+      // Handle arrays - only include non-empty arrays
+      else if (Array.isArray(value)) {
+        if (value.length > 0) {
+          cleanedData[key] = value;
+        }
+      }
+      // Handle numbers - include all numbers (including 0)
+      else if (typeof value === 'number') {
+        cleanedData[key] = value;
+      }
+      // Handle booleans - include all boolean values
+      else if (typeof value === 'boolean') {
+        cleanedData[key] = value;
+      }
+      // Handle other types
+      else {
+        cleanedData[key] = value;
+      }
+    });
+
     try {
-      // Use the correct update endpoint
-      const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', data);
+      // Use PATCH for partial updates (more appropriate than PUT)
+      const response = await api.patch<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', cleanedData);
       return response.data.data;
     } catch (error: any) {
-      console.log('Update endpoint failed, trying PATCH method:', error);
+      console.log('Update endpoint failed, trying auth profile endpoint:', error);
       
-      // Try PATCH method as fallback
-      try {
-        const response = await api.patch<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', data);
-        return response.data.data;
-      } catch (patchError: any) {
-        console.log('PATCH method also failed, trying auth profile endpoint:', patchError);
-        
-        // Fallback to auth profile endpoint for basic fields
-        const basicFields = {
-          name: data.user_name,
-          email: data.user_email,
-          phone: data.user_phone,
-        };
-        const response = await api.put<ApiResponse<DoctorProfile>>('/api/auth/profile/', basicFields);
-        return response.data.data;
-      }
+      // Fallback to auth profile endpoint for basic fields
+      const basicFields = {
+        name: data.user_name,
+        email: data.user_email,
+        phone: data.user_phone,
+      };
+      const response = await api.put<ApiResponse<DoctorProfile>>('/api/auth/profile/', basicFields);
+      return response.data.data;
     }
   },
 
