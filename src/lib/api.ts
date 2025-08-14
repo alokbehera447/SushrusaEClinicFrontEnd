@@ -2793,6 +2793,22 @@ export const doctorApi = {
     }
   },
 
+  // Update current doctor's profile with file upload
+  updateCurrentDoctorProfileWithFile: async (formData: FormData): Promise<DoctorProfile> => {
+    try {
+      // Use PATCH for partial updates with FormData (includes file upload)
+      const response = await api.patch<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.log('Update with file failed:', error);
+      throw error;
+    }
+  },
+
   // Get doctor statistics (SuperAdmin only)
   getDoctorStats: async (): Promise<{
     total_doctors: number;

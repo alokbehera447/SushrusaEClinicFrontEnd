@@ -140,33 +140,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
     }));
   };
 
-  const handleSignatureUpload = async (file: File) => {
-    setUploadingSignature(true);
-    try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('signature', file);
-      formData.append('type', 'doctor_signature');
 
-      // Upload to Digital Ocean with signed URL
-      const response = await api.post('/api/utils/signature/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data.success) {
-        toast.success('Signature uploaded successfully');
-        return response.data.data.file_path;
-      }
-    } catch (error: any) {
-      console.error('Failed to upload signature:', error);
-      toast.error('Failed to upload signature');
-      throw error;
-    } finally {
-      setUploadingSignature(false);
-    }
-  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -199,24 +173,31 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
   const handleSave = async () => {
     setLoading(true);
     try {
-      let signatureFilePath = null;
+      // Prepare FormData for profile update with signature file
+      const formDataToSend = new FormData();
       
-      // First upload signature if selected
+      // Add all profile fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (Array.isArray(value)) {
+            // Handle arrays (like languages_spoken)
+            value.forEach(item => formDataToSend.append(key, item));
+          } else {
+            formDataToSend.append(key, value);
+          }
+        }
+      });
+      
+      // Add signature file if selected
       if (signatureFile) {
-        signatureFilePath = await handleSignatureUpload(signatureFile);
+        formDataToSend.append('signature', signatureFile);
       }
 
-      // Prepare profile data with signature if uploaded
-      const profileDataToUpdate = {
-        ...formData,
-        ...(signatureFilePath && { signature: signatureFilePath })
-      };
+      console.log('🔍 Profile data to update:', Object.fromEntries(formDataToSend));
+      console.log('🔍 Signature file included:', !!signatureFile);
 
-      console.log('🔍 Profile data to update:', profileDataToUpdate);
-      console.log('🔍 Signature file path:', signatureFilePath);
-
-      // Update profile data
-      const updatedProfile = await doctorApi.updateCurrentDoctorProfile(profileDataToUpdate);
+      // Update profile data with FormData (includes file upload)
+      const updatedProfile = await doctorApi.updateCurrentDoctorProfileWithFile(formDataToSend);
       toast.success('Profile updated successfully');
       setIsEditing(false);
       
