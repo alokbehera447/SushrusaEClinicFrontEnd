@@ -149,7 +149,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
       formData.append('type', 'doctor_signature');
 
       // Upload to Digital Ocean with signed URL
-      const response = await api.post('/api/upload/signature/', formData, {
+      const response = await api.post('/api/utils/signature/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -224,21 +224,36 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       
-      // Provide more specific error messages
-      let message = 'Failed to update profile';
-      if (error.response?.status === 404) {
-        message = 'Profile update endpoint not found. Please contact support.';
+      // Handle validation errors
+      if (error.response?.status === 400) {
+        const errorData = error.response?.data;
+        if (errorData?.error?.details) {
+          // Display specific field validation errors
+          const fieldErrors = errorData.error.details;
+          Object.keys(fieldErrors).forEach(field => {
+            const fieldError = fieldErrors[field];
+            if (Array.isArray(fieldError)) {
+              toast.error(`${field}: ${fieldError[0]}`);
+            } else {
+              toast.error(`${field}: ${fieldError}`);
+            }
+          });
+        } else if (errorData?.error?.message) {
+          toast.error(errorData.error.message);
+        } else {
+          toast.error('Invalid profile data. Please check your input.');
+        }
+      } else if (error.response?.status === 404) {
+        toast.error('Profile update endpoint not found. Please contact support.');
       } else if (error.response?.status === 403) {
-        message = 'You do not have permission to update your profile.';
-      } else if (error.response?.status === 400) {
-        message = error.response?.data?.message || 'Invalid profile data. Please check your input.';
+        toast.error('You do not have permission to update your profile.');
       } else if (error.response?.data?.error?.message) {
-        message = error.response.data.error.message;
+        toast.error(error.response.data.error.message);
       } else if (error.message) {
-        message = error.message;
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to update profile. Please try again.');
       }
-      
-      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -3618,3 +3618,113 @@ export const doctorConsultationApi = {
   getPatientProfile,
 };
 
+// Doctor API object with profile and management methods
+export const doctorApi = {
+  // Get current doctor's profile
+  getCurrentDoctorProfile: async (): Promise<DoctorProfile> => {
+    const response = await api.get<ApiResponse<DoctorProfile>>('/api/doctors/me/');
+    return response.data.data;
+  },
+
+  // Update current doctor's profile
+  updateCurrentDoctorProfile: async (profileData: Partial<DoctorProfile>): Promise<DoctorProfile> => {
+    const response = await api.put<ApiResponse<DoctorProfile>>('/api/doctors/update_me/', profileData);
+    return response.data.data;
+  },
+
+  // Get all doctors (for admin/superadmin)
+  getDoctors: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    specialization?: string;
+    is_active?: boolean;
+    is_verified?: boolean;
+    ordering?: string;
+  }): Promise<PaginatedResponse<DoctorProfile>> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get<ApiResponse<PaginatedResponse<DoctorProfile>>>(`/api/doctors/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  // Get public doctors (for patients)
+  getPublicDoctors: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    specialization?: string;
+    is_active?: boolean;
+    is_verified?: boolean;
+    ordering?: string;
+  }): Promise<PaginatedResponse<PublicDoctorProfile>> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    const response = await api.get<ApiResponse<PaginatedResponse<PublicDoctorProfile>>>(`/api/doctors/public/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  // Create doctor (admin/superadmin only)
+  createDoctor: async (data: CreateDoctorUserData & CreateDoctorProfileData): Promise<DoctorProfile> => {
+    const response = await api.post<ApiResponse<DoctorProfile>>('/api/doctors/', data);
+    return response.data.data;
+  },
+
+  // Update doctor (admin/superadmin only)
+  updateDoctor: async (doctorId: string, data: Partial<CreateDoctorUserData & CreateDoctorProfileData>): Promise<DoctorProfile> => {
+    const response = await api.put<ApiResponse<DoctorProfile>>(`/api/doctors/${doctorId}/`, data);
+    return response.data.data;
+  },
+
+  // Delete doctor (admin/superadmin only)
+  deleteDoctor: async (doctorId: string): Promise<void> => {
+    await api.delete<ApiResponse<null>>(`/api/doctors/${doctorId}/`);
+  },
+
+  // Get doctor statistics (admin/superadmin only)
+  getDoctorStats: async (): Promise<{
+    total_doctors: number;
+    active_doctors: number;
+    verified_doctors: number;
+    new_doctors_this_month: number;
+    top_specializations: Array<{ specialization: string; count: number }>;
+    average_rating: number;
+  }> => {
+    const response = await api.get<ApiResponse<{
+      total_doctors: number;
+      active_doctors: number;
+      verified_doctors: number;
+      new_doctors_this_month: number;
+      top_specializations: Array<{ specialization: string; count: number }>;
+      average_rating: number;
+    }>>('/api/doctors/stats/');
+    return response.data.data;
+  },
+
+  // Upload signature
+  uploadSignature: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('signature', file);
+    formData.append('type', 'doctor_signature');
+    
+    const response = await api.post<ApiResponse<{ url: string }>>('/api/upload/signature/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data;
+  },
+};
+
