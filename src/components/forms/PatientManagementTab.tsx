@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,10 @@ import {
   Users2,
   UserPlus,
   UserCheck,
-  UserX
+  UserX,
+  Lock,
+  Key,
+  AlertTriangle
 } from 'lucide-react';
 
 interface PatientManagementTabProps {
@@ -112,6 +115,13 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
   const [patientNotes, setPatientNotes] = useState<PatientNote[]>([]);
   const [activeDetailTab, setActiveDetailTab] = useState('overview');
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  // OTP Verification State
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+  const [pendingPatient, setPendingPatient] = useState<PatientProfile | null>(null);
+  const [otpError, setOtpError] = useState('');
 
   // Load patients with pagination, search, filters, and sorting
   useEffect(() => {
@@ -245,6 +255,7 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
     }
   };
 
+  // Modified handleManagePatient - now only called after OTP verification
   const handleManagePatient = async (patient: PatientProfile) => {
     setSelectedPatient(patient);
     await loadPatientDetails(patient.id);
@@ -305,6 +316,173 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
     }
     return age;
   };
+
+  // OTP Verification Functions
+  const handleViewPatientDetails = async (patient: PatientProfile) => {
+    try {
+      // First, send OTP to admin
+      const otpResponse = await adminPatientApi.sendAdminOTP(patient.id);
+      
+      setPendingPatient(patient);
+      setShowOTPModal(true);
+      setOtpValue('');
+      setOtpError('');
+      
+      toast({
+        title: "OTP Sent",
+        description: `OTP sent for accessing ${patient.user_name}'s medical records`,
+      });
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.error?.message || "Failed to send OTP. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleOtpSubmit = async () => {
+    if (!pendingPatient) return;
+    
+    if (!otpValue.trim()) {
+      setOtpError('Please enter the OTP');
+      return;
+    }
+
+    if (otpValue.length !== 6) {
+      setOtpError('OTP must be 6 digits');
+      return;
+    }
+
+    setIsOtpLoading(true);
+    setOtpError('');
+
+    try {
+      // Verify OTP with backend
+      const verificationResult = await adminPatientApi.verifyAdminOTP(pendingPatient.id, otpValue);
+      
+      if (verificationResult.access_granted) {
+        setShowOTPModal(false);
+        setOtpValue('');
+        setOtpError('');
+        // Proceed with loading patient details
+        await handleManagePatient(pendingPatient);
+        toast({
+          title: "Access Granted",
+          description: `Access granted to ${verificationResult.patient_name}'s medical records`,
+        });
+      } else {
+        setOtpError('Access denied. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('OTP verification error:', error);
+      const errorMessage = error.response?.data?.error?.message || 'Failed to verify OTP. Please try again.';
+      setOtpError(errorMessage);
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleOtpCancel = () => {
+    setShowOTPModal(false);
+    setOtpValue('');
+    setOtpError('');
+    setPendingPatient(null);
+  };
+
+  // OTP Modal Component
+  const OTPVerificationModal = () => (
+    <Dialog open={showOTPModal} onOpenChange={setShowOTPModal}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-orange-500" />
+            Security Verification Required
+          </DialogTitle>
+          <DialogDescription>
+            To access sensitive patient medical records, please enter the 6-digit OTP sent to your registered phone number.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full">
+              <Key className="w-8 h-8 text-orange-600" />
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              Accessing medical records for:
+            </p>
+            <p className="font-semibold text-gray-900">
+              {pendingPatient?.user_name}
+            </p>
+            <p className="text-xs text-gray-500">
+              Patient ID: {pendingPatient?.id}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="otp" className="text-sm font-medium">
+              Enter 6-digit OTP
+            </Label>
+            <Input
+              id="otp"
+              type="text"
+              value={otpValue}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setOtpValue(value);
+                if (otpError) setOtpError('');
+              }}
+              placeholder="000000"
+              className="text-center text-lg font-mono tracking-widest"
+              maxLength={6}
+              disabled={isOtpLoading}
+            />
+            {otpError && (
+              <p className="text-sm text-red-600 flex items-center gap-1">
+                <AlertTriangle className="w-4 h-4" />
+                {otpError}
+              </p>
+            )}
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-800">
+              <strong>Note:</strong> For testing purposes, use OTP: <code className="bg-blue-100 px-1 rounded">123456</code>
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={handleOtpCancel}
+            disabled={isOtpLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleOtpSubmit}
+            disabled={isOtpLoading || !otpValue.trim()}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            {isOtpLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              <>
+                <Shield className="w-4 h-4 mr-2" />
+                Verify & Access
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   // Patient Detail View
   if (selectedPatient) {
@@ -1048,10 +1226,10 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
-                              onClick={() => handleManagePatient(patient)}
+                              onClick={() => handleViewPatientDetails(patient)}
                               variant="outline"
                               size="sm"
-                              title="View Details"
+                              title="View Details (Requires OTP)"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -1210,6 +1388,9 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
         patient={editingPatient}
         onPatientUpdated={handlePatientUpdated}
       />
+
+      {/* Add OTP Modal */}
+      <OTPVerificationModal />
     </div>
   );
 };

@@ -1280,6 +1280,46 @@ export const adminPatientApi = {
     return response.data.data;
   },
 
+  // Admin OTP verification for patient access
+  sendAdminOTP: async (patientId: string): Promise<{
+    patient_id: string;
+    patient_name: string;
+    expires_in: number;
+    otp_code?: string; // Only for testing
+  }> => {
+    const response = await api.post<ApiResponse<{
+      patient_id: string;
+      patient_name: string;
+      expires_in: number;
+      otp_code?: string;
+    }>>('/api/auth/admin/patient-access-otp/', {
+      action: 'send',
+      patient_id: patientId
+    });
+    return response.data.data;
+  },
+
+  verifyAdminOTP: async (patientId: string, otp: string): Promise<{
+    patient_id: string;
+    patient_name: string;
+    access_granted: boolean;
+    access_type: string;
+    expires_at: string;
+  }> => {
+    const response = await api.post<ApiResponse<{
+      patient_id: string;
+      patient_name: string;
+      access_granted: boolean;
+      access_type: string;
+      expires_at: string;
+    }>>('/api/auth/admin/patient-access-otp/', {
+      action: 'verify',
+      patient_id: patientId,
+      otp: otp
+    });
+    return response.data.data;
+  },
+
 };
 
 // User Session interface
