@@ -148,7 +148,7 @@ export default function ConsultationMeeting() {
         height: undefined
       },
       // Additional fields from API
-      secondary_diagnosis: '',
+      patient_previous_history: '',
       clinical_classification: '',
       fluid_intake: '',
       diet_instructions: '',
@@ -465,7 +465,7 @@ export default function ConsultationMeeting() {
         consultation: consultationId!,
         patient: consultation.patient, // Use the actual patient ID from consultation
         primary_diagnosis: prescription.primary_diagnosis || '',
-        secondary_diagnosis: prescription.secondary_diagnosis || '',
+        patient_previous_history: prescription.patient_previous_history || '',
         clinical_classification: prescription.clinical_classification || '',
         general_instructions: prescription.general_instructions || '',
         fluid_intake: prescription.fluid_intake || '',
@@ -848,14 +848,14 @@ export default function ConsultationMeeting() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="secondary_diagnosis" className="text-sm font-medium">
-                          Secondary Diagnosis
+                        <Label htmlFor="patient_previous_history" className="text-sm font-medium">
+                          Patient Previous History
                         </Label>
                         <Textarea
-                          id="secondary_diagnosis"
-                          value={prescription.secondary_diagnosis || ''}
-                          onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
-                          placeholder="Enter secondary diagnosis (if any)..."
+                          id="patient_previous_history"
+                          value={prescription.patient_previous_history || ''}
+                          onChange={(e) => updatePrescription('patient_previous_history', e.target.value)}
+                          placeholder="Enter patient's previous medical history..."
                           className="min-h-[80px] resize-none"
                           disabled={prescription.is_finalized && !isEditing}
                         />

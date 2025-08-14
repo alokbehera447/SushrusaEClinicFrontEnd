@@ -74,7 +74,7 @@ const EnhancedPrescriptionWriter: React.FC<EnhancedPrescriptionWriterProps> = ({
     consultation: consultationId,
     patient: patientId,
     primary_diagnosis: '',
-    secondary_diagnosis: '',
+    patient_previous_history: '',
     general_instructions: '',
     diet_instructions: '',
     lifestyle_advice: '',
@@ -122,7 +122,7 @@ const EnhancedPrescriptionWriter: React.FC<EnhancedPrescriptionWriterProps> = ({
         consultation: consultationId,
         patient: patientId,
         primary_diagnosis: existingPrescription.primary_diagnosis || '',
-        secondary_diagnosis: existingPrescription.secondary_diagnosis || '',
+        patient_previous_history: existingPrescription.patient_previous_history || '',
         general_instructions: existingPrescription.general_instructions || '',
         diet_instructions: existingPrescription.diet_instructions || '',
         lifestyle_advice: existingPrescription.lifestyle_advice || '',
@@ -523,15 +523,15 @@ const EnhancedPrescriptionWriter: React.FC<EnhancedPrescriptionWriterProps> = ({
                 />
               </div>
               <div>
-                <Label htmlFor="secondary_diagnosis">Secondary Diagnosis</Label>
+                <Label htmlFor="patient_previous_history">Patient Previous History</Label>
                 <Textarea
-                  id="secondary_diagnosis"
-                  value={prescription.secondary_diagnosis}
+                  id="patient_previous_history"
+                  value={prescription.patient_previous_history}
                   onChange={(e) => setPrescription(prev => ({
                     ...prev,
-                    secondary_diagnosis: e.target.value
+                    patient_previous_history: e.target.value
                   }))}
-                  placeholder="Enter secondary diagnosis..."
+                  placeholder="Enter patient's previous medical history..."
                   rows={2}
                 />
               </div>

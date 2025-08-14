@@ -87,7 +87,7 @@ interface ConsultationDetails {
     issued_date: string;
     issued_time: string;
     primary_diagnosis: string;
-    secondary_diagnosis: string;
+    patient_previous_history: string;
     general_instructions: string;
     diet_instructions: string;
     lifestyle_advice: string;
@@ -749,10 +749,10 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
                       </div>
                     )}
                     
-                    {consultation.prescription_data.secondary_diagnosis && (
+                    {consultation.prescription_data.patient_previous_history && (
                       <div>
-                        <Label className="text-sm font-medium text-gray-600">Secondary Diagnosis</Label>
-                        <p className="text-gray-700">{consultation.prescription_data.secondary_diagnosis}</p>
+                        <Label className="text-sm font-medium text-gray-600">Patient Previous History</Label>
+                        <p className="text-gray-700">{consultation.prescription_data.patient_previous_history}</p>
                       </div>
                     )}
                   </CardContent>

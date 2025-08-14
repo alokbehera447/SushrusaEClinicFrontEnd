@@ -166,7 +166,7 @@ interface Prescription {
   consultation: string;
   patient: string;
   primary_diagnosis: string;
-  secondary_diagnosis: string;
+  patient_previous_history: string;
   clinical_classification: string;
   pulse: number | null;
   blood_pressure_systolic: number | null;
@@ -297,7 +297,7 @@ export default function ConsultationMeeting() {
       consultation: consultationId!,
       patient: consultation.patient,
       primary_diagnosis: '',
-      secondary_diagnosis: '',
+      patient_previous_history: '',
       clinical_classification: '',
       pulse: null,
       blood_pressure_systolic: null,
@@ -867,14 +867,14 @@ export default function ConsultationMeeting() {
                               />
                             </div>
                             <div>
-                              <Label htmlFor="secondary_diagnosis" className="text-sm font-semibold text-gray-700">
-                                Secondary Diagnosis
+                              <Label htmlFor="patient_previous_history" className="text-sm font-semibold text-gray-700">
+                                Patient Previous History
                               </Label>
                               <Input
-                                id="secondary_diagnosis"
-                                value={prescription.secondary_diagnosis}
-                                onChange={(e) => updatePrescription('secondary_diagnosis', e.target.value)}
-                                placeholder="Enter secondary diagnosis..."
+                                id="patient_previous_history"
+                                value={prescription.patient_previous_history}
+                                onChange={(e) => updatePrescription('patient_previous_history', e.target.value)}
+                                placeholder="Enter patient's previous medical history..."
                                 className="mt-2 border-purple-200 focus:border-purple-500 text-sm"
                                 disabled={prescription.is_finalized}
                               />

@@ -214,7 +214,7 @@ const ConsultationWorkspace: React.FC = () => {
   // Form state
   const [formData, setFormData] = useState({
     primary_diagnosis: '',
-    secondary_diagnosis: '',
+    patient_previous_history: '',
     general_instructions: '',
     fluid_intake: '',
     diet_instructions: '',
@@ -353,7 +353,7 @@ const ConsultationWorkspace: React.FC = () => {
             
             setFormData({
               primary_diagnosis: pres.primary_diagnosis || '',
-              secondary_diagnosis: pres.secondary_diagnosis || '',
+              patient_previous_history: pres.patient_previous_history || '',
               general_instructions: pres.general_instructions || '',
               fluid_intake: pres.fluid_intake || '',
               diet_instructions: pres.diet_instructions || '',
@@ -405,7 +405,7 @@ const ConsultationWorkspace: React.FC = () => {
       try {
         await prescriptionApi.autoSave(prescription.id, {
           primary_diagnosis: formData.primary_diagnosis,
-          secondary_diagnosis: formData.secondary_diagnosis,
+          patient_previous_history: formData.patient_previous_history,
           general_instructions: formData.general_instructions,
           fluid_intake: formData.fluid_intake,
           diet_instructions: formData.diet_instructions,
@@ -450,7 +450,7 @@ const ConsultationWorkspace: React.FC = () => {
     try {
       const updated = await prescriptionApi.saveDraft(prescription.id, {
         primary_diagnosis: formData.primary_diagnosis,
-        secondary_diagnosis: formData.secondary_diagnosis,
+        patient_previous_history: formData.patient_previous_history,
         general_instructions: formData.general_instructions,
         fluid_intake: formData.fluid_intake,
         diet_instructions: formData.diet_instructions,
@@ -498,7 +498,7 @@ const ConsultationWorkspace: React.FC = () => {
     try {
       const result = await prescriptionApi.finalizeAndGeneratePDF(prescription.id, {
         primary_diagnosis: formData.primary_diagnosis,
-        secondary_diagnosis: formData.secondary_diagnosis,
+        patient_previous_history: formData.patient_previous_history,
         general_instructions: formData.general_instructions,
         fluid_intake: formData.fluid_intake,
         diet_instructions: formData.diet_instructions,
@@ -1388,12 +1388,12 @@ const ConsultationWorkspace: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-slate-700">Secondary Diagnosis</Label>
+                      <Label className="text-xs text-slate-700">Patient Previous History</Label>
                       <Textarea
                         rows={2}
-                        value={formData.secondary_diagnosis}
-                        onChange={(e) => setFormData({ ...formData, secondary_diagnosis: e.target.value })}
-                        placeholder="Enter secondary diagnosis..."
+                        value={formData.patient_previous_history}
+                        onChange={(e) => setFormData({ ...formData, patient_previous_history: e.target.value })}
+                        placeholder="Enter patient's previous medical history..."
                         className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>

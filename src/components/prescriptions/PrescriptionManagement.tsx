@@ -520,10 +520,10 @@ const PrescriptionDetailsView: React.FC<PrescriptionDetailsViewProps> = ({
                 <div className="font-medium">{prescription.primary_diagnosis}</div>
               </div>
             )}
-            {prescription.secondary_diagnosis && (
+            {prescription.patient_previous_history && (
               <div>
-                <div className="text-sm text-gray-500">Secondary Diagnosis</div>
-                <div className="font-medium">{prescription.secondary_diagnosis}</div>
+                <div className="text-sm text-gray-500">Patient Previous History</div>
+                <div className="font-medium">{prescription.patient_previous_history}</div>
               </div>
             )}
           </div>
