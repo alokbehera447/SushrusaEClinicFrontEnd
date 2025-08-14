@@ -157,16 +157,17 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
 
       if (response.data.success) {
         toast.success('Signature uploaded successfully');
-        // Update profile with signature URL
-        const updatedProfile = {
-          ...profile,
-          signature_url: response.data.data.url
-        } as DoctorProfile;
-        onProfileUpdate(updatedProfile);
+        // Update formData with the signature URL for the profile update
+        setFormData(prev => ({
+          ...prev,
+          signature: response.data.data.url
+        }));
+        return response.data.data.url;
       }
     } catch (error: any) {
       console.error('Failed to upload signature:', error);
       toast.error('Failed to upload signature');
+      throw error;
     } finally {
       setUploadingSignature(false);
     }
@@ -212,6 +213,10 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
       const updatedProfile = await doctorApi.updateCurrentDoctorProfile(formData);
       toast.success('Profile updated successfully');
       setIsEditing(false);
+      
+      // Clear signature file and preview
+      setSignatureFile(null);
+      setSignaturePreview(null);
       
       // Refresh the profile data to ensure we have the latest information
       try {
