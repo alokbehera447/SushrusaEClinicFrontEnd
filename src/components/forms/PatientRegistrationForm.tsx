@@ -451,6 +451,7 @@ const PatientRegistrationForm = () => {
                     <SelectItem value="telugu">Telugu</SelectItem>
                     <SelectItem value="marathi">Marathi</SelectItem>
                     <SelectItem value="gujarati">Gujarati</SelectItem>
+                    <SelectItem value="odia">Odia</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

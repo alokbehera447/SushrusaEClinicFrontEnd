@@ -361,6 +361,7 @@ const PatientCreationForm: React.FC<PatientCreationFormProps> = ({
                         <SelectItem value="telugu">Telugu</SelectItem>
                         <SelectItem value="kannada">Kannada</SelectItem>
                         <SelectItem value="malayalam">Malayalam</SelectItem>
+                        <SelectItem value="odia">Odia</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

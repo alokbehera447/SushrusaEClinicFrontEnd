@@ -404,6 +404,7 @@ const PatientEditForm: React.FC<PatientEditFormProps> = ({
                         <SelectItem value="telugu">Telugu</SelectItem>
                         <SelectItem value="kannada">Kannada</SelectItem>
                         <SelectItem value="malayalam">Malayalam</SelectItem>
+                        <SelectItem value="odia">Odia</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
