@@ -42,6 +42,7 @@ import {
   consultationService, 
   type Consultation, 
   type ConsultationManagementParams,
+  type ClinicStatistics,
   getStatusColor, 
   getStatusText, 
   formatDateTime, 
@@ -67,13 +68,16 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
     page: 1,
     page_size: 20
   });
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<ClinicStatistics>({
+    clinic_id: '',
+    clinic_name: '',
     total: 0,
     scheduled: 0,
-    checkedIn: 0,
+    checked_in: 0,
     ready: 0,
-    inProgress: 0,
-    completed: 0
+    in_progress: 0,
+    completed: 0,
+    timestamp: ''
   });
 
   // Load consultations
@@ -89,16 +93,28 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
         const consultationsData = Array.isArray(response.data) ? response.data : [];
         setConsultations(consultationsData);
         
-        // Calculate stats
-        const statsData = {
-          total: consultationsData.length,
-          scheduled: consultationsData.filter(c => c.status === 'scheduled').length,
-          checkedIn: consultationsData.filter(c => c.status === 'patient_checked_in').length,
-          ready: consultationsData.filter(c => c.status === 'ready_for_consultation').length,
-          inProgress: consultationsData.filter(c => c.status === 'in_progress').length,
-          completed: consultationsData.filter(c => c.status === 'completed').length
-        };
-        setStats(statsData);
+        // Load clinic statistics from API
+        try {
+          const statsResponse = await consultationService.getClinicStatistics();
+          if (statsResponse.success) {
+            setStats(statsResponse.data);
+          }
+        } catch (error) {
+          console.error('Error loading clinic statistics:', error);
+          // Fallback to calculated stats
+          const statsData = {
+            clinic_id: '',
+            clinic_name: '',
+            total: consultationsData.length,
+            scheduled: consultationsData.filter(c => c.status === 'scheduled').length,
+            checked_in: consultationsData.filter(c => c.status === 'patient_checked_in').length,
+            ready: consultationsData.filter(c => c.status === 'ready_for_consultation').length,
+            in_progress: consultationsData.filter(c => c.status === 'in_progress').length,
+            completed: consultationsData.filter(c => c.status === 'completed').length,
+            timestamp: new Date().toISOString()
+          };
+          setStats(statsData);
+        }
       } else {
         toast({
           title: "Error",
@@ -269,7 +285,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
               <CheckCircle className="h-4 w-4 text-yellow-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Checked In</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.checkedIn}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.checked_in}</p>
               </div>
             </div>
           </CardContent>
@@ -293,7 +309,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
               <Play className="h-4 w-4 text-purple-600" />
               <div>
                 <p className="text-sm font-medium text-gray-600">In Progress</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.inProgress}</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.in_progress}</p>
               </div>
             </div>
           </CardContent>

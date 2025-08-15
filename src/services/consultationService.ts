@@ -55,6 +55,25 @@ export interface CheckInResponse {
   timestamp: string;
 }
 
+export interface ClinicStatistics {
+  clinic_id: string;
+  clinic_name: string;
+  total: number;
+  scheduled: number;
+  checked_in: number;
+  ready: number;
+  in_progress: number;
+  completed: number;
+  timestamp: string;
+}
+
+export interface ClinicStatisticsResponse {
+  success: boolean;
+  data: ClinicStatistics;
+  message: string;
+  timestamp: string;
+}
+
 // Consultation Service
 export const consultationService = {
   // Get consultations for admin management (using existing ConsultationViewSet)
@@ -155,6 +174,17 @@ export const consultationService = {
   // Get checked in consultations for admin
   async getCheckedInConsultations(): Promise<ConsultationResponse> {
     return this.getConsultationsForManagement({ status: 'patient_checked_in' });
+  },
+
+  // Get clinic statistics
+  async getClinicStatistics(clinicId?: string): Promise<ClinicStatisticsResponse> {
+    const queryParams = new URLSearchParams();
+    if (clinicId) {
+      queryParams.append('clinic_id', clinicId);
+    }
+    
+    const response = await api.get(`/api/consultations/clinic-stats/?${queryParams.toString()}`);
+    return response.data;
   }
 };
 
