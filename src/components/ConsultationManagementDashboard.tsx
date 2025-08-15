@@ -52,11 +52,13 @@ import {
 interface ConsultationManagementDashboardProps {
   onConsultationSelect?: (consultation: Consultation) => void;
   userRole?: string; // Add user role prop
+  assignedClinicId?: string; // Add assigned clinic ID prop
 }
 
 export const ConsultationManagementDashboard: React.FC<ConsultationManagementDashboardProps> = ({
   onConsultationSelect,
-  userRole = 'admin' // Default to admin
+  userRole = 'admin', // Default to admin
+  assignedClinicId // Add assigned clinic ID
 }) => {
   const { toast } = useToast();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
@@ -95,7 +97,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
         
         // Load clinic statistics from API
         try {
-          const statsResponse = await consultationService.getClinicStatistics();
+          const statsResponse = await consultationService.getClinicStatistics(assignedClinicId);
           if (statsResponse.success) {
             setStats(statsResponse.data);
           }

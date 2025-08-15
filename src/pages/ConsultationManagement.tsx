@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { superAdminApi } from '@/lib/api';
 import { 
   Card, 
   CardContent, 
@@ -35,6 +36,7 @@ const ConsultationManagement: React.FC = () => {
   const [userRole, setUserRole] = useState<string>('');
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
   const [activeTab, setActiveTab] = useState('management');
+  const [assignedClinicId, setAssignedClinicId] = useState<string | undefined>();
 
   // Get user role from AuthContext and route
   useEffect(() => {
@@ -62,6 +64,26 @@ const ConsultationManagement: React.FC = () => {
       // Fallback to detected role
       setUserRole(detectedRole);
     }
+  }, [user]);
+
+  // Fetch assigned clinic for admin users
+  useEffect(() => {
+    const fetchAssignedClinic = async () => {
+      if (!user || user.role !== 'admin') return;
+      
+      try {
+        const data = await superAdminApi.getEClinics({ page: 1, page_size: 10 });
+        const assignedClinic = data.results.find((clinic) => clinic.admin === user.id);
+        if (assignedClinic) {
+          setAssignedClinicId(assignedClinic.id);
+          console.log('Assigned clinic ID:', assignedClinic.id);
+        }
+      } catch (error) {
+        console.error('Error fetching assigned clinic:', error);
+      }
+    };
+
+    fetchAssignedClinic();
   }, [user]);
 
   const handleConsultationSelect = (consultation: Consultation) => {
@@ -153,6 +175,7 @@ const ConsultationManagement: React.FC = () => {
             <ConsultationManagementDashboard 
               onConsultationSelect={handleConsultationSelect}
               userRole={userRole}
+              assignedClinicId={assignedClinicId}
             />
           </TabsContent>
 
