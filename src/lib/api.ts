@@ -2954,6 +2954,7 @@ export const calculateAvailableSlots = async (params: {
 }> => {
   const queryParams = new URLSearchParams();
   queryParams.append('doctor_id', params.doctor_id.toString());
+  queryParams.append('clinic_id', 'CLI002'); // Temporary fix for production backend
   queryParams.append('date', params.date);
   
   const response = await api.get(`/api/consultations/calculate_available_slots/?${queryParams.toString()}`);
