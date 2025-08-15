@@ -249,17 +249,20 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       const formattedDate = format(date, 'yyyy-MM-dd');
       console.log('🚀 Fetching slots with:', {
         doctor_id: selectedDoctor.user,
+        clinic_id: assignedClinicId,
         date: formattedDate,
       });
       
       console.log('🚀 About to call calculateAvailableSlots with:', {
         doctor_id: selectedDoctor.user,
+        clinic_id: assignedClinicId,
         date: formattedDate,
       });
       
       const result = await calculateAvailableSlots({
         doctor_id: selectedDoctor.user,
         date: formattedDate,
+        clinic_id: assignedClinicId, // Use the admin's assigned clinic ID
       });
       
       console.log('🚀 calculateAvailableSlots result:', result);
