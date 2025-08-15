@@ -160,6 +160,7 @@ const Navbar = () => {
                 Contact
                 <span className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-orange group-hover:w-full group-hover:left-0 transition-all duration-300"></span>
               </a>
+
             {/* ))} */}
           </div>
 
@@ -315,6 +316,7 @@ const Navbar = () => {
                       </svg>
                     </div>
                   </button>
+
                 {/* ))} */}
               </div>
               

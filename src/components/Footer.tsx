@@ -133,9 +133,21 @@ const Footer = () => {
           <p className="text-white/60 text-base sm:text-lg text-center md:text-left">
             © 2024 SUSHRUSA eClinic. All rights reserved.
           </p>
-          <p className="text-white/60 text-base sm:text-lg text-center md:text-right">
-            HIPAA Compliant • SSL Secured • ISO Certified
-          </p>
+          <div className="flex flex-col items-center md:items-end space-y-2">
+            <p className="text-white/60 text-base sm:text-lg text-center md:text-right">
+              HIPAA Compliant • SSL Secured • ISO Certified
+            </p>
+            <p className="text-white/40 text-sm text-center md:text-right">
+              Crafted by <a 
+                href="https://diracai.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-aqua font-semibold hover:text-aqua/80 transition-colors duration-300"
+              >
+                DiracAI
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

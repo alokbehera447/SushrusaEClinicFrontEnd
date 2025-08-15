@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { prescriptionApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
+import MedicationSearch from '@/components/MedicationSearch';
 
 const PrescriptionWriter: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,13 @@ const PrescriptionWriter: React.FC = () => {
       weight: ''
     }
   });
+
+  const [selectedMedications, setSelectedMedications] = useState<any[]>([]);
+
+  const handleMedicationSelect = (medication: any) => {
+    setSelectedMedications(prev => [...prev, medication]);
+    toast.success(`Added ${medication.name} to prescription`);
+  };
 
   useEffect(() => {
     const loadPrescription = async () => {
@@ -311,6 +319,75 @@ const PrescriptionWriter: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Medication Search - FDA Integration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Pill className="w-5 h-5" />
+            Add Medications (FDA Database)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label>Search Medications</Label>
+              <MedicationSearch
+                onMedicationSelect={handleMedicationSelect}
+                placeholder="Search for medications (e.g., aspirin, ibuprofen, amoxicillin)..."
+                className="mt-2"
+                includeFDA={true}
+              />
+            </div>
+            
+            {/* Selected Medications */}
+            {selectedMedications.length > 0 && (
+              <div className="mt-6">
+                <Label>Selected Medications ({selectedMedications.length})</Label>
+                <div className="mt-2 space-y-2">
+                  {selectedMedications.map((medication, index) => (
+                    <div key={index} className="border rounded-lg p-3 bg-blue-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-blue-900">{medication.name}</h4>
+                          <div className="text-sm text-blue-700 space-y-1 mt-1">
+                            {medication.brand_name && medication.brand_name !== medication.name && (
+                              <div className="font-medium text-blue-600">Brand: {medication.brand_name}</div>
+                            )}
+                            {medication.composition && (
+                              <div>Composition: {medication.composition}</div>
+                            )}
+                            {medication.dosage_form && (
+                              <div>Form: {medication.dosage_form}</div>
+                            )}
+                            {medication.strength && (
+                              <div>Strength: {medication.strength}</div>
+                            )}
+                            {medication.manufacturer && (
+                              <div className="text-xs text-gray-500">Manufacturer: {medication.manufacturer}</div>
+                            )}
+                          </div>
+                          <p className="text-xs text-blue-600 mt-2">
+                            Source: {medication.source === 'fda_api' ? 'FDA Database' : 'Local Database'}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedMedications(prev => prev.filter((_, i) => i !== index))}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Instructions */}
       <Card>
         <CardHeader>
@@ -346,13 +423,20 @@ const PrescriptionWriter: React.FC = () => {
             <div className="space-y-3">
               {prescription.medications.map((medication: any, index: number) => (
                 <div key={medication.id || index} className="border rounded-lg p-3">
-                  <h4 className="font-medium">{medication.medicine_name}</h4>
-                  <p className="text-sm text-gray-600">
-                    Dosage: {medication.dosage_display} | Frequency: {medication.frequency}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Duration: {medication.duration_days} days
-                  </p>
+                  <h4 className="font-medium text-gray-900">{medication.medicine_name}</h4>
+                  <div className="text-sm text-gray-600 space-y-1 mt-1">
+                    {medication.composition && (
+                      <div>Composition: {medication.composition}</div>
+                    )}
+                    {medication.dosage_form && (
+                      <div>Form: {medication.dosage_form}</div>
+                    )}
+                    {medication.strength && (
+                      <div>Strength: {medication.strength}</div>
+                    )}
+                    <div>Dosage: {medication.dosage_display} | Frequency: {medication.frequency}</div>
+                    <div>Duration: {medication.duration_days} days</div>
+                  </div>
                 </div>
               ))}
             </div>

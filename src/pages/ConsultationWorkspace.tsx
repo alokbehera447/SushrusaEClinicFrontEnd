@@ -233,6 +233,47 @@ const ConsultationWorkspace: React.FC = () => {
 
   const latestPdfUrl = useMemo(() => prescription?.current_pdf?.file_url as string | undefined, [prescription]);
 
+  // Handle camera and microphone permissions
+  useEffect(() => {
+    if (consultation?.doctor_meeting_link) {
+      // Check if we have camera and microphone permissions
+      const checkPermissions = async () => {
+        try {
+          // Try to get user media to trigger permission request
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: true 
+          });
+          
+          // If successful, we have permissions
+          console.log('Camera and microphone permissions granted');
+          stream.getTracks().forEach(track => track.stop()); // Stop the stream
+          
+          // Hide permission overlay if it's showing
+          const overlay = document.getElementById('permission-overlay');
+          if (overlay) {
+            overlay.style.display = 'none';
+          }
+        } catch (error) {
+          console.log('Camera and microphone permissions not granted:', error);
+          
+          // Show permission overlay after a delay to let iframe load
+          setTimeout(() => {
+            const overlay = document.getElementById('permission-overlay');
+            if (overlay) {
+              overlay.style.display = 'flex';
+            }
+          }, 3000); // Show after 3 seconds if permissions are still not granted
+        }
+      };
+
+      // Check permissions after iframe loads
+      const timer = setTimeout(checkPermissions, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [consultation?.doctor_meeting_link]);
+
   useEffect(() => {
     const loadWorkspaceData = async () => {
       if (!consultationId) return;
@@ -680,8 +721,7 @@ const ConsultationWorkspace: React.FC = () => {
     setSearchError(null);
 
     try {
-      const clinicId = getClinicId();
-      const response = await medicationService.searchMedications(clinicId, query, 10);
+      const response = await medicationService.searchMedications(query, 20, true);
       
       if (response.success) {
         setMedicationSearchResults(response.data.medications);
@@ -1199,10 +1239,16 @@ const ConsultationWorkspace: React.FC = () => {
           <div className={`${isVideoMaximized ? 'w-full' : 'w-2/3'} bg-white border-r border-slate-200 transition-all duration-300 shadow-sm`}>
             <div className="h-full flex flex-col">
               <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <h2 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
-                  <Video className="w-5 h-5 text-blue-600" />
-                  Live Consultation
-                </h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
+                    <Video className="w-5 h-5 text-blue-600" />
+                    Live Consultation
+                  </h2>
+                  <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Camera & Mic access required</span>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -1217,12 +1263,59 @@ const ConsultationWorkspace: React.FC = () => {
               
               <div className="flex-1 p-4 bg-slate-50">
                 {consultation?.doctor_meeting_link ? (
-                  <iframe
-                    src={consultation.doctor_meeting_link}
-                    className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
-                    allow="camera; microphone; fullscreen; display-capture"
-                    title="Consultation Meeting"
-                  />
+                  <div className="w-full h-full">
+                    {/* Enhanced iframe with proper permissions and fallback */}
+                    <iframe
+                      src={consultation.doctor_meeting_link}
+                      className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
+                      allow="camera; microphone; fullscreen; display-capture; autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation"
+                      title="Consultation Meeting"
+                      onLoad={() => {
+                        console.log('Jitsi iframe loaded successfully');
+                      }}
+                      onError={(e) => {
+                        console.error('Jitsi iframe failed to load:', e);
+                      }}
+                    />
+                    
+                                         {/* Permission Request Overlay */}
+                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg" 
+                          style={{ display: 'none' }} 
+                          id="permission-overlay">
+                       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4">
+                         <div className="text-center">
+                           <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                           <h3 className="text-lg font-semibold text-gray-900 mb-2">Camera & Microphone Access Required</h3>
+                           <p className="text-gray-600 mb-4">
+                             This consultation requires access to your camera and microphone. Please allow permissions when prompted.
+                           </p>
+                           <div className="space-y-2 text-sm text-gray-500">
+                             <p>• Click "Allow" when your browser asks for camera access</p>
+                             <p>• Click "Allow" when your browser asks for microphone access</p>
+                             <p>• If blocked, click the camera/mic icons in your browser's address bar</p>
+                           </div>
+                           <Button 
+                             onClick={() => {
+                               document.getElementById('permission-overlay')?.style.setProperty('display', 'none');
+                               // Try to request permissions programmatically
+                               navigator.mediaDevices?.getUserMedia({ video: true, audio: true })
+                                 .then(() => {
+                                   console.log('Permissions granted');
+                                 })
+                                 .catch((err) => {
+                                   console.error('Permission denied:', err);
+                                 });
+                             }}
+                             className="mt-4 w-full"
+                           >
+                             Enable Camera & Microphone
+                           </Button>
+                         </div>
+                       </div>
+                     </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full bg-white rounded-lg border border-slate-200 shadow-sm">
                     <div className="text-center">
@@ -1664,7 +1757,9 @@ const ConsultationWorkspace: React.FC = () => {
 
                 {showSearchResults && medicationSearchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {medicationSearchResults.map((medicationResult, resultIndex) => (
+                    {medicationSearchResults
+                      .filter(medicationResult => medicationResult.source !== 'previously_prescribed')
+                      .map((medicationResult, resultIndex) => (
                       <div
                         key={medicationResult.id}
                         onClick={() => selectMedication(medicationResult)}
@@ -1674,18 +1769,30 @@ const ConsultationWorkspace: React.FC = () => {
                       >
                         <div className="flex-1">
                           <p className="font-medium text-sm">{medicationResult.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {medicationResult.strength} • {medicationResult.form}
+                          <div className="text-xs text-gray-500 space-y-1 mt-1">
+                            {medicationResult.brand_name && medicationResult.brand_name !== medicationResult.name && (
+                              <div className="font-medium text-blue-600">Brand: {medicationResult.brand_name}</div>
+                            )}
+                            {medicationResult.composition && (
+                              <div>Composition: {medicationResult.composition}</div>
+                            )}
+                            {medicationResult.form && (
+                              <div>Form: {medicationResult.form}</div>
+                            )}
+                            {medicationResult.strength && (
+                              <div>Strength: {medicationResult.strength}</div>
+                            )}
                             {medicationResult.source === 'inventory' && medicationResult.stock !== undefined && (
-                              <span className={`ml-2 px-1 py-0.5 rounded text-xs ${
+                              <span className={`px-1 py-0.5 rounded text-xs ${
                                 medicationResult.is_low_stock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                               }`}>
                                 Stock: {medicationResult.stock} {medicationResult.unit}
                               </span>
                             )}
-                          </p>
-                          <p className="text-xs text-blue-600">
-                            {medicationResult.source === 'inventory' ? 'In Inventory' : 'Previously Prescribed'}
+                          </div>
+                          <p className="text-xs text-blue-600 mt-1">
+                            {medicationResult.source === 'inventory' ? 'In Inventory' : 
+                             medicationResult.source === 'fda_api' ? 'FDA Database' : 'Local Database'}
                           </p>
                         </div>
                         <Plus className="w-4 h-4 text-green-600" />

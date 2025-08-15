@@ -274,8 +274,7 @@ export default function ConsultationMeeting() {
     setSearchError(null);
 
     try {
-      const clinicId = getClinicId();
-      const response = await medicationService.searchMedications(clinicId, query, 10);
+      const response = await medicationService.searchMedications(query, 20, true);
       
       if (response.success) {
         setMedicationSearchResults(response.data.medications);
@@ -1005,7 +1004,9 @@ export default function ConsultationMeeting() {
 
                                   {showSearchResults && medicationSearchResults.length > 0 && (
                                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                      {medicationSearchResults.map((medicationResult, resultIndex) => (
+                                      {medicationSearchResults
+                                        .filter(medicationResult => medicationResult.source !== 'previously_prescribed')
+                                        .map((medicationResult, resultIndex) => (
                                         <div
                                           key={medicationResult.id}
                                           onClick={() => {
@@ -1021,18 +1022,30 @@ export default function ConsultationMeeting() {
                                         >
                                           <div className="flex-1">
                                             <p className="font-medium text-sm">{medicationResult.name}</p>
-                                            <p className="text-xs text-gray-500">
-                                              {medicationResult.strength} • {medicationResult.form}
+                                            <div className="text-xs text-gray-500 space-y-1 mt-1">
+                                              {medicationResult.brand_name && medicationResult.brand_name !== medicationResult.name && (
+                                                <div className="font-medium text-blue-600">Brand: {medicationResult.brand_name}</div>
+                                              )}
+                                              {medicationResult.composition && (
+                                                <div>Composition: {medicationResult.composition}</div>
+                                              )}
+                                              {medicationResult.form && (
+                                                <div>Form: {medicationResult.form}</div>
+                                              )}
+                                              {medicationResult.strength && (
+                                                <div>Strength: {medicationResult.strength}</div>
+                                              )}
                                               {medicationResult.source === 'inventory' && medicationResult.stock !== undefined && (
-                                                <span className={`ml-2 px-1 py-0.5 rounded text-xs ${
+                                                <span className={`px-1 py-0.5 rounded text-xs ${
                                                   medicationResult.is_low_stock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                                                 }`}>
                                                   Stock: {medicationResult.stock} {medicationResult.unit}
                                                 </span>
                                               )}
-                                            </p>
-                                            <p className="text-xs text-blue-600">
-                                              {medicationResult.source === 'inventory' ? 'In Inventory' : 'Previously Prescribed'}
+                                            </div>
+                                            <p className="text-xs text-blue-600 mt-1">
+                                              {medicationResult.source === 'inventory' ? 'In Inventory' : 
+                                               medicationResult.source === 'fda_api' ? 'FDA Database' : 'Local Database'}
                                             </p>
                                           </div>
                                           <Plus className="w-4 h-4 text-green-600" />

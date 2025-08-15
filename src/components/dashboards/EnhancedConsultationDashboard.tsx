@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +52,7 @@ interface RealTimeStats {
 }
 
 const EnhancedConsultationDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [stats, setStats] = useState<ConsultationStats | null>(null);
@@ -375,6 +377,36 @@ const EnhancedConsultationDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Actions */}
+      <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+              <p className="text-sm text-gray-600">Manage your consultations and patient flow</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button 
+                onClick={() => navigate('/doctor/consultations')}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Manage Consultations
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

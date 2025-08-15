@@ -435,6 +435,10 @@ const AdminDashboardEnhanced = () => {
                     <Video className="w-4 h-4 mr-2" />
                     Manage Consultations
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/admin/consultations')} disabled={!isAssignedToClinic}>
+                    <Activity className="w-4 h-4 mr-2" />
+                    Consultation Management
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setActiveTab('payments')} disabled={!isAssignedToClinic}>
                     <CreditCard className="w-4 h-4 mr-2" />
                     Payment Tracking
@@ -761,6 +765,14 @@ const AdminDashboardEnhanced = () => {
                   >
                     <Calendar className="w-4 h-4 mr-2" />
                     Schedule Consultation
+                  </Button>
+                  <Button 
+                    className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => navigate('/admin/consultations')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <Activity className="w-4 h-4 mr-2" />
+                    Manage Consultations
                   </Button>
                   <Button 
                     className="w-full justify-start bg-purple-600 hover:bg-purple-700 text-white"

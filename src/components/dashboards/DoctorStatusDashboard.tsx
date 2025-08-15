@@ -98,7 +98,7 @@ import {
   UserCheck as UserCheckIcon,
   UserX as UserXIcon
 } from 'lucide-react';
-import { useDoctorSuperAdminWebSocket, DoctorStatusUpdate, WebSocketMessage } from '@/hooks/useDoctorSuperAdminWebSocket';
+// import { useDoctorSuperAdminWebSocket, DoctorStatusUpdate, WebSocketMessage } from '@/hooks/useDoctorSuperAdminWebSocket';
 import { doctorStatusApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -145,42 +145,50 @@ const DoctorStatusDashboard: React.FC<DoctorStatusDashboardProps> = ({ isDarkMod
     setLastUpdate(new Date());
   }, []);
 
-  const { isConnected, isConnecting, error, sendMessage, reconnect, userRole } = useDoctorSuperAdminWebSocket(
-    handleStatusUpdate,
-    undefined, // onSuperAdminRequest
-    undefined, // onDoctorResponse
-    () => {
-      console.log('🔗 Doctor-SuperAdmin WebSocket CONNECTED successfully!');
-      console.log('👨‍⚕️ User Role:', userRole);
-      console.log('🌐 WebSocket URL: wss://sushrusaeclinic.com/ws/doctor-superadmin/');
-      toast.success('Real-time connection established');
-    },
-    () => {
-      console.log('❌ Doctor-SuperAdmin WebSocket DISCONNECTED');
-      toast.error('Real-time connection lost');
-    }
-  );
+  // const { isConnected, isConnecting, error, sendMessage, reconnect, userRole } = useDoctorSuperAdminWebSocket(
+  //   handleStatusUpdate,
+  //   undefined, // onSuperAdminRequest
+  //   undefined, // onDoctorResponse
+  //   () => {
+  //     console.log('🔗 Doctor-SuperAdmin WebSocket CONNECTED successfully!');
+  //     console.log('👨‍⚕️ User Role:', userRole);
+  //     console.log('🌐 WebSocket URL: wss://sushrusaeclinic.com/ws/doctor-superadmin/');
+  //     toast.success('Real-time connection established');
+  //   },
+  //   () => {
+  //     console.log('❌ Doctor-SuperAdmin WebSocket DISCONNECTED');
+  //     toast.error('Real-time connection lost');
+  //   }
+  // );
+  
+  // Mock WebSocket state for now
+  const isConnected = false;
+  const isConnecting = false;
+  const error = null;
+  const sendMessage = () => {};
+  const reconnect = () => {};
+  const userRole = 'doctor';
 
-  // Debug WebSocket status
-  useEffect(() => {
-    console.log('WebSocket Status:', {
-      isConnected,
-      isConnecting,
-      error
-    });
-  }, [isConnected, isConnecting, error]);
+  // Debug WebSocket status - TEMPORARILY DISABLED
+  // useEffect(() => {
+  //   console.log('WebSocket Status:', {
+  //     isConnected,
+  //     isConnecting,
+  //     error
+  //   });
+  // }, [isConnected, isConnecting, error]);
 
-  // Periodic activity update to keep doctors marked as online
-  useEffect(() => {
-    const activityInterval = setInterval(() => {
-      // Send a ping to keep the connection alive and update activity
-      if (isConnected) {
-        sendMessage({ type: 'ping' });
-      }
-    }, 30000); // Every 30 seconds
+  // Periodic activity update to keep doctors marked as online - TEMPORARILY DISABLED
+  // useEffect(() => {
+  //   const activityInterval = setInterval(() => {
+  //     // Send a ping to keep the connection alive and update activity
+  //     if (isConnected) {
+  //       sendMessage({ type: 'ping' });
+  //     }
+  //   }, 30000); // Every 30 seconds
 
-    return () => clearInterval(activityInterval);
-  }, [isConnected, sendMessage]);
+  //   return () => clearInterval(activityInterval);
+  // }, [isConnected, sendMessage]);
 
   // Load initial data
   useEffect(() => {

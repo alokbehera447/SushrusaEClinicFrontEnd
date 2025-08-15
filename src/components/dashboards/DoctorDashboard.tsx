@@ -52,7 +52,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { patientApi, UserProfile, doctorAnalyticsApi, DoctorPerformanceStats, doctorApi, Consultation, DoctorProfile, DoctorEarnings } from '@/lib/api';
-import { useDoctorSuperAdminWebSocket } from '@/hooks/useDoctorSuperAdminWebSocket';
+// import { useDoctorSuperAdminWebSocket } from '@/hooks/useDoctorSuperAdminWebSocket';
 import DoctorConsultationTab from './DoctorConsultationTab';
 import EnhancedConsultationDashboard from './EnhancedConsultationDashboard';
 import DoctorProfileTab from './DoctorProfileTab';
@@ -104,29 +104,35 @@ const DoctorDashboard = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | DoctorProfile | null>(null);
 
-  // WebSocket connection for doctor status updates
+  // WebSocket connection for doctor status updates - TEMPORARILY DISABLED
   console.log('🔍 DoctorDashboard - User object:', user);
   console.log('🔍 DoctorDashboard - Access token available:', !!user);
   
-  const { isConnected, isConnecting, error: wsError, userRole } = useDoctorSuperAdminWebSocket(
-    (status) => {
-      console.log('🔄 Doctor status update received:', status);
-    },
-    undefined, // onSuperAdminRequest
-    undefined, // onDoctorResponse
-    () => {
-      console.log('🎉 Doctor WebSocket connected to SuperAdmin dashboard!');
-      console.log('👨‍⚕️ Doctor is now online and visible to SuperAdmin');
-    },
-    () => {
-      console.log('❌ Doctor WebSocket disconnected from SuperAdmin dashboard');
-    }
-  );
+  // const { isConnected, isConnecting, error: wsError, userRole } = useDoctorSuperAdminWebSocket(
+  //   (status) => {
+  //     console.log('🔄 Doctor status update received:', status);
+  //   },
+  //   undefined, // onSuperAdminRequest
+  //   undefined, // onDoctorResponse
+  //   () => {
+  //     console.log('🎉 Doctor WebSocket connected to SuperAdmin dashboard!');
+  //     console.log('👨‍⚕️ Doctor is now online and visible to SuperAdmin');
+  //   },
+  //   () => {
+  //     console.log('❌ Doctor WebSocket disconnected from SuperAdmin dashboard');
+  //   }
+  // );
+  
+  // Mock WebSocket state for now
+  const isConnected = false;
+  const isConnecting = false;
+  const wsError = null;
+  const userRole = 'doctor';
   useEffect(() => {
     async function fetchProfile() {
       if (user && user.role === 'doctor') {
         console.log('👨‍⚕️ Doctor logged in, initializing dashboard...');
-        console.log('🔗 WebSocket connection will be established automatically');
+        // console.log('🔗 WebSocket connection will be established automatically');
         setLoadingProfile(true);
         try {
           // Try to get doctor profile first, fallback to user profile
@@ -466,10 +472,9 @@ const DoctorDashboard = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'consultations', label: 'Consultations', icon: Video },
-    { id: 'profile', label: 'Profile', icon: User },
-    // { id: 'schedule', label: 'Schedule', icon: Calendar }, // Schedule tab commented out
     { id: 'slot-booking', label: 'Slot Booking', icon: Clock },
-    { id: 'earnings', label: 'Earnings', icon: DollarSign }
+    { id: 'earnings', label: 'Earnings', icon: DollarSign },
+    { id: 'profile', label: 'Profile', icon: User }
   ];
 
   const getStatusColor = (status: string) => {
@@ -499,8 +504,8 @@ const DoctorDashboard = () => {
               <Badge className="bg-green-100 text-green-800 border-green-200">
                 Available
               </Badge>
-              {/* WebSocket Connection Status */}
-              <div className="flex items-center space-x-2 ml-4">
+              {/* WebSocket Connection Status - TEMPORARILY DISABLED */}
+              {/* <div className="flex items-center space-x-2 ml-4">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
                 <span className="text-xs text-blue-100">
                   {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Disconnected'}
@@ -508,9 +513,19 @@ const DoctorDashboard = () => {
                 {wsError && (
                   <span className="text-xs text-red-200">({wsError})</span>
                 )}
-              </div>
+              </div> */}
             </div>
             <div className="flex items-center space-x-3">
+              {/* Consultation Management Button */}
+              <Button 
+                onClick={() => navigate('/doctor/consultations')}
+                size="sm" 
+                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 transition-colors duration-300"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Manage Consultations
+              </Button>
+
               {/* Theme Toggle */}
               <Button 
                 variant="ghost" 
@@ -595,7 +610,7 @@ const DoctorDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+          <TabsList className="grid w-full grid-cols-5 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
             <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Activity className="w-4 h-4 mr-2" />
               Overview
@@ -604,14 +619,6 @@ const DoctorDashboard = () => {
               <Video className="w-4 h-4 mr-2" />
               Consultations
             </TabsTrigger>
-            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-              <User className="w-4 h-4 mr-2" />
-              Profile
-            </TabsTrigger>
-            {/* <TabsTrigger value="prescriptions" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-              <FileText className="w-4 h-4 mr-2" />
-              Prescriptions
-            </TabsTrigger> */}
             <TabsTrigger value="slot-booking" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
               <Clock className="w-4 h-4 mr-2" />
               Slot Booking
@@ -620,12 +627,11 @@ const DoctorDashboard = () => {
               <DollarSign className="w-4 h-4 mr-2" />
               Earnings
             </TabsTrigger>
-                    </TabsList>
-
-          {/* Slot Booking Tab */}
-          <TabsContent value="slot-booking">
-            <DoctorAvailabilitySlots />
-          </TabsContent>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <User className="w-4 h-4 mr-2" />
+              Profile
+            </TabsTrigger>
+          </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview">
@@ -751,9 +757,13 @@ const DoctorDashboard = () => {
                       <Calendar className="w-5 h-5 mr-3" />
                       Update Schedule
                     </Button>
-                    <Button variant="outline" className="w-full justify-start h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white">
-                      <FileText className="w-5 h-5 mr-3" />
-                      View Consultations
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white"
+                      onClick={() => navigate('/doctor/consultations')}
+                    >
+                      <Activity className="w-5 h-5 mr-3" />
+                      Manage Consultations
                     </Button>
                   </CardContent>
                 </Card>
@@ -843,9 +853,269 @@ const DoctorDashboard = () => {
           </div>
           </TabsContent>
 
-                    {/* Consultations Tab */}
+          {/* Consultations Tab */}
           <TabsContent value="consultations">
             <EnhancedConsultationDashboard />
+          </TabsContent>
+
+          {/* Slot Booking Tab */}
+          <TabsContent value="slot-booking">
+            <DoctorAvailabilitySlots />
+          </TabsContent>
+
+          {/* Earnings Tab */}
+          <TabsContent value="earnings">
+          <div className="space-y-8">
+
+            {/* Period Filter */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-900">Earnings Analytics</CardTitle>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant={earningsPeriod === 'week' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEarningsPeriod('week')}
+                    className={earningsPeriod === 'week' ? 'bg-[#E17726] hover:bg-[#c9651e]' : ''}
+                  >
+                    Week
+                  </Button>
+                  <Button 
+                    variant={earningsPeriod === 'month' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEarningsPeriod('month')}
+                    className={earningsPeriod === 'month' ? 'bg-[#E17726] hover:bg-[#c9651e]' : ''}
+                  >
+                    Month
+                  </Button>
+                  <Button 
+                    variant={earningsPeriod === 'year' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEarningsPeriod('year')}
+                    className={earningsPeriod === 'year' ? 'bg-[#E17726] hover:bg-[#c9651e]' : ''}
+                  >
+                    Year
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setLoadingEarnings(true);
+                      doctorAnalyticsApi.getDoctorEarnings({ period: earningsPeriod })
+                        .then(setEarnings)
+                        .catch(console.error)
+                        .finally(() => setLoadingEarnings(false));
+                    }}
+                    disabled={loadingEarnings}
+                    className="ml-2"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingEarnings ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {earnings?.period && (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div>
+                      <p className="font-semibold text-midnight">Period: {earnings.period.period_type.charAt(0).toUpperCase() + earnings.period.period_type.slice(1)}</p>
+                      <p className="text-sm text-gray-600">
+                        {earnings.period.start_date} to {earnings.period.end_date}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-[#E17726]">
+                        {earnings.overview?.total_consultations ?? 0} consultations
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        ₹{(earnings.overview?.total_earnings ?? 0).toLocaleString()} total
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Earnings Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-2">Total Consultations</p>
+                      <p className="text-3xl font-bold text-midnight">
+                        {loadingEarnings ? '...' : (earnings?.overview?.total_consultations ?? 0)}
+                      </p>
+                      <p className={`text-sm mt-1 ${earnings?.overview?.growth_type === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                        {earnings?.overview?.earnings_growth ? `${earnings.overview.earnings_growth > 0 ? '+' : ''}${earnings.overview.earnings_growth.toFixed(1)}%` : '0%'} this {earningsPeriod}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
+                      <Users className="w-6 h-6 text-[#E17726]" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-2">Total Earnings</p>
+                      <p className="text-3xl font-bold text-midnight">
+                        ₹{loadingEarnings ? '...' : (earnings?.overview?.total_earnings ?? 0).toLocaleString()}
+                      </p>
+                      <p className={`text-sm mt-1 ${earnings?.overview?.growth_type === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                        {earnings?.overview?.earnings_growth ? `${earnings.overview.earnings_growth > 0 ? '+' : ''}${earnings.overview.earnings_growth.toFixed(1)}%` : '0%'} this {earningsPeriod}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
+                      <DollarSign className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-2">Average Per Consultation</p>
+                      <p className="text-3xl font-bold text-midnight">
+                        ₹{loadingEarnings ? '...' : (earnings?.overview?.average_per_consultation ?? 0).toLocaleString()}
+                      </p>
+                      <p className="text-sm mt-1 text-gray-600">
+                        Based on {earnings?.overview?.total_consultations ?? 0} consultations
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Earnings Trend Chart */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Earnings Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                ) : earnings?.trends && earnings.trends.length > 0 ? (
+                  <div className="space-y-4">
+                    {earnings.trends.map((trend, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-[#E17726]/10 rounded-full flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-[#E17726]" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-midnight">{trend.period}</p>
+                            <p className="text-sm text-gray-600">{trend.consultations} consultations</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-[#E17726]">₹{trend.earnings.toLocaleString()}</p>
+                          <p className={`text-sm ${trend.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {trend.growth >= 0 ? '+' : ''}{trend.growth.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No earnings trend data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Payment Methods Distribution */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Payment Methods</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                ) : earnings?.payment_methods && Object.keys(earnings.payment_methods).length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Object.entries(earnings.payment_methods).map(([method, amount]) => (
+                      <div key={method} className="p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-midnight capitalize">{method.replace('_', ' ')}</p>
+                            <p className="text-sm text-gray-600">Total</p>
+                          </div>
+                          <p className="font-bold text-[#E17726]">₹{(amount as number).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No payment method data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Transactions */}
+            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-gray-900">Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingEarnings ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+                  </div>
+                ) : earnings?.recent_transactions && earnings.recent_transactions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm text-gray-600">Showing {earnings.recent_transactions.length} recent transactions</p>
+                      <p className="text-sm font-semibold text-[#E17726]">
+                        Total: ₹{earnings.recent_transactions.reduce((sum, t) => sum + (t.amount ?? 0), 0).toLocaleString()}
+                      </p>
+                    </div>
+                    {earnings.recent_transactions.map((transaction, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-[#E17726]/10 rounded-full flex items-center justify-center">
+                            <DollarSign className="w-5 h-5 text-[#E17726]" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-midnight">{transaction.patient_name}</p>
+                            <p className="text-sm text-gray-600 capitalize">
+                              {transaction.consultation_type?.replace('_', ' ')} • {transaction.payment_method}
+                            </p>
+                            <p className="text-xs text-gray-500">{transaction.processed_at}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-[#E17726]">₹{(transaction.amount ?? 0).toLocaleString()}</p>
+                          <Badge className={`text-xs ${transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {transaction.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No recent transactions available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
           </TabsContent>
 
           {/* Profile Tab */}

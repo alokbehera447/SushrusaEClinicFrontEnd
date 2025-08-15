@@ -37,6 +37,9 @@ import AddPatientPage from "./pages/AddPatientPage";
 import PrescriptionManagement from "./pages/PrescriptionManagement";
 import PrescriptionWriter from "./pages/PrescriptionWriter";
 import NearbyEClinicsPage from "./pages/NearbyEClinicsPage";
+import MedicationSearchDemo from "./pages/MedicationSearchDemo";
+import PatientManagement from "./pages/PatientManagement";
+import ConsultationManagement from "./pages/ConsultationManagement";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -63,6 +66,7 @@ const App = () => (
             <Route path="/find-doctors" element={<FindDoctors />} />
             <Route path="/test-doctors" element={<TestDoctors />} />
             <Route path="/nearby-eclinics" element={<NearbyEClinicsPage />} />
+            <Route path="/medication-search-demo" element={<MedicationSearchDemo />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             
@@ -95,6 +99,21 @@ const App = () => (
             <Route path="/admin/patients/new" element={
               <ProtectedRoute requiredRole="admin">
                 <AddPatientPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/patients" element={
+              <ProtectedRoute requiredRole="admin">
+                <PatientManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/consultations" element={
+              <ProtectedRoute requiredRole="admin">
+                <ConsultationManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/doctor/consultations" element={
+              <ProtectedRoute requiredRole="doctor">
+                <ConsultationManagement />
               </ProtectedRoute>
             } />
             <Route path="/doctor/dashboard" element={
