@@ -2937,7 +2937,6 @@ export const getAvailableSlots = async (params: {
 
 export const calculateAvailableSlots = async (params: {
   doctor_id: string | number;
-  clinic_id: string | number;
   date: string; // YYYY-MM-DD
 }): Promise<{
   slots: Array<{
@@ -2955,7 +2954,6 @@ export const calculateAvailableSlots = async (params: {
 }> => {
   const queryParams = new URLSearchParams();
   queryParams.append('doctor_id', params.doctor_id.toString());
-  queryParams.append('clinic_id', params.clinic_id.toString());
   queryParams.append('date', params.date);
   
   const response = await api.get(`/api/consultations/calculate_available_slots/?${queryParams.toString()}`);
