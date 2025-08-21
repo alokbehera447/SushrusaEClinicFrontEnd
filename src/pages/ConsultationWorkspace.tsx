@@ -260,10 +260,19 @@ const ConsultationWorkspace: React.FC = () => {
         }
       }
 
-      // Request permissions
+      // Request permissions with the same constraints that Jitsi Meet uses
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
+        video: {
+          height: { ideal: 720 },
+          width: { ideal: 1280 },
+          frameRate: { min: 15, max: 30 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
       
       console.log('✅ Camera and microphone permissions granted successfully');
@@ -309,33 +318,85 @@ const ConsultationWorkspace: React.FC = () => {
 
   useEffect(() => {
     if (consultation?.doctor_meeting_link) {
-      // Check if we have camera and microphone permissions
-      const checkPermissions = async () => {
+      // Pre-flight permission check before iframe loads
+      const preflightPermissionCheck = async () => {
         try {
+          console.log('🔍 Pre-flight permission check...');
+          
           // First check if permissions are already granted
           if (navigator.permissions) {
             try {
               const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
               const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
               
+              console.log('📊 Permission states:', { camera: cameraPermission.state, microphone: micPermission.state });
+              
               if (cameraPermission.state === 'granted' && micPermission.state === 'granted') {
                 console.log('✅ Camera and microphone permissions already granted');
-                // Hide permission overlay if it's showing
-                const overlay = document.getElementById('permission-overlay');
-                if (overlay) {
-                  overlay.style.display = 'none';
-                }
-                return;
+                return true;
+              } else if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
+                console.log('❌ Camera or microphone permissions denied');
+                return false;
               }
             } catch (permError) {
               console.log('Permission query not supported, falling back to getUserMedia');
             }
           }
 
-          // Try to get user media to trigger permission request
+          // Try to get user media with the same constraints that Jitsi Meet uses
           const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: true, 
-            audio: true 
+            video: {
+              height: { ideal: 720 },
+              width: { ideal: 1280 },
+              frameRate: { min: 15, max: 30 },
+              facingMode: 'user'
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+          
+          // If successful, we have permissions
+          console.log('✅ Camera and microphone permissions granted');
+          stream.getTracks().forEach(track => track.stop()); // Stop the stream
+          return true;
+        } catch (error) {
+          console.log('❌ Camera and microphone permissions not granted:', error);
+          return false;
+        }
+      };
+
+      // Run pre-flight check immediately
+      preflightPermissionCheck().then((hasPermissions) => {
+        if (!hasPermissions) {
+          // Show permission overlay immediately if permissions are not granted
+          setTimeout(() => {
+            const overlay = document.getElementById('permission-overlay');
+            if (overlay) {
+              overlay.style.display = 'flex';
+            }
+          }, 1000);
+        }
+      });
+
+      // Additional check after iframe loads
+      const checkPermissions = async () => {
+        try {
+          // Try to get user media with the same constraints that Jitsi Meet uses
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: {
+              height: { ideal: 720 },
+              width: { ideal: 1280 },
+              frameRate: { min: 15, max: 30 },
+              facingMode: 'user'
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
           });
           
           // If successful, we have permissions
@@ -1401,9 +1462,21 @@ const ConsultationWorkspace: React.FC = () => {
                               if (overlay) {
                                 overlay.style.display = 'none';
                               }
-                              // Try to request permissions programmatically
+                              // Try to request permissions programmatically with Jitsi Meet constraints
                               if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                                navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                                navigator.mediaDevices.getUserMedia({ 
+                                  video: {
+                                    height: { ideal: 720 },
+                                    width: { ideal: 1280 },
+                                    frameRate: { min: 15, max: 30 },
+                                    facingMode: 'user'
+                                  },
+                                  audio: {
+                                    echoCancellation: true,
+                                    noiseSuppression: true,
+                                    autoGainControl: true
+                                  }
+                                })
                                   .then((stream) => {
                                     console.log('Permissions granted successfully');
                                     // Stop the test stream
