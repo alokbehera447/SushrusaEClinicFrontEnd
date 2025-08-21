@@ -126,16 +126,34 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
   const getCurrentLocationAndClinics = async () => {
     setLocationLoading(true);
     try {
+      console.log('📍 Requesting user location...');
       const location = await getUserLocation();
       setUserLocation(location);
+      console.log('✅ Location detected:', {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        address: location.address
+      });
       toast.success('Location detected successfully!');
       
       // Fetch all clinics and calculate distances
       await fetchNearbyClinics(location);
     } catch (error: any) {
-      console.error('Error getting location:', error);
-      toast.error(error.message || 'Failed to get your location');
+      console.error('❌ Error getting location:', error);
       
+      // Enhanced error handling for geolocation
+      if (error.message.includes('permission')) {
+        toast.error('Location permission denied. Please enable location access in your browser settings.');
+        console.log('💡 To enable location: Click the location icon in your browser address bar and allow location access.');
+      } else if (error.message.includes('not supported')) {
+        toast.error('Geolocation is not supported by your browser.');
+      } else if (error.message.includes('timeout')) {
+        toast.error('Location request timed out. Please try again.');
+      } else {
+        toast.error(error.message || 'Failed to get your location');
+      }
+      
+      console.log('🔄 Falling back to fetch clinics without location...');
       // Fallback: fetch clinics without location
       await fetchNearbyClinics();
     } finally {
@@ -147,10 +165,17 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
   const fetchNearbyClinics = async (location?: UserLocation) => {
     setLoading(true);
     try {
+      console.log('🔍 Fetching clinics from API...');
       const response = await publicApi.getPublicEClinics({
         page_size: 100, // Get more clinics for better nearby results
         is_active: 'true',
         is_verified: 'true'
+      });
+
+      console.log('📊 API Response:', {
+        total_clinics: response.results.length,
+        clinics_with_coordinates: response.results.filter(c => c.latitude && c.longitude).length,
+        user_location: location ? `${location.latitude}, ${location.longitude}` : 'Not available'
       });
 
       let clinicsWithDistance: ClinicWithDistance[] = response.results.map(clinic => {
@@ -161,10 +186,15 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
           distance = calculateDistance(
             location.latitude,
             location.longitude,
-            clinic.latitude,
-            clinic.longitude
+            parseFloat(clinic.latitude.toString()),
+            parseFloat(clinic.longitude.toString())
           );
           distanceText = formatDistance(distance);
+        } else if (!clinic.latitude || !clinic.longitude) {
+          console.warn(`⚠️ Clinic ${clinic.name} (${clinic.id}) missing coordinates:`, {
+            latitude: clinic.latitude,
+            longitude: clinic.longitude
+          });
         }
 
         return {
@@ -174,9 +204,17 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
         };
       });
 
+      console.log('📏 Distance calculations:', {
+        total_clinics: clinicsWithDistance.length,
+        with_valid_distance: clinicsWithDistance.filter(c => c.distance !== Infinity).length,
+        max_distance_filter: maxDistance
+      });
+
       // Filter by max distance if location is available
       if (location) {
+        const beforeFilter = clinicsWithDistance.length;
         clinicsWithDistance = clinicsWithDistance.filter(clinic => clinic.distance <= maxDistance);
+        console.log(`🔍 Filtered clinics within ${maxDistance}km: ${beforeFilter} → ${clinicsWithDistance.length}`);
       }
 
       // Sort clinics
@@ -196,9 +234,30 @@ const NearbyEClinics: React.FC<NearbyEClinicsProps> = ({ onClinicSelect }) => {
 
       setAllClinics(response.results);
       setNearbyClinics(clinicsWithDistance);
+      
+      console.log('✅ Successfully loaded clinics:', {
+        all_clinics: response.results.length,
+        nearby_clinics: clinicsWithDistance.length
+      });
     } catch (error: any) {
-      console.error('Error fetching clinics:', error);
-      toast.error('Failed to fetch nearby clinics. Please try again later.');
+      console.error('❌ Error fetching clinics:', error);
+      
+      // Enhanced error details
+      if (error.response) {
+        console.error('API Error Response:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          url: error.response.config?.url
+        });
+        toast.error(`API Error: ${error.response.status} - ${error.response.statusText}`);
+      } else if (error.request) {
+        console.error('Network Error:', error.request);
+        toast.error('Network error: Could not connect to server. Please check your internet connection.');
+      } else {
+        console.error('Error Message:', error.message);
+        toast.error(`Error: ${error.message}`);
+      }
       
       // Set empty arrays to show no results
       setAllClinics([]);
