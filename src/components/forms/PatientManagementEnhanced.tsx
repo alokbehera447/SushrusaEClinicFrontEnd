@@ -25,7 +25,8 @@ import {
   Clock,
   UserCheck,
   UserX,
-  FileText
+  FileText,
+  Lock
 } from 'lucide-react';
 import { 
   adminPatientApi,
@@ -73,6 +74,7 @@ import {
 } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 // Patient Management Enhanced Component
 interface PatientManagementEnhancedProps {
@@ -81,6 +83,7 @@ interface PatientManagementEnhancedProps {
 
 const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagementEnhancedProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // State management
   const [patients, setPatients] = useState<PatientProfile[]>([]);
@@ -158,7 +161,7 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
     fetchPatients();
   }, [fetchPatientStats, fetchPatients]);
 
-  // Handle patient actions
+  // Handle patient actions with permission checks
   const handlePatientAction = async (action: string, patient: PatientProfile) => {
     try {
       switch (action) {
@@ -166,9 +169,29 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
           navigate(`/dashboard/patients/${patient.id}`);
           break;
         case 'edit':
+          // Check edit permissions
+          if (!hasEditPermission(patient)) {
+            toast.error('You do not have permission to edit this patient. Contact super admin or request patient consent.');
+            
+            // Optionally request consent
+            const consentGiven = await requestPatientConsent(patient, 'edit');
+            if (!consentGiven) {
+              return;
+            }
+          }
           navigate(`/dashboard/patients/${patient.id}/edit`);
           break;
         case 'delete':
+          // Check delete permissions
+          if (!hasDeletePermission(patient)) {
+            toast.error('You do not have permission to delete this patient. Contact super admin or request patient consent.');
+            
+            // Optionally request consent
+            const consentGiven = await requestPatientConsent(patient, 'delete');
+            if (!consentGiven) {
+              return;
+            }
+          }
           setSelectedPatient(patient);
           setShowDeleteDialog(true);
           break;
@@ -187,9 +210,67 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
     }
   };
 
-  // Handle patient deletion
+  // Permission check functions
+  const hasEditPermission = (patient: PatientProfile) => {
+    // Super admin can edit any patient
+    if (user?.role === 'superadmin') return true;
+    
+    // Admin can only edit patients if they have explicit permission
+    if (user?.role === 'admin') {
+      // Check if patient has given consent for admin editing
+      // This would typically be stored in the patient profile
+      return patient.can_be_edited_by_admin === true;
+    }
+    
+    return false;
+  };
+
+  const hasDeletePermission = (patient: PatientProfile) => {
+    // Super admin can delete any patient
+    if (user?.role === 'superadmin') return true;
+    
+    // Admin can only delete patients if they have explicit permission
+    if (user?.role === 'admin') {
+      // Check if patient has given consent for admin deletion
+      return patient.can_be_deleted_by_admin === true;
+    }
+    
+    return false;
+  };
+
+  const requestPatientConsent = async (patient: PatientProfile, action: 'edit' | 'delete') => {
+    try {
+      // This would typically send a notification to the patient
+      // For now, we'll show a toast message
+      toast.info(`Requesting consent from ${patient.user_name} for ${action} operation`);
+      
+      // In a real implementation, you would:
+      // 1. Send a notification to the patient
+      // 2. Wait for their response
+      // 3. Update the patient's consent flags
+      
+      return false; // For now, return false to indicate consent not given
+    } catch (error) {
+      console.error('Error requesting patient consent:', error);
+      toast.error('Failed to request patient consent');
+      return false;
+    }
+  };
+
+  // Handle patient deletion with permission check
   const handleDeletePatient = async () => {
     if (!selectedPatient) return;
+    
+    // Check permissions
+    if (!hasDeletePermission(selectedPatient)) {
+      toast.error('You do not have permission to delete this patient. Contact super admin or request patient consent.');
+      
+      // Optionally request consent
+      const consentGiven = await requestPatientConsent(selectedPatient, 'delete');
+      if (!consentGiven) {
+        return;
+      }
+    }
     
     try {
       await adminPatientApi.deletePatient(selectedPatient.id);
@@ -255,6 +336,18 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
           <AlertDescription className="text-orange-700">
             You have not been assigned to any e-clinic. Patient management features are disabled. 
             Please contact the super admin to get assigned to an e-clinic.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Permission System Info */}
+      {user?.role === 'admin' && (
+        <Alert className="border-blue-200 bg-blue-50">
+          <Shield className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-800">Patient Permission System</AlertTitle>
+          <AlertDescription className="text-blue-700">
+            As an admin, you can only edit or delete patients with explicit consent. 
+            Super admins have full access. Patients marked with "Restricted" badge require permission.
           </AlertDescription>
         </Alert>
       )}
@@ -449,9 +542,17 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Active
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 text-green-800">
+                            Active
+                          </Badge>
+                          {(!hasEditPermission(patient) || !hasDeletePermission(patient)) && (
+                            <Badge variant="outline" className="text-orange-600 border-orange-300">
+                              <Lock className="w-3 h-3 mr-1" />
+                              Restricted
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -465,9 +566,16 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePatientAction('edit', patient)}>
+                            <DropdownMenuItem 
+                              onClick={() => handlePatientAction('edit', patient)}
+                              className={!hasEditPermission(patient) ? 'opacity-50 cursor-not-allowed' : ''}
+                              disabled={!hasEditPermission(patient)}
+                            >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Patient
+                              {!hasEditPermission(patient) && (
+                                <Lock className="w-3 h-3 ml-2 text-gray-400" />
+                              )}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handlePatientAction('consultation', patient)}>
                               <Calendar className="w-4 h-4 mr-2" />
@@ -480,10 +588,14 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handlePatientAction('delete', patient)}
-                              className="text-red-600"
+                              className={`text-red-600 ${!hasDeletePermission(patient) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              disabled={!hasDeletePermission(patient)}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete Patient
+                              {!hasDeletePermission(patient) && (
+                                <Lock className="w-3 h-3 ml-2 text-gray-400" />
+                              )}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -532,6 +644,14 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
             <DialogTitle>Delete Patient</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete {selectedPatient?.user_name}? This action cannot be undone.
+              {selectedPatient && !hasDeletePermission(selectedPatient) && (
+                <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-md">
+                  <p className="text-sm text-orange-700 flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    <strong>Permission Required:</strong> You need super admin access or patient consent to delete this patient.
+                  </p>
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2">
