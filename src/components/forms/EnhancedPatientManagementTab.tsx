@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import { 
   adminPatientApi, 
   PatientProfile, 
@@ -192,6 +193,7 @@ const OTPVerificationModal: React.FC<OTPVerificationModalProps> = ({
 
 const EnhancedPatientManagementTab: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Main states
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
@@ -342,7 +344,75 @@ const EnhancedPatientManagementTab: React.FC = () => {
     });
   };
 
+  // Permission check functions
+  const hasEditPermission = (patient: PatientProfile) => {
+    // Super admin can edit any patient
+    if (user?.role === 'superadmin') return true;
+    
+    // Admin can only edit patients if they have explicit permission
+    if (user?.role === 'admin') {
+      // Check if patient has given consent for admin editing
+      return patient.can_be_edited_by_admin === true;
+    }
+    
+    return false;
+  };
+
+  const hasDeletePermission = (patient: PatientProfile) => {
+    // Super admin can delete any patient
+    if (user?.role === 'superadmin') return true;
+    
+    // Admin can only delete patients if they have explicit permission
+    if (user?.role === 'admin') {
+      // Check if patient has given consent for admin deletion
+      return patient.can_be_deleted_by_admin === true;
+    }
+    
+    return false;
+  };
+
+  const requestPatientConsent = async (patient: PatientProfile, action: 'edit' | 'delete') => {
+    try {
+      // This would typically send a notification to the patient
+      // For now, we'll show a toast message
+      toast({
+        title: "Permission Required",
+        description: `Requesting consent from ${patient.user_name} for ${action} operation`,
+      });
+      
+      // In a real implementation, you would:
+      // 1. Send a notification to the patient
+      // 2. Wait for their response
+      // 3. Update the patient's consent flags
+      
+      return false; // For now, return false to indicate consent not given
+    } catch (error) {
+      console.error('Error requesting patient consent:', error);
+      toast({
+        title: "Error",
+        description: "Failed to request patient consent",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleDeletePatient = async (patient: PatientProfile) => {
+    // Check permissions
+    if (!hasDeletePermission(patient)) {
+      toast({
+        title: "Permission Denied",
+        description: "You do not have permission to delete this patient. Contact super admin or request patient consent.",
+        variant: "destructive",
+      });
+      
+      // Optionally request consent
+      const consentGiven = await requestPatientConsent(patient, 'delete');
+      if (!consentGiven) {
+        return;
+      }
+    }
+
     try {
       // Delete the user account (which will cascade delete the patient profile)
       await adminPatientApi.deletePatient(patient.user);
@@ -973,6 +1043,22 @@ const EnhancedPatientManagementTab: React.FC = () => {
           </div>
         </div>
 
+        {/* Permission System Info */}
+        {user?.role === 'admin' && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-medium text-blue-800">Patient Permission System</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  As an admin, you can only edit or delete patients with explicit consent. 
+                  Super admins have full access. Patients with lock icons require permission.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Statistics Cards */}
         {patientStats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -1256,24 +1342,38 @@ const EnhancedPatientManagementTab: React.FC = () => {
                             */}
                             <Button
                               onClick={() => {
+                                // Check edit permissions
+                                if (!hasEditPermission(patient)) {
+                                  toast({
+                                    title: "Permission Denied",
+                                    description: "You do not have permission to edit this patient. Contact super admin or request patient consent.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
                                 setEditingPatient(patient);
                                 setShowEditForm(true);
                               }}
                               variant="outline"
                               size="sm"
-                              title="Edit Patient"
+                              title={hasEditPermission(patient) ? "Edit Patient" : "Edit Patient (Permission Required)"}
+                              className={!hasEditPermission(patient) ? "opacity-50 cursor-not-allowed" : ""}
+                              disabled={!hasEditPermission(patient)}
                             >
                               <Edit className="w-4 h-4" />
+                              {!hasEditPermission(patient) && <Lock className="w-3 h-3 ml-1 text-gray-400" />}
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="text-red-600 hover:text-red-700"
-                                  title="Delete Patient"
+                                  className={`text-red-600 hover:text-red-700 ${!hasDeletePermission(patient) ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  title={hasDeletePermission(patient) ? "Delete Patient" : "Delete Patient (Permission Required)"}
+                                  disabled={!hasDeletePermission(patient)}
                                 >
                                   <Trash2 className="w-4 h-4" />
+                                  {!hasDeletePermission(patient) && <Lock className="w-3 h-3 ml-1 text-gray-400" />}
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
