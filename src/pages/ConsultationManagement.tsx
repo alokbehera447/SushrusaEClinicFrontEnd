@@ -106,7 +106,7 @@ const ConsultationManagement: React.FC = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => navigate(userRole === 'doctor' ? '/doctor/dashboard' : '/admin')}
+              onClick={() => navigate(userRole === 'doctor' ? '/doctor/dashboard' : '/dashboard')}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to {userRole === 'doctor' ? 'Doctor' : 'Admin'}
