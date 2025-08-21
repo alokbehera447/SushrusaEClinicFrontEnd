@@ -30,7 +30,8 @@ import {
   FileText,
   UserCheck,
   Settings,
-  ImageIcon
+  ImageIcon,
+  AlertTriangle
 } from 'lucide-react';
 import { superAdminApi, EClinic, CreateEClinicData, UserProfile } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
@@ -99,6 +100,8 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
     state: '',
     pincode: '',
     country: 'India',
+    latitude: '',
+    longitude: '',
     registration_number: '',
     license_number: '',
     accreditation: '',
@@ -286,6 +289,41 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
       });
       return false;
     }
+    if (!clinicForm.latitude.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Latitude is required for nearby clinic search",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!clinicForm.longitude.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Longitude is required for nearby clinic search",
+        variant: "destructive",
+      });
+      return false;
+    }
+    // Validate latitude and longitude format
+    const lat = parseFloat(clinicForm.latitude);
+    const lng = parseFloat(clinicForm.longitude);
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      toast({
+        title: "Validation Error",
+        description: "Latitude must be a valid number between -90 and 90",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      toast({
+        title: "Validation Error",
+        description: "Longitude must be a valid number between -180 and 180",
+        variant: "destructive",
+      });
+      return false;
+    }
     return true;
   };
 
@@ -384,6 +422,8 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
       state: clinic.state,
       pincode: clinic.pincode,
       country: clinic.country || 'India',
+      latitude: clinic.latitude?.toString() || '',
+      longitude: clinic.longitude?.toString() || '',
       registration_number: clinic.registration_number,
       license_number: clinic.license_number || '',
       accreditation: clinic.accreditation || '',
@@ -472,6 +512,59 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
     }
   };
 
+  const handleGetCoordinates = async () => {
+    if (!clinicForm.street || !clinicForm.city || !clinicForm.state) {
+      toast({
+        title: "Error",
+        description: "Please fill in street, city, and state first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const address = `${clinicForm.street}, ${clinicForm.city}, ${clinicForm.state}, ${clinicForm.country}`;
+      const encodedAddress = encodeURIComponent(address);
+      
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch coordinates');
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setClinicForm(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lon
+        }));
+        
+        toast({
+          title: "Success",
+          description: "Coordinates fetched successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not find coordinates for this address. Please enter manually.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching coordinates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch coordinates. Please enter manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setClinicForm({
       name: '',
@@ -484,6 +577,8 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
       state: '',
       pincode: '',
       country: 'India',
+      latitude: '',
+      longitude: '',
       registration_number: '',
       license_number: '',
       accreditation: '',
@@ -745,6 +840,19 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
                         <Clock className="w-4 h-4 mr-2 text-gray-400" />
                         <span className="truncate">{clinic.consultation_duration || 15} min consultation</span>
                       </div>
+                      {clinic.latitude && clinic.longitude ? (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                          <span className="truncate">
+                            {parseFloat(clinic.latitude.toString()).toFixed(4)}, {parseFloat(clinic.longitude.toString()).toFixed(4)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-sm text-orange-600">
+                          <AlertTriangle className="w-4 h-4 mr-2" />
+                          <span className="truncate">Coordinates missing</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Assigned Admin */}
@@ -1181,6 +1289,56 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
                   className="mt-1 h-11"
                 />
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="latitude" className="text-sm font-medium text-gray-700">
+                    Latitude <span className="text-orange-500">*</span>
+                  </Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={clinicForm.latitude}
+                    onChange={(e) => setClinicForm({...clinicForm, latitude: e.target.value})}
+                    placeholder="e.g., 19.0760"
+                    className="mt-1 h-11"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required for nearby clinic search functionality</p>
+                </div>
+                <div>
+                  <Label htmlFor="longitude" className="text-sm font-medium text-gray-700">
+                    Longitude <span className="text-orange-500">*</span>
+                  </Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={clinicForm.longitude}
+                    onChange={(e) => setClinicForm({...clinicForm, longitude: e.target.value})}
+                    placeholder="e.g., 72.8777"
+                    className="mt-1 h-11"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Required for nearby clinic search functionality</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGetCoordinates}
+                  disabled={!clinicForm.street || !clinicForm.city || !clinicForm.state}
+                  className="text-xs"
+                >
+                  <MapPin className="w-3 h-3 mr-1" />
+                  Get Coordinates from Address
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Fill address fields above first, then click to auto-fill coordinates
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1550,6 +1708,20 @@ const EClinicManagement: React.FC<EClinicManagementProps> = ({ isDarkMode = fals
                               <p className="font-medium text-gray-900">{viewingClinic.street}</p>
                               <p className="text-gray-700">{viewingClinic.city}, {viewingClinic.state}</p>
                               <p className="text-gray-600">Pincode: {viewingClinic.pincode}</p>
+                              {viewingClinic.latitude && viewingClinic.longitude ? (
+                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">Coordinates:</span> {parseFloat(viewingClinic.latitude.toString()).toFixed(6)}, {parseFloat(viewingClinic.longitude.toString()).toFixed(6)}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                  <p className="text-sm text-orange-600 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Coordinates missing
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
