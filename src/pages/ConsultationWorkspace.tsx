@@ -234,6 +234,61 @@ const ConsultationWorkspace: React.FC = () => {
   const latestPdfUrl = useMemo(() => prescription?.current_pdf?.file_url as string | undefined, [prescription]);
 
   // Handle camera and microphone permissions
+  const requestMediaPermissions = async () => {
+    try {
+      console.log('Requesting media permissions...');
+      
+      // Check if we're in a secure context
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('Media devices not supported or not in secure context');
+        return;
+      }
+
+      // Request permissions
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      console.log('✅ Camera and microphone permissions granted successfully');
+      
+      // Stop the test stream
+      stream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`Stopped ${track.kind} track`);
+      });
+      
+      // Hide permission overlay if it's showing
+      const overlay = document.getElementById('permission-overlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Media permissions error:', error);
+      
+      let errorMessage = 'Failed to access camera and microphone';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Camera and microphone access was denied. Please allow permissions in your browser settings.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No camera or microphone found. Please check your devices.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Camera or microphone is already in use by another application.';
+      }
+      
+      console.log('Camera and microphone permissions not granted:', errorMessage);
+      
+      // Show permission overlay
+      setTimeout(() => {
+        const overlay = document.getElementById('permission-overlay');
+        if (overlay) {
+          overlay.style.display = 'flex';
+        }
+      }, 2000);
+    }
+  };
+
   useEffect(() => {
     if (consultation?.doctor_meeting_link) {
       // Check if we have camera and microphone permissions
@@ -1268,12 +1323,16 @@ const ConsultationWorkspace: React.FC = () => {
                     <iframe
                       src={consultation.doctor_meeting_link}
                       className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
-                      allow="camera; microphone; fullscreen; display-capture; autoplay; encrypted-media; picture-in-picture"
+                      allow="camera; microphone; fullscreen; display-capture; autoplay; encrypted-media; picture-in-picture; geolocation"
                       allowFullScreen
-                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation"
+                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation allow-modals"
                       title="Consultation Meeting"
                       onLoad={() => {
                         console.log('Jitsi iframe loaded successfully');
+                        // Request permissions after iframe loads
+                        setTimeout(() => {
+                          requestMediaPermissions();
+                        }, 1000);
                       }}
                       onError={(e) => {
                         console.error('Jitsi iframe failed to load:', e);
