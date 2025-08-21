@@ -244,6 +244,22 @@ const ConsultationWorkspace: React.FC = () => {
         return;
       }
 
+      // Check if permissions are already granted
+      const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      if (permissions.state === 'granted') {
+        console.log('✅ Camera permissions already granted');
+        const audioPermissions = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (audioPermissions.state === 'granted') {
+          console.log('✅ Microphone permissions already granted');
+          // Hide permission overlay if it's showing
+          const overlay = document.getElementById('permission-overlay');
+          if (overlay) {
+            overlay.style.display = 'none';
+          }
+          return;
+        }
+      }
+
       // Request permissions
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
@@ -275,17 +291,19 @@ const ConsultationWorkspace: React.FC = () => {
         errorMessage = 'No camera or microphone found. Please check your devices.';
       } else if (error.name === 'NotReadableError') {
         errorMessage = 'Camera or microphone is already in use by another application.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage = 'Camera and microphone access blocked by security policy. Please check your browser settings.';
       }
       
       console.log('Camera and microphone permissions not granted:', errorMessage);
       
-      // Show permission overlay
+      // Show permission overlay after a delay
       setTimeout(() => {
         const overlay = document.getElementById('permission-overlay');
         if (overlay) {
           overlay.style.display = 'flex';
         }
-      }, 2000);
+      }, 3000);
     }
   };
 
@@ -294,6 +312,26 @@ const ConsultationWorkspace: React.FC = () => {
       // Check if we have camera and microphone permissions
       const checkPermissions = async () => {
         try {
+          // First check if permissions are already granted
+          if (navigator.permissions) {
+            try {
+              const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+              const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+              
+              if (cameraPermission.state === 'granted' && micPermission.state === 'granted') {
+                console.log('✅ Camera and microphone permissions already granted');
+                // Hide permission overlay if it's showing
+                const overlay = document.getElementById('permission-overlay');
+                if (overlay) {
+                  overlay.style.display = 'none';
+                }
+                return;
+              }
+            } catch (permError) {
+              console.log('Permission query not supported, falling back to getUserMedia');
+            }
+          }
+
           // Try to get user media to trigger permission request
           const stream = await navigator.mediaDevices.getUserMedia({ 
             video: true, 
@@ -301,7 +339,7 @@ const ConsultationWorkspace: React.FC = () => {
           });
           
           // If successful, we have permissions
-          console.log('Camera and microphone permissions granted');
+          console.log('✅ Camera and microphone permissions granted');
           stream.getTracks().forEach(track => track.stop()); // Stop the stream
           
           // Hide permission overlay if it's showing
@@ -310,7 +348,7 @@ const ConsultationWorkspace: React.FC = () => {
             overlay.style.display = 'none';
           }
         } catch (error) {
-          console.log('Camera and microphone permissions not granted:', error);
+          console.log('❌ Camera and microphone permissions not granted:', error);
           
           // Show permission overlay after a delay to let iframe load
           setTimeout(() => {
@@ -1318,7 +1356,7 @@ const ConsultationWorkspace: React.FC = () => {
               
               <div className="flex-1 p-4 bg-slate-50">
                 {consultation?.doctor_meeting_link ? (
-                  <div className="w-full h-full">
+                  <div className="w-full h-full relative">
                     {/* Enhanced iframe with proper permissions and fallback */}
                     <iframe
                       src={consultation.doctor_meeting_link}
@@ -1339,41 +1377,57 @@ const ConsultationWorkspace: React.FC = () => {
                       }}
                     />
                     
-                                         {/* Permission Request Overlay */}
-                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg" 
-                          style={{ display: 'none' }} 
-                          id="permission-overlay">
-                       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4">
-                         <div className="text-center">
-                           <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                           <h3 className="text-lg font-semibold text-gray-900 mb-2">Camera & Microphone Access Required</h3>
-                           <p className="text-gray-600 mb-4">
-                             This consultation requires access to your camera and microphone. Please allow permissions when prompted.
-                           </p>
-                           <div className="space-y-2 text-sm text-gray-500">
-                             <p>• Click "Allow" when your browser asks for camera access</p>
-                             <p>• Click "Allow" when your browser asks for microphone access</p>
-                             <p>• If blocked, click the camera/mic icons in your browser's address bar</p>
-                           </div>
-                           <Button 
-                             onClick={() => {
-                               document.getElementById('permission-overlay')?.style.setProperty('display', 'none');
-                               // Try to request permissions programmatically
-                               navigator.mediaDevices?.getUserMedia({ video: true, audio: true })
-                                 .then(() => {
-                                   console.log('Permissions granted');
-                                 })
-                                 .catch((err) => {
-                                   console.error('Permission denied:', err);
-                                 });
-                             }}
-                             className="mt-4 w-full"
-                           >
-                             Enable Camera & Microphone
-                           </Button>
-                         </div>
-                       </div>
-                     </div>
+                    {/* Permission Request Overlay */}
+                    <div 
+                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg z-10" 
+                      style={{ display: 'none' }} 
+                      id="permission-overlay"
+                    >
+                      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4">
+                        <div className="text-center">
+                          <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Camera & Microphone Access Required</h3>
+                          <p className="text-gray-600 mb-4">
+                            This consultation requires access to your camera and microphone. Please allow permissions when prompted.
+                          </p>
+                          <div className="space-y-2 text-sm text-gray-500">
+                            <p>• Click "Allow" when your browser asks for camera access</p>
+                            <p>• Click "Allow" when your browser asks for microphone access</p>
+                            <p>• If blocked, click the camera/mic icons in your browser's address bar</p>
+                          </div>
+                          <Button 
+                            onClick={() => {
+                              const overlay = document.getElementById('permission-overlay');
+                              if (overlay) {
+                                overlay.style.display = 'none';
+                              }
+                              // Try to request permissions programmatically
+                              if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                                navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                                  .then((stream) => {
+                                    console.log('Permissions granted successfully');
+                                    // Stop the test stream
+                                    stream.getTracks().forEach(track => track.stop());
+                                  })
+                                  .catch((err) => {
+                                    console.error('Permission denied:', err);
+                                    // Show overlay again after a delay if permission is still denied
+                                    setTimeout(() => {
+                                      const overlay = document.getElementById('permission-overlay');
+                                      if (overlay) {
+                                        overlay.style.display = 'flex';
+                                      }
+                                    }, 2000);
+                                  });
+                              }
+                            }}
+                            className="mt-4 w-full"
+                          >
+                            Enable Camera & Microphone
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full bg-white rounded-lg border border-slate-200 shadow-sm">
