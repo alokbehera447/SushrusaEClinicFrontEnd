@@ -759,6 +759,14 @@ const AdminDashboardEnhanced = () => {
                     Add New Patient
                   </Button>
                   <Button 
+                    className="w-full justify-start bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={() => navigate('/admin/patients')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <Users className="w-4 h-4 mr-2" />
+                    Manage Patients
+                  </Button>
+                  <Button 
                     className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => navigate('/admin/consultations/new')}
                     disabled={!isAssignedToClinic}

@@ -67,7 +67,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
         languages_spoken: profile.languages_spoken || [],
         bio: profile.bio || '',
         achievements: profile.achievements || '',
-        consultation_duration: profile.consultation_duration || 30,
+        consultation_duration: profile.consultation_duration || 5,
         is_online_consultation_available: profile.is_online_consultation_available || false,
         clinic_name: profile.clinic_name || '',
         clinic_address: profile.clinic_address || '',
@@ -308,7 +308,7 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
         languages_spoken: profile.languages_spoken || [],
         bio: profile.bio || '',
         achievements: profile.achievements || '',
-        consultation_duration: profile.consultation_duration || 30,
+        consultation_duration: profile.consultation_duration || 5,
         is_online_consultation_available: profile.is_online_consultation_available || false,
         clinic_name: profile.clinic_name || '',
         clinic_address: profile.clinic_address || '',
@@ -656,14 +656,15 @@ const DoctorProfileTab: React.FC<DoctorProfileTabProps> = ({ profile, onProfileU
                   {isEditing ? (
                     <Input
                       type="number"
-                      value={formData.consultation_duration || 30}
+                      value={formData.consultation_duration || 5}
                       onChange={(e) => handleInputChange('consultation_duration', parseInt(e.target.value))}
-                      min="15"
-                      max="120"
-                      step="15"
+                      min="5"
+                      max="15"
+                      step="1"
+                      placeholder="5-15 minutes"
                     />
                   ) : (
-                    <p className="text-gray-900 font-medium">{profile.consultation_duration || 30} minutes</p>
+                    <p className="text-gray-900 font-medium">{profile.consultation_duration || 5} minutes</p>
                   )}
                 </div>
 

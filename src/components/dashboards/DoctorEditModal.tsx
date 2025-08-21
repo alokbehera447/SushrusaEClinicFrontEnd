@@ -69,7 +69,7 @@ const DoctorEditModal: React.FC<DoctorEditModalProps> = ({
     clinic_address: '',
     bio: '',
     languages_spoken: [] as string[],
-    consultation_duration: '30',
+    consultation_duration: '5',
     is_online_consultation_available: true,
     is_active: true,
   });
@@ -92,7 +92,7 @@ const DoctorEditModal: React.FC<DoctorEditModalProps> = ({
         clinic_address: doctor.clinic_address || '',
         bio: doctor.bio || '',
         languages_spoken: doctor.languages_spoken || [],
-        consultation_duration: doctor.consultation_duration?.toString() || '30',
+        consultation_duration: doctor.consultation_duration?.toString() || '5',
         is_online_consultation_available: doctor.is_online_consultation_available || true,
         is_active: doctor.is_active || true,
       });
@@ -175,8 +175,8 @@ const DoctorEditModal: React.FC<DoctorEditModalProps> = ({
       errors.push('Please enter a valid experience (0-50 years)');
     }
     
-    if (isNaN(consultationDuration) || consultationDuration < 15 || consultationDuration > 120) {
-      errors.push('Please enter a valid consultation duration (15-120 minutes)');
+    if (isNaN(consultationDuration) || consultationDuration < 5 || consultationDuration > 15) {
+      errors.push('Please enter a valid consultation duration (5-15 minutes)');
     }
     
     return errors;
@@ -410,9 +410,10 @@ const DoctorEditModal: React.FC<DoctorEditModalProps> = ({
                 type="number"
                 value={formData.consultation_duration}
                 onChange={(e) => handleInputChange('consultation_duration', e.target.value)}
-                placeholder="30"
-                min="15"
-                max="120"
+                placeholder="5"
+                min="5"
+                max="15"
+                step="1"
               />
             </div>
           </div>

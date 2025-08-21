@@ -20,14 +20,17 @@ import {
   BarChart3, 
   User,
   Plus,
-  Settings
+  Settings,
+  ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { PatientSearch } from '@/components/PatientSearch';
 import { PatientManagementDashboard } from '@/components/PatientManagementDashboard';
 import { PatientStatsDashboard } from '@/components/PatientStatsDashboard';
 import { type PatientProfile } from '@/services/patientService';
 
 const PatientManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
   const [activeTab, setActiveTab] = useState('search');
 
@@ -46,11 +49,22 @@ const PatientManagement: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Patient Management</h1>
-            <p className="text-gray-600">
-              Comprehensive patient management system with medical records, documents, and analytics
-            </p>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/admin/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Patient Management</h1>
+              <p className="text-gray-600">
+                Comprehensive patient management system with medical records, documents, and analytics
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="flex items-center gap-2">

@@ -138,7 +138,7 @@ const DoctorManagementTab = () => {
       clinic_address: '123 Medical Center, City, State - 123456',
       bio: 'Experienced cardiologist with expertise in interventional procedures',
       languages_spoken: ['English', 'Hindi'],
-      consultation_duration: 30,
+      consultation_duration: 5,
       is_online_consultation_available: true,
       is_verified: false,
       is_active: true,
@@ -790,7 +790,7 @@ const DoctorManagementTab = () => {
                   formData.append('clinic_address', '456 Health Street, City, State - 123456');
                   formData.append('bio', 'Experienced general physician');
                   formData.append('languages_spoken', JSON.stringify(['English', 'Hindi']));
-                  formData.append('consultation_duration', '30');
+                  formData.append('consultation_duration', '5');
                   formData.append('is_online_consultation_available', 'true');
                   formData.append('is_verified', 'false');
                   formData.append('is_active', 'true');
@@ -810,7 +810,7 @@ const DoctorManagementTab = () => {
                     clinic_address: '456 Health Street, City, State - 123456',
                     bio: 'Experienced general physician',
                     languages_spoken: ['English', 'Hindi'],
-                    consultation_duration: 30,
+                    consultation_duration: 5,
                     is_online_consultation_available: true,
                     is_verified: false,
                     is_active: true,

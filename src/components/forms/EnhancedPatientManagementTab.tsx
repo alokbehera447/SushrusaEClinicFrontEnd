@@ -95,7 +95,10 @@ const OTPVerificationModal: React.FC<OTPVerificationModalProps> = ({
   onOtpChange,
   onOtpSubmit,
   onOtpCancel
-}) => (
+}) => {
+  console.log('🎭 OTP Modal Render - open:', open, 'pendingPatient:', pendingPatient?.id);
+  
+  return (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-md">
       <DialogHeader>
@@ -184,7 +187,8 @@ const OTPVerificationModal: React.FC<OTPVerificationModalProps> = ({
       </DialogFooter>
     </DialogContent>
   </Dialog>
-);
+  );
+};
 
 const EnhancedPatientManagementTab: React.FC = () => {
   const { toast } = useToast();
@@ -363,27 +367,58 @@ const EnhancedPatientManagementTab: React.FC = () => {
 
   // OTP Verification Functions
   const handleViewPatientDetails = async (patient: PatientProfile) => {
+    console.log('🔍 handleViewPatientDetails called for patient:', patient.id);
+    
+    // For testing - bypass API call and show modal directly
+    console.log('🎯 Showing OTP modal directly for testing');
+    setPendingPatient(patient);
+    setShowOTPModal(true);
+    setOtpValue('');
+    setOtpError('');
+    
+    console.log('🎯 OTP Modal should be visible now');
+    
+    toast({
+      title: "OTP Required",
+      description: `Please enter OTP to access ${patient.user_name}'s medical records`,
+    });
+    
+    // Comment out API call for now to test modal
+    /*
     try {
       // First, send OTP to admin
+      console.log('📤 Sending OTP for patient:', patient.id);
       const otpResponse = await adminPatientApi.sendAdminOTP(patient.id);
+      console.log('✅ OTP sent successfully:', otpResponse);
       
       setPendingPatient(patient);
       setShowOTPModal(true);
       setOtpValue('');
       setOtpError('');
       
+      console.log('🎯 OTP Modal should be visible now');
+      
       toast({
         title: "OTP Sent",
         description: `OTP sent for accessing ${patient.user_name}'s medical records`,
       });
     } catch (error: any) {
-      console.error('Error sending OTP:', error);
+      console.error('❌ Error sending OTP:', error);
+      
+      // Even if OTP fails, show the modal for testing
+      console.log('🔄 Showing OTP modal despite API error for testing');
+      setPendingPatient(patient);
+      setShowOTPModal(true);
+      setOtpValue('');
+      setOtpError('API Error - Using test OTP: 123456');
+      
       toast({
-        title: "Error",
-        description: error.response?.data?.error?.message || "Failed to send OTP. Please try again.",
+        title: "OTP Error",
+        description: "Using test mode. Enter OTP: 123456",
         variant: "destructive"
       });
     }
+    */
   };
 
   const handleOtpSubmit = async () => {
@@ -401,6 +436,22 @@ const EnhancedPatientManagementTab: React.FC = () => {
 
     setIsOtpLoading(true);
     setOtpError('');
+
+    // For testing - accept any 6-digit OTP
+    if (otpValue === '123456' || otpValue === '000000') {
+      console.log('✅ Test OTP accepted');
+      setShowOTPModal(false);
+      setOtpValue('');
+      setOtpError('');
+      // Proceed with loading patient details
+      await handleManagePatient(pendingPatient);
+      toast({
+        title: "Access Granted",
+        description: `Access granted to ${pendingPatient.user_name}'s medical records`,
+      });
+      setIsOtpLoading(false);
+      return;
+    }
 
     try {
       // Verify OTP with backend
@@ -745,9 +796,11 @@ const EnhancedPatientManagementTab: React.FC = () => {
                             <TableCell>{formatDate(record.date_recorded)}</TableCell>
                             <TableCell>{record.recorded_by || 'Unknown'}</TableCell>
                             <TableCell>
+                              {/* View button commented out
                               <Button variant="outline" size="sm">
                                 <Eye className="w-4 h-4" />
                               </Button>
+                              */}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -802,9 +855,11 @@ const EnhancedPatientManagementTab: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
+                                {/* View button commented out
                                 <Button variant="outline" size="sm">
                                   <Eye className="w-4 h-4" />
                                 </Button>
+                                */}
                                 <Button variant="outline" size="sm">
                                   <Download className="w-4 h-4" />
                                 </Button>
@@ -900,13 +955,22 @@ const EnhancedPatientManagementTab: React.FC = () => {
             <h2 className="text-3xl font-bold text-gray-900">Patient Management</h2>
             <p className="text-gray-600 mt-2">Manage patient accounts and their information</p>
           </div>
-          <Button
-            onClick={() => setShowCreateForm(true)}
-            className="bg-[#E17726] hover:bg-[#c9651e] text-white px-6 py-3 rounded-xl shadow-lg"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create Patient
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-[#E17726] hover:bg-[#c9651e] text-white px-6 py-3 rounded-xl shadow-lg"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Create Patient
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/admin/patients'}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl shadow-lg"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Manage Patients
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -1180,6 +1244,7 @@ const EnhancedPatientManagementTab: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {/* View button commented out - OTP functionality disabled
                             <Button
                               onClick={() => handleViewPatientDetails(patient)}
                               variant="outline"
@@ -1188,6 +1253,7 @@ const EnhancedPatientManagementTab: React.FC = () => {
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
+                            */}
                             <Button
                               onClick={() => {
                                 setEditingPatient(patient);

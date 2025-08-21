@@ -585,14 +585,24 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                 <SelectItem value="50">50 per page</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              onClick={() => navigate('/admin/consultations/new')}
-              className="bg-[#E17726] hover:bg-[#c9651e] text-white h-11 px-6 rounded-xl"
-              disabled={!isAssignedToClinic}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Consultation
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => navigate('/admin/consultations/new')}
+                className="bg-[#E17726] hover:bg-[#c9651e] text-white h-11 px-6 rounded-xl"
+                disabled={!isAssignedToClinic}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Consultation
+              </Button>
+              <Button 
+                onClick={() => navigate('/admin/consultations')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white h-11 px-6 rounded-xl"
+                disabled={!isAssignedToClinic}
+              >
+                <Video className="w-4 h-4 mr-2" />
+                Manage Consultations
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

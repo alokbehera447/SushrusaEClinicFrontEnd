@@ -283,10 +283,10 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       return false;
     }
     
-    if (isNaN(consultationDuration) || consultationDuration < 15 || consultationDuration > 120) {
+    if (isNaN(consultationDuration) || consultationDuration < 5 || consultationDuration > 15) {
       toast({
         title: "Validation Error",
-        description: "Please enter a valid consultation duration (15-120 minutes)",
+        description: "Please enter a valid consultation duration (5-15 minutes)",
         variant: "destructive",
       });
       return false;
@@ -386,7 +386,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       clinic_address: doctor.clinic_address || '',
       bio: doctor.bio || '',
       languages_spoken: doctor.languages_spoken || [],
-      consultation_duration: doctor.consultation_duration?.toString() || '30',
+      consultation_duration: doctor.consultation_duration?.toString() || '5',
       is_online_consultation_available: doctor.is_online_consultation_available || true,
       is_active: doctor.is_active || true,
       date_of_birth: doctor.date_of_birth || '',
@@ -509,7 +509,7 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
       clinic_address: '',
       bio: '',
       languages_spoken: [],
-      consultation_duration: '30',
+      consultation_duration: '5',
       is_online_consultation_available: true,
       is_active: true,
       date_of_birth: '',
@@ -1112,9 +1112,10 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
                     type="number"
                     value={doctorForm.consultation_duration}
                     onChange={(e) => setDoctorForm({...doctorForm, consultation_duration: e.target.value})}
-                    placeholder="30"
-                    min="15"
-                    max="120"
+                    placeholder="5"
+                    min="5"
+                    max="15"
+                    step="1"
                     style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                 </div>

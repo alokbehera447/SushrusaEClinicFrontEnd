@@ -136,7 +136,7 @@ const AdminDoctorManagementTab = () => {
     experience_years: '',
     consultation_fee: '',
     online_consultation_fee: '',
-    consultation_duration: '30',
+    consultation_duration: '5',
     clinic_name: '',
     clinic_address: '',
     bio: '',
@@ -407,7 +407,7 @@ const AdminDoctorManagementTab = () => {
       experience_years: '',
       consultation_fee: '',
       online_consultation_fee: '',
-      consultation_duration: '30',
+      consultation_duration: '5',
       clinic_name: '',
       clinic_address: '',
       bio: '',
@@ -840,7 +840,10 @@ const AdminDoctorManagementTab = () => {
                   type="number"
                   value={formData.consultation_duration}
                   onChange={(e) => setFormData({...formData, consultation_duration: e.target.value})}
-                  placeholder="30"
+                  placeholder="5"
+                  min="5"
+                  max="15"
+                  step="1"
                 />
               </div>
             </div>
@@ -1104,7 +1107,10 @@ const AdminDoctorManagementTab = () => {
                   type="number"
                   value={formData.consultation_duration}
                   onChange={(e) => setFormData({...formData, consultation_duration: e.target.value})}
-                  placeholder="30"
+                  placeholder="5"
+                  min="5"
+                  max="15"
+                  step="1"
                 />
               </div>
             </div>
