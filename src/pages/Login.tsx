@@ -31,7 +31,7 @@ const Login = () => {
   // Dummy phone numbers for testing
   const dummyCredentials = {
     'super_admin': { phone: '9876543210', redirect: '/superadmin/dashboard' },
-    'admin': { phone: '9876543211', redirect: '/admin/dashboard' },
+    'admin': { phone: '9876543211', redirect: '/dashboard' },
     'doctor': { phone: '9876543212', redirect: '/doctor/dashboard' },
     'patient': { phone: '9876543213', redirect: '/patient/dashboard' }
   };
@@ -45,7 +45,7 @@ const Login = () => {
       } else if (user.role === 'superadmin') {
         navigate('/superadmin/dashboard');
       } else if (user.role === 'admin') {
-        navigate('/admin/dashboard');
+        navigate('/dashboard');
       } else if (user.role === 'doctor') {
         navigate('/doctor/dashboard');
       } else {
@@ -179,7 +179,7 @@ const Login = () => {
         } else if (user.role === 'superadmin') {
           navigate('/superadmin/dashboard');
         } else if (user.role === 'admin') {
-          navigate('/admin/dashboard');
+          navigate('/dashboard');
         } else if (user.role === 'doctor') {
           navigate('/doctor/dashboard');
         } else {

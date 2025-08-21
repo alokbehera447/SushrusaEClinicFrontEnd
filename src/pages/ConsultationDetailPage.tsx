@@ -164,7 +164,7 @@ const ConsultationDetailPage = () => {
           loadConsultationDetails();
           break;
         case 'edit':
-          navigate(`/admin/consultations/${consultationId}/edit`);
+          navigate(`/dashboard/consultations/${consultationId}/edit`);
           break;
         case 'delete':
           if (confirm('Are you sure you want to delete this consultation?')) {
@@ -173,7 +173,7 @@ const ConsultationDetailPage = () => {
               title: "Success",
               description: "Consultation deleted successfully",
             });
-            navigate('/admin/dashboard');
+            navigate('/dashboard');
           }
           break;
       }
@@ -219,7 +219,7 @@ const ConsultationDetailPage = () => {
           </AlertDescription>
         </Alert>
         <Button 
-          onClick={() => navigate('/admin/dashboard')}
+          onClick={() => navigate('/dashboard')}
           className="mt-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -236,7 +236,7 @@ const ConsultationDetailPage = () => {
         <div className="flex items-center space-x-4">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/admin/dashboard')}
+            onClick={() => navigate('/dashboard')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back

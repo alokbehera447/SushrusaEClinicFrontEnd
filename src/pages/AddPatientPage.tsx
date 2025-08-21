@@ -139,7 +139,7 @@ const AddPatientPage = () => {
   };
 
   const handleBackToDashboard = () => {
-    navigate('/admin/dashboard');
+          navigate('/dashboard');
   };
 
   const handleAddAnotherPatient = () => {

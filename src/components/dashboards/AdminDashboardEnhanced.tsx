@@ -280,10 +280,10 @@ const AdminDashboardEnhanced = () => {
     try {
       switch (action) {
         case 'view':
-          navigate(`/admin/patients/${patientId}`);
+          navigate(`/dashboard/patients/${patientId}`);
           break;
         case 'edit':
-          navigate(`/admin/patients/${patientId}/edit`);
+          navigate(`/dashboard/patients/${patientId}/edit`);
           break;
         case 'delete':
           if (confirm('Are you sure you want to delete this patient?')) {
@@ -305,7 +305,7 @@ const AdminDashboardEnhanced = () => {
   const handleConsultationAction = (consultation: any, action: string) => {
     switch (action) {
       case 'view':
-        navigate(`/admin/consultations/${consultation.id}`);
+        navigate(`/dashboard/consultations/${consultation.id}`);
         break;
       case 'join': {
         // Open doctor's meeting link directly in new tab
@@ -419,11 +419,11 @@ const AdminDashboardEnhanced = () => {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/admin/patients/new')} disabled={!isAssignedToClinic}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/patients/new')} disabled={!isAssignedToClinic}>
                     <UserPlus className="w-4 h-4 mr-2" />
                     Add New Patient
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/admin/consultations/new')} disabled={!isAssignedToClinic}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/consultations/new')} disabled={!isAssignedToClinic}>
                     <Calendar className="w-4 h-4 mr-2" />
                     New Consultation
                   </DropdownMenuItem>
@@ -435,7 +435,7 @@ const AdminDashboardEnhanced = () => {
                     <Video className="w-4 h-4 mr-2" />
                     Manage Consultations
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/admin/consultations')} disabled={!isAssignedToClinic}>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/consultations')} disabled={!isAssignedToClinic}>
                     <Activity className="w-4 h-4 mr-2" />
                     Consultation Management
                   </DropdownMenuItem>
@@ -752,7 +752,7 @@ const AdminDashboardEnhanced = () => {
                 <CardContent className="space-y-3">
                   <Button 
                     className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => navigate('/admin/patients/new')}
+                    onClick={() => navigate('/dashboard/patients/new')}
                     disabled={!isAssignedToClinic}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -760,7 +760,7 @@ const AdminDashboardEnhanced = () => {
                   </Button>
                   <Button 
                     className="w-full justify-start bg-indigo-600 hover:bg-indigo-700 text-white"
-                    onClick={() => navigate('/admin/patients')}
+                    onClick={() => navigate('/dashboard/patients')}
                     disabled={!isAssignedToClinic}
                   >
                     <Users className="w-4 h-4 mr-2" />
@@ -768,7 +768,7 @@ const AdminDashboardEnhanced = () => {
                   </Button>
                   <Button 
                     className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={() => navigate('/admin/consultations/new')}
+                    onClick={() => navigate('/dashboard/consultations/new')}
                     disabled={!isAssignedToClinic}
                   >
                     <Calendar className="w-4 h-4 mr-2" />
@@ -776,7 +776,7 @@ const AdminDashboardEnhanced = () => {
                   </Button>
                   <Button 
                     className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => navigate('/admin/consultations')}
+                    onClick={() => navigate('/dashboard/consultations')}
                     disabled={!isAssignedToClinic}
                   >
                     <Activity className="w-4 h-4 mr-2" />
@@ -892,7 +892,7 @@ const AdminDashboardEnhanced = () => {
                 <Button 
                   size="sm" 
                   className="bg-[#E17726] hover:bg-[#c9651e] text-white"
-                  onClick={() => navigate('/admin/consultations/new')}
+                  onClick={() => navigate('/dashboard/consultations/new')}
                   disabled={!isAssignedToClinic}
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -925,7 +925,7 @@ const AdminDashboardEnhanced = () => {
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No consultations today</h3>
                     <p className="text-gray-500 mb-4">No consultations are scheduled for today.</p>
                     <Button 
-                      onClick={() => navigate('/admin/consultations/new')}
+                      onClick={() => navigate('/dashboard/consultations/new')}
                       className="bg-[#E17726] hover:bg-[#c9651e] text-white"
                       disabled={!isAssignedToClinic}
                     >

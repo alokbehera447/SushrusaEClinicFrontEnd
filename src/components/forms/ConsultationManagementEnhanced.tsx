@@ -306,10 +306,10 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
     try {
       switch (action) {
         case 'view':
-          navigate(`/admin/consultations/${consultation.id}`);
+          navigate(`/dashboard/consultations/${consultation.id}`);
           break;
         case 'edit':
-          navigate(`/admin/consultations/${consultation.id}/edit`);
+          navigate(`/dashboard/consultations/${consultation.id}/edit`);
           break;
         case 'delete':
           setConsultationToDelete(consultation);
@@ -326,7 +326,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
           break;
         }
         case 'reschedule':
-          navigate(`/admin/consultations/${consultation.id}/reschedule`);
+          navigate(`/dashboard/consultations/${consultation.id}/reschedule`);
           break;
         case 'cancel':
           // You would implement cancel consultation API call here
@@ -587,7 +587,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
             </Select>
             <div className="flex items-center gap-3">
               <Button 
-                onClick={() => navigate('/admin/consultations/new')}
+                onClick={() => navigate('/dashboard/consultations/new')}
                 className="bg-[#E17726] hover:bg-[#c9651e] text-white h-11 px-6 rounded-xl"
                 disabled={!isAssignedToClinic}
               >
@@ -595,7 +595,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                 New Consultation
               </Button>
               <Button 
-                onClick={() => navigate('/admin/consultations')}
+                onClick={() => navigate('/dashboard/consultations')}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white h-11 px-6 rounded-xl"
                 disabled={!isAssignedToClinic}
               >
@@ -636,7 +636,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                   : 'No consultations have been scheduled yet.'}
               </p>
               <Button 
-                onClick={() => navigate('/admin/consultations/new')}
+                onClick={() => navigate('/dashboard/consultations/new')}
                 className="bg-[#E17726] hover:bg-[#c9651e] text-white"
                 disabled={!isAssignedToClinic}
               >

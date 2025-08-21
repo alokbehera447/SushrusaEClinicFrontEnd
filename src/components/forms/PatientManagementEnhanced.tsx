@@ -163,20 +163,20 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
     try {
       switch (action) {
         case 'view':
-          navigate(`/admin/patients/${patient.id}`);
+          navigate(`/dashboard/patients/${patient.id}`);
           break;
         case 'edit':
-          navigate(`/admin/patients/${patient.id}/edit`);
+          navigate(`/dashboard/patients/${patient.id}/edit`);
           break;
         case 'delete':
           setSelectedPatient(patient);
           setShowDeleteDialog(true);
           break;
         case 'consultation':
-          navigate(`/admin/consultations/new?patient=${patient.id}`);
+          navigate(`/dashboard/consultations/new?patient=${patient.id}`);
           break;
         case 'medical-records':
-          navigate(`/admin/patients/${patient.id}/medical-records`);
+          navigate(`/dashboard/patients/${patient.id}/medical-records`);
           break;
         default:
           break;
@@ -347,7 +347,7 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
               </SelectContent>
             </Select>
             <Button 
-              onClick={() => navigate('/admin/patients/new')}
+              onClick={() => navigate('/dashboard/patients/new')}
               className="bg-[#E17726] hover:bg-[#c9651e] text-white h-11 px-6 rounded-xl"
               disabled={!isAssignedToClinic}
             >
@@ -389,7 +389,7 @@ const PatientManagementEnhanced = ({ isAssignedToClinic = true }: PatientManagem
                 }
               </p>
               <Button 
-                onClick={() => navigate('/admin/patients/new')}
+                onClick={() => navigate('/dashboard/patients/new')}
                 className="bg-[#E17726] hover:bg-[#c9651e] text-white"
               >
                 <UserPlus className="w-4 h-4 mr-2" />

@@ -29,7 +29,7 @@ const ConsultationCreationPage = () => {
   }, [user]);
 
   const handleClose = () => {
-    navigate('/admin/dashboard');
+          navigate('/dashboard');
   };
 
   return (

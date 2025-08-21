@@ -44,7 +44,7 @@ const ConsultationManagement: React.FC = () => {
     console.log('User role from AuthContext:', user?.role);
     
     // Determine role based on AuthContext and current route
-    const isAdminRoute = window.location.pathname.includes('/admin/');
+    const isAdminRoute = window.location.pathname.includes('/dashboard/');
     const isDoctorRoute = window.location.pathname.includes('/doctor/');
     const detectedRole = user?.role || '';
     
@@ -149,7 +149,7 @@ const ConsultationManagement: React.FC = () => {
       
       {/* Determine if we should show admin view based on role or URL */}
       {(() => {
-        const isAdminRoute = window.location.pathname.includes('/admin/');
+        const isAdminRoute = window.location.pathname.includes('/dashboard/');
         const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
         const shouldShowAdminView = isAdminRole || isAdminRoute;
         

@@ -76,7 +76,7 @@ const App = () => (
                 <SuperAdminDashboardPage />
               </ProtectedRoute>
             } />
-            <Route path="/admin/dashboard" element={
+            <Route path="/dashboard" element={
               <ProtectedRoute requiredRole="admin">
                 <AdminDashboardPage />
               </ProtectedRoute>
@@ -86,27 +86,27 @@ const App = () => (
                 <SlotManagementPage />
               </ProtectedRoute>
             } />
-            <Route path="/admin/consultations/:consultationId" element={
+            <Route path="/dashboard/consultations/:consultationId" element={
               <ProtectedRoute requiredRole="admin">
                 <ConsultationDetailPage />
               </ProtectedRoute>
             } />
-            <Route path="/admin/consultations/new" element={
+            <Route path="/dashboard/consultations/new" element={
               <ProtectedRoute requiredRole="admin">
                 <ConsultationCreationPage />
               </ProtectedRoute>
             } />
-            <Route path="/admin/patients/new" element={
+            <Route path="/dashboard/patients/new" element={
               <ProtectedRoute requiredRole="admin">
                 <AddPatientPage />
               </ProtectedRoute>
             } />
-            <Route path="/admin/patients" element={
+            <Route path="/dashboard/patients" element={
               <ProtectedRoute requiredRole="admin">
                 <PatientManagement />
               </ProtectedRoute>
             } />
-            <Route path="/admin/consultations" element={
+            <Route path="/dashboard/consultations" element={
               <ProtectedRoute requiredRole="admin">
                 <ConsultationManagement />
               </ProtectedRoute>

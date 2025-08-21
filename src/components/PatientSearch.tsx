@@ -406,7 +406,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
 
   const handleBookConsultation = (patient: PatientProfile) => {
     // Navigate to consultation creation page with patient data
-    navigate('/admin/consultations/new', {
+            navigate('/dashboard/consultations/new', {
       state: {
         selectedPatient: {
           id: patient.id,
