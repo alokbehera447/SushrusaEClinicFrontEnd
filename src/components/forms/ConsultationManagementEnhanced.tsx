@@ -726,21 +726,14 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                                     <Video className="w-4 h-4 mr-2" />
                                     Join Meeting
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleConsultationAction('reschedule', consultation)}>
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Reschedule
-                                  </DropdownMenuItem>
+
                                   <DropdownMenuItem onClick={() => handleConsultationAction('cancel', consultation)}>
                                     <AlertTriangle className="w-4 h-4 mr-2" />
                                     Cancel
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleConsultationAction('edit', consultation)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
+
                               <DropdownMenuItem 
                                 onClick={() => handleConsultationAction('delete', consultation)}
                                 className="text-red-600"

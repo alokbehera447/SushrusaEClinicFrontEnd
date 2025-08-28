@@ -387,17 +387,7 @@ const ConsultationDetailPage = () => {
                   </DropdownMenuItem>
                 </>
               )}
-              {consultation.status === 'in_progress' && (
-                <DropdownMenuItem onClick={() => handleConsultationAction('complete')}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Complete Consultation
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleConsultationAction('edit')}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Consultation
-              </DropdownMenuItem>
+
               <DropdownMenuItem onClick={() => handleConsultationAction('delete')}>
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete Consultation
@@ -689,51 +679,7 @@ const ConsultationDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="w-5 h-5 mr-2 text-[#E17726]" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {consultation.status === 'scheduled' && (
-                <Button 
-                  onClick={() => handleConsultationAction('start')}
-                  className="w-full"
-                >
-                  <Video className="w-4 h-4 mr-2" />
-                  Start Consultation
-                </Button>
-              )}
-              
-              {consultation.status === 'in_progress' && (
-                <Button 
-                  onClick={() => handleConsultationAction('complete')}
-                  className="w-full"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Complete Consultation
-                </Button>
-              )}
 
-              <Button variant="outline" className="w-full">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Send Message
-              </Button>
-
-              <Button variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                Download Report
-              </Button>
-
-              <Button variant="outline" className="w-full">
-                <Printer className="w-4 h-4 mr-2" />
-                Print Details
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
