@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import ConsultationDetailsModal from './ConsultationDetailsModal';
 import { 
   Video, 
@@ -23,11 +25,17 @@ import {
   Edit,
   Play,
   Square,
-  RotateCcw
+  RotateCcw,
+  Heart,
+  Thermometer,
+  Activity,
+  Scale,
+  Save
 } from 'lucide-react';
-import { adminConsultationApi, superAdminApi } from '@/lib/api';
+import { adminConsultationApi, superAdminApi, prescriptionApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface Consultation {
   id: string;
@@ -61,7 +69,7 @@ interface Consultation {
   consultationDate: string;
   consultationTime: string;
   duration: number;
-  status: 'scheduled' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'confirmed' | 'patient_checked_in' | 'checked_in' | 'ongoing' | 'completed' | 'cancelled';
   chiefComplaint: string;
   symptoms?: string;
   consultationFee: number;
@@ -86,10 +94,12 @@ const ConsultationManagementFlow = () => {
   const [error, setError] = useState<string | null>(null);
   const [assignedClinics, setAssignedClinics] = useState<{ id: string; name: string }[]>([]);
   const [loadingClinics, setLoadingClinics] = useState<boolean>(true);
+  const [downloadingPrescriptions, setDownloadingPrescriptions] = useState<{ [key: string]: boolean }>({});
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('ConsultationManagementFlow mounted, user role:', user?.role);
     if (!user || user.role !== 'admin') return;
     setLoadingClinics(true);
     superAdminApi.getEClinics({ page: 1, page_size: 10 })
@@ -215,6 +225,17 @@ const ConsultationManagementFlow = () => {
   const [showPrescriptionDialog, setShowPrescriptionDialog] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedConsultationForDetails, setSelectedConsultationForDetails] = useState<Consultation | null>(null);
+  const [showVitalSignsModal, setShowVitalSignsModal] = useState(false);
+  const [selectedConsultationForVitalSigns, setSelectedConsultationForVitalSigns] = useState<Consultation | null>(null);
+  const [vitalSignsData, setVitalSignsData] = useState({
+    pulse: '',
+    blood_pressure_systolic: '',
+    blood_pressure_diastolic: '',
+    temperature: '',
+    weight: '',
+    height: '',
+    oxygen_saturation: ''
+  });
   
   // Filter states
   const [filterUpcoming, setFilterUpcoming] = useState(false);
@@ -296,6 +317,34 @@ const ConsultationManagementFlow = () => {
     }
   };
 
+  const saveVitalSigns = async (consultationId: string, vitalSigns: any) => {
+    try {
+      // API Call: POST /api/consultations/{consultation_id}/vital-signs/
+      console.log(`Saving vital signs for consultation ${consultationId}:`, vitalSigns);
+      
+      // For now, we'll just log the data. In production, this would make an API call
+      const response = await fetch(`/api/consultations/${consultationId}/vital-signs/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        },
+        body: JSON.stringify(vitalSigns)
+      });
+
+      if (response.ok) {
+        console.log('Vital signs saved successfully');
+        return { success: true };
+      } else {
+        console.error('Failed to save vital signs');
+        return { success: false, error: 'Failed to save vital signs' };
+      }
+    } catch (error) {
+      console.error('Error saving vital signs:', error);
+      return { success: false, error };
+    }
+  };
+
   // Workflow Actions
   const handleStartConsultation = async (consultation: Consultation) => {
     const result = await updateConsultationStatus(consultation.id, 'ongoing');
@@ -315,12 +364,54 @@ const ConsultationManagementFlow = () => {
     }
   };
 
+  // Handle download prescription
+  const handleDownloadPrescription = async (consultation: Consultation) => {
+    try {
+      setDownloadingPrescriptions(prev => ({ ...prev, [consultation.id]: true }));
+      
+      let prescriptionId = consultation.prescription?.id;
+      
+      // If no prescription data available, try to get it from the consultation
+      if (!prescriptionId) {
+        try {
+          const prescriptionData = await prescriptionApi.getConsultationPrescription(consultation.id);
+          prescriptionId = prescriptionData.id;
+        } catch (error) {
+          console.error('Error fetching prescription data:', error);
+          toast.error('No prescription available for this consultation');
+          return;
+        }
+      }
+      
+      if (!prescriptionId) {
+        toast.error('No prescription available for this consultation');
+        return;
+      }
+      
+      const response = await prescriptionApi.downloadPDF(prescriptionId, 'latest');
+      
+      // The API returns a download URL, so we can open it directly
+      if (response.download_url) {
+        window.open(response.download_url, '_blank');
+        toast.success('Prescription download started');
+      } else {
+        toast.error('No download URL available');
+      }
+    } catch (error) {
+      console.error('Error downloading prescription:', error);
+      toast.error('Failed to download prescription');
+    } finally {
+      setDownloadingPrescriptions(prev => ({ ...prev, [consultation.id]: false }));
+    }
+  };
+
 
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'scheduled': return 'bg-blue-100 text-blue-800';
       case 'confirmed': return 'bg-green-100 text-green-800';
+      case 'patient_checked_in': return 'bg-emerald-100 text-emerald-800';
       case 'ongoing': return 'bg-yellow-100 text-yellow-800';
       case 'completed': return 'bg-gray-100 text-gray-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
@@ -332,6 +423,7 @@ const ConsultationManagementFlow = () => {
     switch (status) {
       case 'scheduled': return <Calendar className="w-4 h-4" />;
       case 'confirmed': return <CheckCircle className="w-4 h-4" />;
+      case 'patient_checked_in': return <User className="w-4 h-4" />;
       case 'ongoing': return <Play className="w-4 h-4" />;
       case 'completed': return <CheckCircle className="w-4 h-4" />;
       case 'cancelled': return <AlertCircle className="w-4 h-4" />;
@@ -356,14 +448,14 @@ const ConsultationManagementFlow = () => {
       </div>
 
       {/* Workflow Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {['scheduled', 'ongoing', 'completed', 'cancelled'].map((status) => (
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {['scheduled', 'confirmed', 'patient_checked_in', 'ongoing', 'completed'].map((status) => (
           <Card key={status} className="border-0 shadow-lg">
             <CardContent className="p-4 text-center">
               <div className="flex items-center justify-center mb-2">
                 {getStatusIcon(status)}
               </div>
-              <p className="text-sm font-medium text-gray-600 capitalize">{status}</p>
+              <p className="text-sm font-medium text-gray-600 capitalize">{status.replace('_', ' ')}</p>
               <p className="text-2xl font-bold text-midnight">
                 {consultations.filter(c => c.status === status).length}
               </p>
@@ -402,6 +494,7 @@ const ConsultationManagementFlow = () => {
                 <option value="">All Status</option>
                 <option value="scheduled">Scheduled</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="patient_checked_in">Checked In</option>
                 <option value="ongoing">Ongoing</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
@@ -495,6 +588,61 @@ const ConsultationManagementFlow = () => {
 
               {/* Action Buttons based on Status */}
               <div className="flex flex-wrap gap-2">
+                {/* Debug: Show current status */}
+                <div className="text-xs text-gray-500 mb-2 w-full">
+                  Debug - Status: {consultation.status}
+                </div>
+
+                {/* Add Vital Signs Button - Show for multiple statuses */}
+                {(consultation.status === 'confirmed' || 
+                  consultation.status === 'patient_checked_in' || 
+                  consultation.status === 'checked_in' ||
+                  consultation.status === 'scheduled') && (
+                  <Button 
+                    size="sm" 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => {
+                      setSelectedConsultationForVitalSigns(consultation);
+                      setVitalSignsData({
+                        pulse: '',
+                        blood_pressure_systolic: '',
+                        blood_pressure_diastolic: '',
+                        temperature: '',
+                        weight: '',
+                        height: '',
+                        oxygen_saturation: ''
+                      });
+                      setShowVitalSignsModal(true);
+                    }}
+                  >
+                    <Activity className="w-4 h-4 mr-2" />
+                    Add Vital Signs
+                  </Button>
+                )}
+
+                {/* Test Button - Show for all consultations */}
+                <Button 
+                  size="sm" 
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => {
+                    console.log('Opening vital signs modal for consultation:', consultation.id);
+                    setSelectedConsultationForVitalSigns(consultation);
+                    setVitalSignsData({
+                      pulse: '',
+                      blood_pressure_systolic: '',
+                      blood_pressure_diastolic: '',
+                      temperature: '',
+                      weight: '',
+                      height: '',
+                      oxygen_saturation: ''
+                    });
+                    setShowVitalSignsModal(true);
+                  }}
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  Test Vital Signs
+                </Button>
+
                 {consultation.status === 'scheduled' && (
                   <>
                     <Button 
@@ -525,6 +673,32 @@ const ConsultationManagementFlow = () => {
                     >
                       <Bell className="w-4 h-4 mr-2" />
                       Send Reminder
+                    </Button>
+                  </>
+                )}
+
+                {consultation.status === 'confirmed' && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+                      onClick={() => handleStartConsultation(consultation)}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Consultation
+                    </Button>
+                  </>
+                )}
+
+                {consultation.status === 'patient_checked_in' && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+                      onClick={() => handleStartConsultation(consultation)}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Consultation
                     </Button>
                   </>
                 )}
@@ -600,6 +774,24 @@ const ConsultationManagementFlow = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   View Details
                 </Button>
+
+                {/* Download Prescription Button - Show for completed consultations */}
+                {consultation.status === 'completed' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDownloadPrescription(consultation)}
+                    disabled={downloadingPrescriptions[consultation.id]}
+                    className="flex items-center"
+                  >
+                    {downloadingPrescriptions[consultation.id] ? (
+                      <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-2" />
+                    )}
+                    {downloadingPrescriptions[consultation.id] ? 'Downloading...' : 'Download Prescription'}
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -716,6 +908,135 @@ const ConsultationManagementFlow = () => {
         }}
         userRole="admin"
       />
+
+      {/* Vital Signs Modal */}
+      <Dialog open={showVitalSignsModal} onOpenChange={(open) => {
+        console.log('Vital signs modal state changed:', open);
+        setShowVitalSignsModal(open);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-emerald-600" />
+              Add Vital Signs
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <strong>Patient:</strong> {selectedConsultationForVitalSigns?.patient.name || selectedConsultationForVitalSigns?.patient_name}
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Consultation ID:</strong> {selectedConsultationForVitalSigns?.id}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium">Pulse Rate (bpm)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 72"
+                  value={vitalSignsData.pulse}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, pulse: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Temperature (°C)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="e.g., 36.8"
+                  value={vitalSignsData.temperature}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, temperature: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">BP Systolic (mmHg)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 120"
+                  value={vitalSignsData.blood_pressure_systolic}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, blood_pressure_systolic: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">BP Diastolic (mmHg)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 80"
+                  value={vitalSignsData.blood_pressure_diastolic}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, blood_pressure_diastolic: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Weight (kg)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="e.g., 70"
+                  value={vitalSignsData.weight}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, weight: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Height (cm)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 170"
+                  value={vitalSignsData.height}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, height: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Oxygen Saturation (%)</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g., 98"
+                  value={vitalSignsData.oxygen_saturation}
+                  onChange={(e) => setVitalSignsData(prev => ({ ...prev, oxygen_saturation: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowVitalSignsModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={async () => {
+                  if (selectedConsultationForVitalSigns) {
+                    const result = await saveVitalSigns(selectedConsultationForVitalSigns.id, vitalSignsData);
+                    if (result.success) {
+                      setShowVitalSignsModal(false);
+                      setSelectedConsultationForVitalSigns(null);
+                      // You can add a success toast here
+                      console.log('Vital signs saved successfully');
+                    } else {
+                      console.error('Failed to save vital signs:', result.error);
+                    }
+                  }
+                }}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Vital Signs
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

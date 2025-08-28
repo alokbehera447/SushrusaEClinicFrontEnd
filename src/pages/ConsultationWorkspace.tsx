@@ -160,6 +160,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(false);
 
   // UI states
@@ -176,6 +177,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [showDiagnosis, setShowDiagnosis] = useState(true);
   const [showInstructions, setShowInstructions] = useState(true);
   const [showMedications, setShowMedications] = useState(true);
+  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
   
   // PDF Modal states
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -233,200 +235,22 @@ const ConsultationWorkspace: React.FC = () => {
 
   const latestPdfUrl = useMemo(() => prescription?.current_pdf?.file_url as string | undefined, [prescription]);
 
-  // Handle camera and microphone permissions
-  const requestMediaPermissions = async () => {
-    try {
-      console.log('Requesting media permissions...');
-      
-      // Check if we're in a secure context
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('Media devices not supported or not in secure context');
-        return;
-      }
+  // Simple iframe for Jitsi Meet - no complex permission handling needed
 
-      // Check if permissions are already granted
-      const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      if (permissions.state === 'granted') {
-        console.log('✅ Camera permissions already granted');
-        const audioPermissions = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        if (audioPermissions.state === 'granted') {
-          console.log('✅ Microphone permissions already granted');
-          // Hide permission overlay if it's showing
-          const overlay = document.getElementById('permission-overlay');
-          if (overlay) {
-            overlay.style.display = 'none';
-          }
-          return;
-        }
-      }
-
-      // Request permissions with the same constraints that Jitsi Meet uses
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: {
-          height: { ideal: 720 },
-          width: { ideal: 1280 },
-          frameRate: { min: 15, max: 30 },
-          facingMode: 'user'
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      
-      console.log('✅ Camera and microphone permissions granted successfully');
-      
-      // Stop the test stream
-      stream.getTracks().forEach(track => {
-        track.stop();
-        console.log(`Stopped ${track.kind} track`);
-      });
-      
-      // Hide permission overlay if it's showing
-      const overlay = document.getElementById('permission-overlay');
-      if (overlay) {
-        overlay.style.display = 'none';
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Media permissions error:', error);
-      
-      let errorMessage = 'Failed to access camera and microphone';
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage = 'Camera and microphone access was denied. Please allow permissions in your browser settings.';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = 'No camera or microphone found. Please check your devices.';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = 'Camera or microphone is already in use by another application.';
-      } else if (error.name === 'SecurityError') {
-        errorMessage = 'Camera and microphone access blocked by security policy. Please check your browser settings.';
-      }
-      
-      console.log('Camera and microphone permissions not granted:', errorMessage);
-      
-      // Show permission overlay after a delay
-      setTimeout(() => {
-        const overlay = document.getElementById('permission-overlay');
-        if (overlay) {
-          overlay.style.display = 'flex';
-        }
-      }, 3000);
-    }
-  };
-
+  // Log the doctor meeting link being used
   useEffect(() => {
+    const meetingUrl = consultation?.doctor_meeting_link || "https://meet.diracai.com/office";
+    console.log('🎥 Opening Jitsi Meet iframe with URL:', meetingUrl);
+    console.log('🔗 Full iframe URL:', meetingUrl);
+    
+    // Log the doctor meeting link details
     if (consultation?.doctor_meeting_link) {
-      // Pre-flight permission check before iframe loads
-      const preflightPermissionCheck = async () => {
-        try {
-          console.log('🔍 Pre-flight permission check...');
-          
-          // First check if permissions are already granted
-          if (navigator.permissions) {
-            try {
-              const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
-              const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-              
-              console.log('📊 Permission states:', { camera: cameraPermission.state, microphone: micPermission.state });
-              
-              if (cameraPermission.state === 'granted' && micPermission.state === 'granted') {
-                console.log('✅ Camera and microphone permissions already granted');
-                return true;
-              } else if (cameraPermission.state === 'denied' || micPermission.state === 'denied') {
-                console.log('❌ Camera or microphone permissions denied');
-                return false;
-              }
-            } catch (permError) {
-              console.log('Permission query not supported, falling back to getUserMedia');
-            }
-          }
-
-          // Try to get user media with the same constraints that Jitsi Meet uses
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: {
-              height: { ideal: 720 },
-              width: { ideal: 1280 },
-              frameRate: { min: 15, max: 30 },
-              facingMode: 'user'
-            },
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          });
-          
-          // If successful, we have permissions
-          console.log('✅ Camera and microphone permissions granted');
-          stream.getTracks().forEach(track => track.stop()); // Stop the stream
-          return true;
-        } catch (error) {
-          console.log('❌ Camera and microphone permissions not granted:', error);
-          return false;
-        }
-      };
-
-      // Run pre-flight check immediately
-      preflightPermissionCheck().then((hasPermissions) => {
-        if (!hasPermissions) {
-          // Show permission overlay immediately if permissions are not granted
-          setTimeout(() => {
-            const overlay = document.getElementById('permission-overlay');
-            if (overlay) {
-              overlay.style.display = 'flex';
-            }
-          }, 1000);
-        }
-      });
-
-      // Additional check after iframe loads
-      const checkPermissions = async () => {
-        try {
-          // Try to get user media with the same constraints that Jitsi Meet uses
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: {
-              height: { ideal: 720 },
-              width: { ideal: 1280 },
-              frameRate: { min: 15, max: 30 },
-              facingMode: 'user'
-            },
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          });
-          
-          // If successful, we have permissions
-          console.log('✅ Camera and microphone permissions granted');
-          stream.getTracks().forEach(track => track.stop()); // Stop the stream
-          
-          // Hide permission overlay if it's showing
-          const overlay = document.getElementById('permission-overlay');
-          if (overlay) {
-            overlay.style.display = 'none';
-          }
-        } catch (error) {
-          console.log('❌ Camera and microphone permissions not granted:', error);
-          
-          // Show permission overlay after a delay to let iframe load
-          setTimeout(() => {
-            const overlay = document.getElementById('permission-overlay');
-            if (overlay) {
-              overlay.style.display = 'flex';
-            }
-          }, 3000); // Show after 3 seconds if permissions are still not granted
-        }
-      };
-
-      // Check permissions after iframe loads
-      const timer = setTimeout(checkPermissions, 2000);
-      
-      return () => clearTimeout(timer);
+      console.log('👨‍⚕️ Doctor meeting link from backend:', consultation.doctor_meeting_link);
+      console.log('📋 Doctor ID from consultation:', consultation.doctor?.id || consultation.doctor);
+    } else {
+      console.log('❌ No doctor meeting link available, using fallback URL');
     }
-  }, [consultation?.doctor_meeting_link]);
+  }, [consultation]);
 
   useEffect(() => {
     const loadWorkspaceData = async () => {
@@ -743,6 +567,36 @@ const ConsultationWorkspace: React.FC = () => {
     }
   };
 
+  const handleCompleteConsultation = async () => {
+    if (!consultationId) return;
+    setCompleting(true);
+    try {
+      // Update consultation status to completed
+      const response = await doctorConsultationApi.completeConsultation(consultationId);
+      
+      if (response && response.success) {
+        // Update local consultation state
+        setConsultation(prev => prev ? { ...prev, status: 'completed' } : null);
+        toast.success('Consultation completed successfully');
+        
+        // Show success message for longer before redirecting
+        setTimeout(() => {
+          toast.success('Redirecting to dashboard...');
+          setTimeout(() => {
+            navigate('/doctor/dashboard');
+          }, 1500);
+        }, 3000);
+      } else {
+        toast.error(response?.error || 'Failed to complete consultation');
+      }
+    } catch (error) {
+      console.error('Error completing consultation:', error);
+      toast.error('Failed to complete consultation');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
   const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
     const birth = new Date(dateOfBirth);
@@ -1023,8 +877,15 @@ const ConsultationWorkspace: React.FC = () => {
                   <Separator orientation="vertical" className="h-4" />
                   <span>{consultation.scheduled_date} at {consultation.scheduled_time}</span>
                   <Separator orientation="vertical" className="h-4" />
-                  <Badge variant={consultation.status === 'scheduled' ? 'default' : consultation.status === 'completed' ? 'secondary' : 'destructive'}>
-                    {consultation.status?.replace('_', ' ')}
+                  <Badge variant={
+                    consultation.status === 'scheduled' ? 'default' : 
+                    consultation.status === 'completed' ? 'secondary' : 
+                    consultation.status === 'ongoing' || consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'destructive' :
+                    'default'
+                  }>
+                    {consultation.status === 'completed' ? 'Completed' : 
+                     consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'In Progress' :
+                     consultation.status?.replace('_', ' ')}
                   </Badge>
                 </>
               )}
@@ -1033,6 +894,23 @@ const ConsultationWorkspace: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Complete Consultation Button - Show for multiple statuses */}
+          
+          {(consultation?.status === 'ongoing' || 
+            consultation?.status === 'in progress' || 
+            consultation?.status === 'in_progress' ||
+            consultation?.status === 'active') && (
+            <Button 
+              onClick={() => setShowCompleteConfirmation(true)} 
+              disabled={completing} 
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {completing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              Complete Consultation
+            </Button>
+          )}
+          
           <Button variant="outline" onClick={handleSaveDraft} disabled={saving || finalizing} size="sm">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Draft
@@ -1396,11 +1274,11 @@ const ConsultationWorkspace: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
                     <Video className="w-5 h-5 text-blue-600" />
-                    Live Consultation
+                    Jitsi Meet - Dirac AI
                   </h2>
                   <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
                     <AlertCircle className="w-3 h-3" />
-                    <span>Camera & Mic access required</span>
+                    <span>Video conferencing application</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1416,101 +1294,22 @@ const ConsultationWorkspace: React.FC = () => {
               </div>
               
               <div className="flex-1 p-4 bg-slate-50">
-                {consultation?.doctor_meeting_link ? (
-                  <div className="w-full h-full relative">
-                    {/* Enhanced iframe with proper permissions and fallback */}
-                    <iframe
-                      src={consultation.doctor_meeting_link}
-                      className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
-                      allow="camera; microphone; fullscreen; display-capture; autoplay; encrypted-media; picture-in-picture; geolocation"
-                      allowFullScreen
-                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation allow-modals"
-                      title="Consultation Meeting"
-                      onLoad={() => {
-                        console.log('Jitsi iframe loaded successfully');
-                        // Request permissions after iframe loads
-                        setTimeout(() => {
-                          requestMediaPermissions();
-                        }, 1000);
-                      }}
-                      onError={(e) => {
-                        console.error('Jitsi iframe failed to load:', e);
-                      }}
-                    />
-                    
-                    {/* Permission Request Overlay */}
-                    <div 
-                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg z-10" 
-                      style={{ display: 'none' }} 
-                      id="permission-overlay"
-                    >
-                      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4">
-                        <div className="text-center">
-                          <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Camera & Microphone Access Required</h3>
-                          <p className="text-gray-600 mb-4">
-                            This consultation requires access to your camera and microphone. Please allow permissions when prompted.
-                          </p>
-                          <div className="space-y-2 text-sm text-gray-500">
-                            <p>• Click "Allow" when your browser asks for camera access</p>
-                            <p>• Click "Allow" when your browser asks for microphone access</p>
-                            <p>• If blocked, click the camera/mic icons in your browser's address bar</p>
-                          </div>
-                          <Button 
-                            onClick={() => {
-                              const overlay = document.getElementById('permission-overlay');
-                              if (overlay) {
-                                overlay.style.display = 'none';
-                              }
-                              // Try to request permissions programmatically with Jitsi Meet constraints
-                              if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                                navigator.mediaDevices.getUserMedia({ 
-                                  video: {
-                                    height: { ideal: 720 },
-                                    width: { ideal: 1280 },
-                                    frameRate: { min: 15, max: 30 },
-                                    facingMode: 'user'
-                                  },
-                                  audio: {
-                                    echoCancellation: true,
-                                    noiseSuppression: true,
-                                    autoGainControl: true
-                                  }
-                                })
-                                  .then((stream) => {
-                                    console.log('Permissions granted successfully');
-                                    // Stop the test stream
-                                    stream.getTracks().forEach(track => track.stop());
-                                  })
-                                  .catch((err) => {
-                                    console.error('Permission denied:', err);
-                                    // Show overlay again after a delay if permission is still denied
-                                    setTimeout(() => {
-                                      const overlay = document.getElementById('permission-overlay');
-                                      if (overlay) {
-                                        overlay.style.display = 'flex';
-                                      }
-                                    }, 2000);
-                                  });
-                              }
-                            }}
-                            className="mt-4 w-full"
-                          >
-                            Enable Camera & Microphone
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-white rounded-lg border border-slate-200 shadow-sm">
-                    <div className="text-center">
-                      <VideoOff className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">No Meeting Link Available</h3>
-                      <p className="text-slate-600">Meeting link will be provided when the consultation starts.</p>
-                    </div>
-                  </div>
-                )}
+                <div className="w-full h-full relative">
+                  {/* Doctor's individual Jitsi Meet iframe */}
+                  <iframe
+                    src={consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
+                    className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
+                    allow="camera; microphone; fullscreen; speaker; display-capture"
+                    allowFullScreen
+                    title="Jitsi Meet - Dirac AI"
+                    onLoad={() => {
+                      console.log('Jitsi Meet iframe loaded successfully');
+                    }}
+                    onError={(e) => {
+                      console.error('Jitsi Meet iframe failed to load:', e);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -1536,10 +1335,16 @@ const ConsultationWorkspace: React.FC = () => {
                 <Card className="border-slate-200 shadow-sm">
                   <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-200">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                        <Heart className="w-4 h-4 text-emerald-600" />
-                        Vital Signs
-                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base flex items-center gap-2 text-slate-800">
+                          <Heart className="w-4 h-4 text-emerald-600" />
+                          Vital Signs
+                        </CardTitle>
+                        <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
+                          <Eye className="w-3 h-3" />
+                          <span>Read-only (Admin measured)</span>
+                        </div>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1555,81 +1360,57 @@ const ConsultationWorkspace: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs text-slate-700">Pulse (bpm)</Label>
-                        <Input
-                          size="sm"
-                          value={formData.vital_signs.pulse}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            vital_signs: { ...formData.vital_signs, pulse: Number(e.target.value) || 0 }
-                          })}
-                          placeholder="72"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
-                        />
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formData.vital_signs.pulse || 'Not recorded'}
+                          </span>
+                          {formData.vital_signs.pulse && <span className="text-xs text-slate-500">bpm</span>}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs text-slate-700">Temperature (°C)</Label>
-                        <Input
-                          size="sm"
-                          value={formData.vital_signs.temperature}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            vital_signs: { ...formData.vital_signs, temperature: Number(e.target.value) || 0 }
-                          })}
-                          placeholder="37.0"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
-                        />
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formData.vital_signs.temperature || 'Not recorded'}
+                          </span>
+                          {formData.vital_signs.temperature && <span className="text-xs text-slate-500">°C</span>}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs text-slate-700">BP Systolic</Label>
-                        <Input
-                          size="sm"
-                          value={formData.vital_signs.blood_pressure_systolic}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            vital_signs: { ...formData.vital_signs, blood_pressure_systolic: Number(e.target.value) || 0 }
-                          })}
-                          placeholder="120"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
-                        />
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formData.vital_signs.blood_pressure_systolic || 'Not recorded'}
+                          </span>
+                          {formData.vital_signs.blood_pressure_systolic && <span className="text-xs text-slate-500">mmHg</span>}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs text-slate-700">BP Diastolic</Label>
-                        <Input
-                          size="sm"
-                          value={formData.vital_signs.blood_pressure_diastolic}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            vital_signs: { ...formData.vital_signs, blood_pressure_diastolic: Number(e.target.value) || 0 }
-                          })}
-                          placeholder="80"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
-                        />
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formData.vital_signs.blood_pressure_diastolic || 'Not recorded'}
+                          </span>
+                          {formData.vital_signs.blood_pressure_diastolic && <span className="text-xs text-slate-500">mmHg</span>}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs text-slate-700">Weight (kg)</Label>
-                        <Input
-                          size="sm"
-                          value={formData.vital_signs.weight}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            vital_signs: { ...formData.vital_signs, weight: Number(e.target.value) || 0 }
-                          })}
-                          placeholder="70"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
-                        />
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formData.vital_signs.weight || 'Not recorded'}
+                          </span>
+                          {formData.vital_signs.weight && <span className="text-xs text-slate-500">kg</span>}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-xs text-slate-700">Height (cm)</Label>
-                        <Input
-                          size="sm"
-                          value={formData.vital_signs.height}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            vital_signs: { ...formData.vital_signs, height: Number(e.target.value) || 0 }
-                          })}
-                          placeholder="170"
-                          className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
-                        />
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formData.vital_signs.height || 'Not recorded'}
+                          </span>
+                          {formData.vital_signs.height && <span className="text-xs text-slate-500">cm</span>}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -2253,6 +2034,68 @@ const ConsultationWorkspace: React.FC = () => {
                   Close
                 </Button>
               </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Consultation Confirmation Dialog */}
+      <Dialog open={showCompleteConfirmation} onOpenChange={setShowCompleteConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Complete Consultation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-700">
+                <strong>Warning:</strong> This action cannot be undone. Once completed, the consultation will be marked as finished.
+              </p>
+            </div>
+            
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <strong>Patient:</strong> {consultation?.patient?.name || consultation?.patient_name}
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Consultation ID:</strong> {consultation?.id}
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Current Status:</strong> {consultation?.status}
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCompleteConfirmation(false)}
+                disabled={completing}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={async () => {
+                  setShowCompleteConfirmation(false);
+                  await handleCompleteConsultation();
+                }}
+                disabled={completing}
+              >
+                {completing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Complete Consultation
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>

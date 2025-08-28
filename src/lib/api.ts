@@ -3550,7 +3550,7 @@ export const startConsultation = async (consultationId: string): Promise<Consult
 };
 
 export const completeConsultation = async (consultationId: string): Promise<Consultation> => {
-  const response = await api.post(`/api/consultations/doctor/consultations/${consultationId}/complete/`);
+  const response = await api.post(`/api/consultations/${consultationId}/complete/`);
   return response.data;
 };
 

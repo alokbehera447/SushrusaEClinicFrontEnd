@@ -41,7 +41,8 @@ import {
 import { format } from 'date-fns';
 import { 
   adminConsultationApi,
-  Consultation
+  Consultation,
+  prescriptionApi
 } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,6 +70,7 @@ const ConsultationDetailPage = () => {
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPrescription, setDownloadingPrescription] = useState(false);
 
   useEffect(() => {
     if (consultationId) {
@@ -187,6 +189,85 @@ const ConsultationDetailPage = () => {
     }
   };
 
+  // Handle download prescription
+  const handleDownloadPrescription = async () => {
+    try {
+      setDownloadingPrescription(true);
+      
+      let prescriptionId = consultation.prescription_data?.id;
+      
+      // If no prescription data available, try to get it from the consultation
+      if (!prescriptionId) {
+        try {
+          const prescriptionData = await prescriptionApi.getConsultationPrescription(consultation.id);
+          prescriptionId = prescriptionData.id;
+        } catch (error) {
+          console.error('Error fetching prescription data:', error);
+          toast({
+            title: "Error",
+            description: "No prescription available for this consultation",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
+      if (!prescriptionId) {
+        toast({
+          title: "Error",
+          description: "No prescription available for this consultation",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const response = await prescriptionApi.downloadPDF(prescriptionId, 'latest');
+      
+      // The API returns a download URL, so we can open it directly
+      if (response.download_url) {
+        window.open(response.download_url, '_blank');
+        toast({
+          title: "Success",
+          description: "Prescription download started",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "No download URL available",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error downloading prescription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download prescription",
+        variant: "destructive"
+      });
+    } finally {
+      setDownloadingPrescription(false);
+    }
+  };
+
+  // Handle join meeting
+  const handleJoinMeeting = () => {
+    if (!consultation.doctor_meeting_link) {
+      toast({
+        title: "Error",
+        description: "No meeting link available",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Open meeting link in new tab
+    window.open(consultation.doctor_meeting_link, '_blank');
+    toast({
+      title: "Success",
+      description: "Opening meeting...",
+    });
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -256,6 +337,34 @@ const ConsultationDetailPage = () => {
             {getStatusIcon(consultation.status)}
             <span className="ml-1 capitalize">{consultation.status.replace('_', ' ')}</span>
           </Badge>
+          
+          {/* Download Prescription Button */}
+          <Button
+            onClick={handleDownloadPrescription}
+            variant="outline"
+            size="sm"
+            className="flex items-center"
+            disabled={downloadingPrescription}
+          >
+            {downloadingPrescription ? (
+              <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {downloadingPrescription ? 'Downloading...' : 'Download Prescription'}
+          </Button>
+          
+          {/* Join Meeting Button - Only show if consultation is not completed */}
+          {consultation.status !== 'completed' && consultation.doctor_meeting_link && (
+            <Button
+              onClick={handleJoinMeeting}
+              size="sm"
+              className="flex items-center bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Video className="w-4 h-4 mr-2" />
+              Join Meeting
+            </Button>
+          )}
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

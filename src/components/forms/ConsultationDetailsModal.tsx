@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { prescriptionApi } from '@/lib/api';
+import { toast } from 'sonner';
 import { 
   User, 
   Phone, 
@@ -175,6 +177,7 @@ interface ConsultationDetailsModalProps {
 
 const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'admin' }: ConsultationDetailsModalProps) => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [downloadingPrescription, setDownloadingPrescription] = useState(false);
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
   const [vitalSigns, setVitalSigns] = useState<VitalSigns[]>([]);
   const [documents, setDocuments] = useState<ConsultationDocument[]>([]);
@@ -379,16 +382,102 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, userRole = 'a
     }
   };
 
+  // Handle download prescription
+  const handleDownloadPrescription = async () => {
+    try {
+      setDownloadingPrescription(true);
+      
+      let prescriptionId = consultation.prescription_data?.id;
+      
+      // If no prescription data available, try to get it from the consultation
+      if (!prescriptionId) {
+        try {
+          const prescriptionData = await prescriptionApi.getConsultationPrescription(consultation.id);
+          prescriptionId = prescriptionData.id;
+        } catch (error) {
+          console.error('Error fetching prescription data:', error);
+          toast.error('No prescription available for this consultation');
+          return;
+        }
+      }
+      
+      if (!prescriptionId) {
+        toast.error('No prescription available for this consultation');
+        return;
+      }
+      
+      const response = await prescriptionApi.downloadPDF(prescriptionId, 'latest');
+      
+      // The API returns a download URL, so we can open it directly
+      if (response.download_url) {
+        window.open(response.download_url, '_blank');
+        toast.success('Prescription download started');
+      } else {
+        toast.error('No download URL available');
+      }
+    } catch (error) {
+      console.error('Error downloading prescription:', error);
+      toast.error('Failed to download prescription');
+    } finally {
+      setDownloadingPrescription(false);
+    }
+  };
+
+  // Handle join meeting
+  const handleJoinMeeting = () => {
+    if (!consultation.doctor_meeting_link) {
+      toast.error('No meeting link available');
+      return;
+    }
+    
+    // Open meeting link in new tab
+    window.open(consultation.doctor_meeting_link, '_blank');
+    toast.success('Opening meeting...');
+  };
+
   if (!consultation) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center text-xl font-bold text-midnight">
-            <Eye className="w-5 h-5 mr-2 text-[#E17726]" />
-            Consultation Details - {consultation.id}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center text-xl font-bold text-midnight">
+              <Eye className="w-5 h-5 mr-2 text-[#E17726]" />
+              Consultation Details - {consultation.id}
+            </DialogTitle>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-2">
+              {/* Download Prescription Button */}
+              <Button
+                onClick={handleDownloadPrescription}
+                variant="outline"
+                size="sm"
+                className="flex items-center"
+                disabled={downloadingPrescription}
+              >
+                {downloadingPrescription ? (
+                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                {downloadingPrescription ? 'Downloading...' : 'Download Prescription'}
+              </Button>
+              
+              {/* Join Meeting Button - Only show if consultation is not completed */}
+              {consultation.status !== 'completed' && consultation.doctor_meeting_link && (
+                <Button
+                  onClick={handleJoinMeeting}
+                  size="sm"
+                  className="flex items-center bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  Join Meeting
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
