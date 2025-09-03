@@ -190,8 +190,8 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
       // Download the latest PDF version directly
       const response = await patientApi.downloadPrescriptionPDF(prescription.id, 'latest');
       
-      if (response && response.download_url) {
-        window.open(response.download_url, '_blank');
+      if (response && response.success && response.data && response.data.download_url) {
+        window.open(response.data.download_url, '_blank');
       } else {
         // Fallback to direct API call
         window.open(`/api/prescriptions/${prescription.id}/pdf/latest/`, '_blank');
@@ -626,8 +626,8 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                                           try {
                                             // Use the proper API endpoint for PDF download
                                             const response = await patientApi.downloadPrescriptionPDF(prescription.id);
-                                            if (response && response.download_url) {
-                                              window.open(response.download_url, '_blank');
+                                            if (response && response.success && response.data && response.data.download_url) {
+                                              window.open(response.data.download_url, '_blank');
                                             } else {
                                               // Fallback to direct API call
                                               window.open(`/api/prescriptions/${prescription.id}/pdf/latest/`, '_blank');

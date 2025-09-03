@@ -73,6 +73,10 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
     inProgress: 0,
     completed: 0
   });
+  // Overdue state (read-only)
+  const [showOverdue, setShowOverdue] = useState(false);
+  const [overdue, setOverdue] = useState<Consultation[]>([]);
+  const [loadingOverdue, setLoadingOverdue] = useState(false);
 
   // Load consultations
   const loadConsultations = async () => {
@@ -113,6 +117,26 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load overdue (read-only)
+  const loadOverdue = async () => {
+    try {
+      setLoadingOverdue(true);
+      const response = await consultationService.getDoctorOverdueConsultations();
+      if (response.success) {
+        const data = Array.isArray(response.data) ? response.data : [];
+        setOverdue(data);
+        setShowOverdue(true);
+      } else {
+        toast({ title: 'Error', description: 'Failed to load overdue consultations', variant: 'destructive' });
+      }
+    } catch (e) {
+      console.error('Error loading overdue consultations:', e);
+      toast({ title: 'Error', description: 'Failed to load overdue consultations', variant: 'destructive' });
+    } finally {
+      setLoadingOverdue(false);
     }
   };
 
@@ -173,11 +197,69 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
           <h2 className="text-2xl font-bold text-gray-900">My Consultations</h2>
           <p className="text-gray-600">Manage your consultations and start sessions with ready patients</p>
         </div>
-        <Button onClick={loadConsultations} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center">
+          <Button onClick={loadConsultations} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={loadOverdue} variant="outline" disabled={loadingOverdue} className="ml-2">
+            <AlertCircle className={`h-4 w-4 mr-2 ${loadingOverdue ? 'animate-spin' : ''}`} />
+            Overdue
+          </Button>
+        </div>
       </div>
+
+      {/* Overdue List (read-only) */}
+      {showOverdue && (
+        <Card className="border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              Overdue Consultations
+            </CardTitle>
+            <CardDescription>
+              Consultations past their scheduled time. Admin will handle rescheduling.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingOverdue ? (
+              <div className="flex items-center justify-center py-8 text-gray-600">
+                <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading overdue consultations...
+              </div>
+            ) : overdue.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">No overdue consultations</div>
+            ) : (
+              <div className="space-y-4">
+                {overdue.map((c) => (
+                  <div key={c.id} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="font-semibold text-gray-900">{c.patient_name}</h4>
+                          <Badge className={getStatusColor('overdue')}>Overdue</Badge>
+                          {typeof c.hours_overdue === 'number' && (
+                            <span className="text-xs text-red-700">{c.hours_overdue.toFixed(1)}h overdue</span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>{formatDateTime(c.scheduled_date, c.scheduled_time)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Read-only: no doctor actions */}
+                    </div>
+                    {c.reschedule_status && (
+                      <div className="mt-2 text-xs text-gray-500">Reschedule status: {c.reschedule_status}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

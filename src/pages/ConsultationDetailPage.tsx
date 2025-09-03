@@ -223,9 +223,9 @@ const ConsultationDetailPage = () => {
       
       const response = await prescriptionApi.downloadPDF(prescriptionId, 'latest');
       
-      // The API returns a download URL, so we can open it directly
-      if (response.download_url) {
-        window.open(response.download_url, '_blank');
+      // The API returns a response with data containing download_url
+      if (response.success && response.data && response.data.download_url) {
+        window.open(response.data.download_url, '_blank');
         toast({
           title: "Success",
           description: "Prescription download started",

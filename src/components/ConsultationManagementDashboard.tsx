@@ -377,10 +377,32 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
           <h2 className="text-2xl font-bold text-gray-900">Consultation Management</h2>
           <p className="text-gray-600">Manage patient check-ins and consultation flow</p>
         </div>
-        <Button onClick={loadConsultations} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={loadConsultations} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          {(userRole === 'admin' || userRole === 'superadmin') && (
+            <Button 
+              onClick={async () => {
+                try {
+                  const response = await consultationService.getOverdueConsultations();
+                  if (response.success) {
+                    toast({ title: 'Overdue Consultations', description: `Found ${response.data.length} overdue consultations` });
+                    // You can add logic here to display the overdue consultations
+                  }
+                } catch (error) {
+                  toast({ title: 'Error', description: 'Failed to load overdue consultations', variant: 'destructive' });
+                }
+              }} 
+              variant="outline" 
+              className="border-red-200 text-red-700 hover:bg-red-50"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Overdue
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Statistics Cards */}

@@ -44,6 +44,9 @@ import {
 } from 'lucide-react';
 import { medicationService, type MedicationSearchResult } from '@/services/medicationService';
 import { prescriptionApi, doctorConsultationApi, api } from '@/lib/api';
+import InvestigationSelector from '@/components/investigations/InvestigationSelector';
+import { PrescriptionInvestigation } from '@/services/investigationService';
+import investigationService from '@/services/investigationService';
 import {
   Dialog,
   DialogContent,
@@ -191,6 +194,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [existingPrescriptions, setExistingPrescriptions] = useState<ExistingPrescription[]>([]);
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
+  const [prescriptionInvestigations, setPrescriptionInvestigations] = useState<PrescriptionInvestigation[]>([]);
 
   // Medication form state
   const [medicationForm, setMedicationForm] = useState<Medication>({
@@ -218,11 +222,7 @@ const ConsultationWorkspace: React.FC = () => {
     primary_diagnosis: '',
     patient_previous_history: '',
     general_instructions: '',
-    fluid_intake: '',
-    diet_instructions: '',
-    lifestyle_advice: '',
     next_visit: '',
-    follow_up_notes: '',
     vital_signs: {
       pulse: '',
       blood_pressure_systolic: '',
@@ -374,11 +374,7 @@ const ConsultationWorkspace: React.FC = () => {
               primary_diagnosis: pres.primary_diagnosis || '',
               patient_previous_history: pres.patient_previous_history || '',
               general_instructions: pres.general_instructions || '',
-              fluid_intake: pres.fluid_intake || '',
-              diet_instructions: pres.diet_instructions || '',
-              lifestyle_advice: pres.lifestyle_advice || '',
               next_visit: pres.next_visit || '',
-              follow_up_notes: pres.follow_up_notes || '',
               vital_signs: {
                 pulse: pres.pulse?.toString() || pres.vital_signs?.pulse?.toString() || '',
                 blood_pressure_systolic: pres.blood_pressure_systolic?.toString() || pres.vital_signs?.blood_pressure_systolic?.toString() || '',
@@ -388,6 +384,15 @@ const ConsultationWorkspace: React.FC = () => {
                 height: pres.height?.toString() || pres.vital_signs?.height?.toString() || '',
               },
             });
+
+            // Load investigations for this prescription
+            try {
+              const investigations = await investigationService.getPrescriptionInvestigations(pres.id);
+              setPrescriptionInvestigations(investigations);
+            } catch (investigationError) {
+              console.error('Error loading investigations:', investigationError);
+              setPrescriptionInvestigations([]);
+            }
           } catch (err: any) {
             // If not found, create a new draft
             if (consultData && patientId) {
@@ -426,11 +431,7 @@ const ConsultationWorkspace: React.FC = () => {
           primary_diagnosis: formData.primary_diagnosis,
           patient_previous_history: formData.patient_previous_history,
           general_instructions: formData.general_instructions,
-          fluid_intake: formData.fluid_intake,
-          diet_instructions: formData.diet_instructions,
-          lifestyle_advice: formData.lifestyle_advice,
           next_visit: formData.next_visit,
-          follow_up_notes: formData.follow_up_notes,
           pulse: formData.vital_signs.pulse ? Number(formData.vital_signs.pulse) : undefined,
           blood_pressure_systolic: formData.vital_signs.blood_pressure_systolic ? Number(formData.vital_signs.blood_pressure_systolic) : undefined,
           blood_pressure_diastolic: formData.vital_signs.blood_pressure_diastolic ? Number(formData.vital_signs.blood_pressure_diastolic) : undefined,
@@ -471,11 +472,7 @@ const ConsultationWorkspace: React.FC = () => {
         primary_diagnosis: formData.primary_diagnosis,
         patient_previous_history: formData.patient_previous_history,
         general_instructions: formData.general_instructions,
-        fluid_intake: formData.fluid_intake,
-        diet_instructions: formData.diet_instructions,
-        lifestyle_advice: formData.lifestyle_advice,
         next_visit: formData.next_visit,
-        follow_up_notes: formData.follow_up_notes,
         pulse: formData.vital_signs.pulse ? Number(formData.vital_signs.pulse) : undefined,
         blood_pressure_systolic: formData.vital_signs.blood_pressure_systolic ? Number(formData.vital_signs.blood_pressure_systolic) : undefined,
         blood_pressure_diastolic: formData.vital_signs.blood_pressure_diastolic ? Number(formData.vital_signs.blood_pressure_diastolic) : undefined,
@@ -519,11 +516,7 @@ const ConsultationWorkspace: React.FC = () => {
         primary_diagnosis: formData.primary_diagnosis,
         patient_previous_history: formData.patient_previous_history,
         general_instructions: formData.general_instructions,
-        fluid_intake: formData.fluid_intake,
-        diet_instructions: formData.diet_instructions,
-        lifestyle_advice: formData.lifestyle_advice,
         next_visit: formData.next_visit,
-        follow_up_notes: formData.follow_up_notes,
         pulse: formData.vital_signs.pulse ? Number(formData.vital_signs.pulse) : undefined,
         blood_pressure_systolic: formData.vital_signs.blood_pressure_systolic ? Number(formData.vital_signs.blood_pressure_systolic) : undefined,
         blood_pressure_diastolic: formData.vital_signs.blood_pressure_diastolic ? Number(formData.vital_signs.blood_pressure_diastolic) : undefined,
@@ -670,6 +663,10 @@ const ConsultationWorkspace: React.FC = () => {
 
   const handleDeleteMedication = (medicationId: number) => {
     setMedications(medications.filter(med => med.id !== medicationId));
+  };
+
+  const handleInvestigationsUpdated = (investigations: PrescriptionInvestigation[]) => {
+    setPrescriptionInvestigations(investigations);
   };
 
   const getFrequencyDisplay = (frequency: string, custom?: string) => {
@@ -1467,7 +1464,7 @@ const ConsultationWorkspace: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base flex items-center gap-2 text-slate-800">
                         <FileText className="w-4 h-4 text-teal-600" />
-                        Instructions & Advice
+                        Patient Instructions
                       </CardTitle>
                       <Button
                         variant="ghost"
@@ -1481,71 +1478,60 @@ const ConsultationWorkspace: React.FC = () => {
                   </CardHeader>
                   {showInstructions && (
                     <CardContent className="space-y-3 bg-white">
-                    <div>
-                      <Label className="text-xs text-slate-700">General Instructions</Label>
-                      <Textarea
-                        rows={3}
-                        value={formData.general_instructions}
-                        onChange={(e) => setFormData({ ...formData, general_instructions: e.target.value })}
-                        placeholder="Enter general instructions..."
-                        className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-700">Diet Instructions</Label>
-                      <Textarea
-                        rows={2}
-                        value={formData.diet_instructions}
-                        onChange={(e) => setFormData({ ...formData, diet_instructions: e.target.value })}
-                        placeholder="Enter diet recommendations..."
-                        className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-700">Lifestyle Advice</Label>
-                      <Textarea
-                        rows={2}
-                        value={formData.lifestyle_advice}
-                        onChange={(e) => setFormData({ ...formData, lifestyle_advice: e.target.value })}
-                        placeholder="Enter lifestyle recommendations..."
-                        className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs text-slate-700">Fluid Intake</Label>
-                        <Input
-                          value={formData.fluid_intake}
-                          onChange={(e) => setFormData({ ...formData, fluid_intake: e.target.value })}
-                          placeholder="e.g., 2-3 liters/day"
+                        <Label className="text-xs text-slate-700">Special Instructions</Label>
+                        <Textarea
+                          rows={3}
+                          value={formData.general_instructions}
+                          onChange={(e) => setFormData({ ...formData, general_instructions: e.target.value })}
+                          placeholder="Enter special instructions for the patient..."
                           className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
                         />
                       </div>
+
                       <div>
                         <Label className="text-xs text-slate-700">Next Visit</Label>
-                        <Input
+                        <Select
                           value={formData.next_visit}
-                          onChange={(e) => setFormData({ ...formData, next_visit: e.target.value })}
-                          placeholder="e.g., 2 weeks"
-                          className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
-                        />
+                          onValueChange={(value) => setFormData({ ...formData, next_visit: value })}
+                        >
+                          <SelectTrigger className="border-slate-300 focus:border-teal-500 focus:ring-teal-500">
+                            <SelectValue placeholder="Select next visit timing" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1 week">1 week</SelectItem>
+                            <SelectItem value="2 weeks">2 weeks</SelectItem>
+                            <SelectItem value="3 weeks">3 weeks</SelectItem>
+                            <SelectItem value="4 weeks">4 weeks</SelectItem>
+                            <SelectItem value="6 weeks">6 weeks</SelectItem>
+                            <SelectItem value="8 weeks">8 weeks</SelectItem>
+                            <SelectItem value="10 weeks">10 weeks</SelectItem>
+                            <SelectItem value="12 weeks">12 weeks</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-700">Follow-up Notes</Label>
-                      <Textarea
-                        rows={2}
-                        value={formData.follow_up_notes}
-                        onChange={(e) => setFormData({ ...formData, follow_up_notes: e.target.value })}
-                        placeholder="Enter follow-up instructions..."
-                        className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
-                      />
-                    </div>
-                  </CardContent>
-                )}
+                    </CardContent>
+                  )}
               </Card>
 
-                {/* Medications Summary */}
+              {/* Investigation Tests */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                  <CardTitle className="text-base flex items-center gap-2 text-slate-800">
+                    <Stethoscope className="w-4 h-4 text-blue-600" />
+                    Investigation Tests
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="bg-white">
+                  <InvestigationSelector
+                    prescriptionId={prescription?.id || 0}
+                    onInvestigationsUpdated={handleInvestigationsUpdated}
+                    existingInvestigations={prescriptionInvestigations}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Medications Summary */}
                 <Card className="border-slate-200 shadow-sm">
                   <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
                     <div className="flex items-center justify-between">

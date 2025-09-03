@@ -1,0 +1,234 @@
+nohup: ignoring input
+
+> vite_react_shadcn_ts@0.0.0 dev
+> vite --host --port 8080
+
+
+  VITE v5.4.10  ready in 856 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://192.168.1.37:8080/
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+12:49:34 PM [vite] hmr update /src/pages/Login.tsx, /src/index.css, /src/pages/Register.tsx, /src/pages/FindDoctors.tsx, /src/context/AuthContext.tsx, /src/components/ui/tooltip.tsx, /src/components/ui/card.tsx, /src/components/ui/button.tsx, /src/components/ui/input.tsx, /src/components/ui/label.tsx, /src/components/ui/badge.tsx, /src/pages/TestDoctors.tsx, /src/pages/ConsultationMeeting.tsx, /src/pages/ConsultationCreationPage.tsx, /src/pages/ConsultationDetailPage.tsx, /src/pages/AddPatientPage.tsx, /src/pages/ConsultationWorkspace.tsx, /src/pages/PrescriptionWriter.tsx, /src/pages/PrescriptionManagement.tsx, /src/pages/ConsultationManagement.tsx, /src/components/workflow/DoctorSchedule.tsx, /src/components/workflow/VideoConsultation.tsx, /src/components/NearbyEClinics.tsx, /src/components/dashboards/SuperAdminDashboard.tsx, /src/components/dashboards/DoctorDashboard.tsx, /src/components/forms/DoctorSlotManagement.tsx, /src/components/forms/EnhancedConsultationBooking.tsx, /src/components/dashboards/PatientDashboard.tsx, /src/components/forms/ConsultationCreationForm.tsx, /src/components/PatientSearch.tsx, /src/components/dashboards/AdminDashboardEnhanced.tsx, /src/components/dashboards/SuperAdminSlotManagement.tsx, /src/components/dashboards/EClinicManagement.tsx, /src/components/dashboards/SuperAdminOverview.tsx, /src/components/dashboards/SuperAdminAnalytics.tsx, /src/components/dashboards/DoctorProfileTab.tsx, /src/components/workflow/DoctorAvailabilitySlots.tsx, /src/components/dashboards/patient/PatientConsultations.tsx, /src/components/dashboards/patient/PatientRecordsManager.tsx, /src/components/dashboards/PaymentTrackingDashboard.tsx, /src/components/forms/EnhancedPatientManagementTab.tsx, /src/components/forms/ConsultationManagementEnhanced.tsx, /src/components/dashboards/DetailedAnalyticsDashboard.tsx, /src/components/dashboards/EnhancedConsultationDashboard.tsx, /src/components/dashboards/EnhancedConsultationWorkflow.tsx, /src/components/forms/PatientManagementTab.tsx, /src/components/forms/PatientCreationForm.tsx, /src/components/forms/PatientEditForm.tsx, /src/components/MedicationSearch.tsx, /src/components/ui/textarea.tsx, /src/components/ui/tabs.tsx, /src/components/ui/avatar.tsx, /src/components/ui/separator.tsx, /src/components/ui/alert.tsx, /src/components/ui/skeleton.tsx, /src/components/ui/dropdown-menu.tsx, /src/components/ui/select.tsx, /src/components/ui/dialog.tsx, /src/components/ConsultationManagementDashboard.tsx, /src/components/ui/toast.tsx, /src/components/dashboards/ManageAdmins.tsx, /src/components/dashboards/MedicationManagement.tsx, /src/components/ui/scroll-area.tsx, /src/components/ui/switch.tsx, /src/components/ui/calendar.tsx, /src/components/ui/popover.tsx, /src/components/DoctorReadyPatientsDashboard.tsx, /src/components/AdminReadyPatientsDashboard.tsx, /src/components/DoctorConsultationManagementDashboard.tsx, /src/components/PatientStatsDashboard.tsx, /src/components/PatientManagementDashboard.tsx, /src/components/ui/alert-dialog.tsx, /src/components/ui/table.tsx
+12:49:34 PM [vite] hmr update /src/pages/Login.tsx, /src/index.css, /src/pages/Register.tsx, /src/pages/FindDoctors.tsx, /src/context/AuthContext.tsx, /src/components/ui/tooltip.tsx, /src/components/ui/card.tsx, /src/components/ui/button.tsx, /src/components/ui/input.tsx, /src/components/ui/label.tsx, /src/components/ui/badge.tsx, /src/pages/TestDoctors.tsx, /src/pages/ConsultationMeeting.tsx, /src/pages/ConsultationCreationPage.tsx, /src/pages/ConsultationDetailPage.tsx, /src/pages/AddPatientPage.tsx, /src/pages/ConsultationWorkspace.tsx, /src/pages/PrescriptionWriter.tsx, /src/pages/PrescriptionManagement.tsx, /src/pages/ConsultationManagement.tsx, /src/components/workflow/DoctorSchedule.tsx, /src/components/workflow/VideoConsultation.tsx, /src/components/NearbyEClinics.tsx, /src/components/dashboards/SuperAdminDashboard.tsx, /src/components/dashboards/DoctorDashboard.tsx, /src/components/forms/DoctorSlotManagement.tsx, /src/components/forms/EnhancedConsultationBooking.tsx, /src/components/dashboards/PatientDashboard.tsx, /src/components/forms/ConsultationCreationForm.tsx, /src/components/PatientSearch.tsx, /src/components/dashboards/AdminDashboardEnhanced.tsx, /src/components/dashboards/SuperAdminSlotManagement.tsx, /src/components/dashboards/EClinicManagement.tsx, /src/components/dashboards/SuperAdminOverview.tsx, /src/components/dashboards/SuperAdminAnalytics.tsx, /src/components/dashboards/DoctorProfileTab.tsx, /src/components/workflow/DoctorAvailabilitySlots.tsx, /src/components/dashboards/patient/PatientConsultations.tsx, /src/components/dashboards/patient/PatientRecordsManager.tsx, /src/components/dashboards/PaymentTrackingDashboard.tsx, /src/components/forms/EnhancedPatientManagementTab.tsx, /src/components/forms/ConsultationManagementEnhanced.tsx, /src/components/dashboards/DetailedAnalyticsDashboard.tsx, /src/components/dashboards/EnhancedConsultationDashboard.tsx, /src/components/dashboards/EnhancedConsultationWorkflow.tsx, /src/components/forms/PatientManagementTab.tsx, /src/components/forms/PatientCreationForm.tsx, /src/components/forms/PatientEditForm.tsx, /src/components/MedicationSearch.tsx, /src/components/ui/textarea.tsx, /src/components/ui/tabs.tsx, /src/components/ui/avatar.tsx, /src/components/ui/separator.tsx, /src/components/ui/alert.tsx, /src/components/ui/skeleton.tsx, /src/components/ui/dropdown-menu.tsx, /src/components/ui/select.tsx, /src/components/ui/dialog.tsx, /src/components/ConsultationManagementDashboard.tsx, /src/components/ui/toast.tsx, /src/components/dashboards/ManageAdmins.tsx, /src/components/dashboards/MedicationManagement.tsx, /src/components/ui/scroll-area.tsx, /src/components/ui/switch.tsx, /src/components/ui/calendar.tsx, /src/components/ui/popover.tsx, /src/components/DoctorReadyPatientsDashboard.tsx, /src/components/AdminReadyPatientsDashboard.tsx, /src/components/DoctorConsultationManagementDashboard.tsx, /src/components/PatientStatsDashboard.tsx, /src/components/PatientManagementDashboard.tsx, /src/components/ui/alert-dialog.tsx, /src/components/ui/table.tsx
+12:49:34 PM [vite] hmr update /src/pages/Login.tsx, /src/index.css, /src/pages/Register.tsx, /src/pages/FindDoctors.tsx, /src/context/AuthContext.tsx, /src/components/ui/tooltip.tsx, /src/components/ui/card.tsx, /src/components/ui/button.tsx, /src/components/ui/input.tsx, /src/components/ui/label.tsx, /src/components/ui/badge.tsx, /src/pages/TestDoctors.tsx, /src/pages/ConsultationMeeting.tsx, /src/pages/ConsultationCreationPage.tsx, /src/pages/ConsultationDetailPage.tsx, /src/pages/AddPatientPage.tsx, /src/pages/ConsultationWorkspace.tsx, /src/pages/PrescriptionWriter.tsx, /src/pages/PrescriptionManagement.tsx, /src/pages/ConsultationManagement.tsx, /src/components/workflow/DoctorSchedule.tsx, /src/components/workflow/VideoConsultation.tsx, /src/components/NearbyEClinics.tsx, /src/components/dashboards/SuperAdminDashboard.tsx, /src/components/dashboards/DoctorDashboard.tsx, /src/components/forms/DoctorSlotManagement.tsx, /src/components/forms/EnhancedConsultationBooking.tsx, /src/components/dashboards/PatientDashboard.tsx, /src/components/forms/ConsultationCreationForm.tsx, /src/components/PatientSearch.tsx, /src/components/dashboards/AdminDashboardEnhanced.tsx, /src/components/dashboards/SuperAdminSlotManagement.tsx, /src/components/dashboards/EClinicManagement.tsx, /src/components/dashboards/SuperAdminOverview.tsx, /src/components/dashboards/SuperAdminAnalytics.tsx, /src/components/dashboards/DoctorProfileTab.tsx, /src/components/workflow/DoctorAvailabilitySlots.tsx, /src/components/dashboards/patient/PatientConsultations.tsx, /src/components/dashboards/patient/PatientRecordsManager.tsx, /src/components/dashboards/PaymentTrackingDashboard.tsx, /src/components/forms/EnhancedPatientManagementTab.tsx, /src/components/forms/ConsultationManagementEnhanced.tsx, /src/components/dashboards/DetailedAnalyticsDashboard.tsx, /src/components/dashboards/EnhancedConsultationDashboard.tsx, /src/components/dashboards/EnhancedConsultationWorkflow.tsx, /src/components/forms/PatientManagementTab.tsx, /src/components/forms/PatientCreationForm.tsx, /src/components/forms/PatientEditForm.tsx, /src/components/MedicationSearch.tsx, /src/components/ui/textarea.tsx, /src/components/ui/tabs.tsx, /src/components/ui/avatar.tsx, /src/components/ui/separator.tsx, /src/components/ui/alert.tsx, /src/components/ui/skeleton.tsx, /src/components/ui/dropdown-menu.tsx, /src/components/ui/select.tsx, /src/components/ui/dialog.tsx, /src/components/ConsultationManagementDashboard.tsx, /src/components/ui/toast.tsx, /src/components/dashboards/ManageAdmins.tsx, /src/components/dashboards/MedicationManagement.tsx, /src/components/ui/scroll-area.tsx, /src/components/ui/switch.tsx, /src/components/ui/calendar.tsx, /src/components/ui/popover.tsx, /src/components/DoctorReadyPatientsDashboard.tsx, /src/components/AdminReadyPatientsDashboard.tsx, /src/components/DoctorConsultationManagementDashboard.tsx, /src/components/PatientStatsDashboard.tsx, /src/components/PatientManagementDashboard.tsx, /src/components/ui/alert-dialog.tsx, /src/components/ui/table.tsx
+12:59:39 PM [vite] hmr update /src/components/forms/ConsultationCreationForm.tsx, /src/index.css
+1:00:21 PM [vite] hmr update /src/components/forms/ConsultationCreationForm.tsx, /src/index.css
+3:09:08 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+3:10:02 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+3:10:02 PM [vite] Internal server error: Failed to resolve import "./OverdueConsultationsDashboard" from "src/components/forms/ConsultationManagementEnhanced.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx:78:46
+  26 |  import { useNavigate } from 'react-router-dom';
+  27 |  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+  28 |  import { OverdueConsultationsDashboard } from './OverdueConsultationsDashboard';
+     |                                                 ^
+  29 |  const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId })=>{
+  30 |      _s();
+      at TransformPluginContext._formatError (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:49255:41)
+      at TransformPluginContext.error (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:49250:16)
+      at normalizeUrl (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:64041:23)
+      at async file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:64173:39
+      at async Promise.all (index 19)
+      at async TransformPluginContext.transform (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:64100:7)
+      at async PluginContainer.transform (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:49096:18)
+      at async loadAndTransform (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:51929:27)
+3:10:02 PM [vite] Internal server error: Failed to resolve import "./OverdueConsultationsDashboard" from "src/components/forms/ConsultationManagementEnhanced.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx:78:46
+  26 |  import { useNavigate } from 'react-router-dom';
+  27 |  import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+  28 |  import { OverdueConsultationsDashboard } from './OverdueConsultationsDashboard';
+     |                                                 ^
+  29 |  const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId })=>{
+  30 |      _s();
+      at TransformPluginContext._formatError (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:49255:41)
+      at TransformPluginContext.error (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:49250:16)
+      at normalizeUrl (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:64041:23)
+      at async file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:64173:39
+      at async Promise.all (index 19)
+      at async TransformPluginContext.transform (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:64100:7)
+      at async PluginContainer.transform (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:49096:18)
+      at async loadAndTransform (file:///home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/vite/dist/node/chunks/dep-BWSbWtLw.js:51929:27)
+3:10:17 PM [vite] hmr update /src/index.css, /src/components/dashboards/AdminDashboardEnhanced.tsx
+3:10:30 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+Error processing file src/components/forms/ConsultationManagementEnhanced.tsx: SyntaxError: Expected corresponding JSX closing tag for <TabsContent>. (891:8)
+    at constructor (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:362:19)
+    at TypeScriptParserMixin.raise (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3259:19)
+    at TypeScriptParserMixin.jsxParseElementAt (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6774:16)
+    at TypeScriptParserMixin.jsxParseElementAt (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6745:32)
+    at TypeScriptParserMixin.jsxParseElementAt (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6745:32)
+    at TypeScriptParserMixin.jsxParseElementAt (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6745:32)
+    at TypeScriptParserMixin.jsxParseElementAt (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6745:32)
+    at TypeScriptParserMixin.jsxParseElement (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6796:17)
+    at TypeScriptParserMixin.parseExprAtom (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:6806:19)
+    at TypeScriptParserMixin.parseExprSubscripts (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10592:23) {
+  code: 'BABEL_PARSER_SYNTAX_ERROR',
+  reasonCode: 'MissingClosingTagElement',
+  loc: Position { line: 891, column: 8, index: 37688 },
+  pos: 37688,
+  syntaxPlugin: 'jsx'
+}
+3:10:30 PM [vite] Internal server error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx[0m:423:1]
+ [2m420[0m |   ];
+ [2m421[0m | 
+ [2m422[0m |   return (
+ [2m423[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m424[0m |       {/* No Clinic Assignment Warning */}
+ [2m425[0m |       {!isAssignedToClinic && (
+ [2m426[0m |         <Alert className="border-orange-200 bg-orange-50">
+     `----
+
+
+Caused by:
+    Syntax Error
+  Plugin: vite:react-swc
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx
+  
+3:10:30 PM [vite] Internal server error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx[0m:423:1]
+ [2m420[0m |   ];
+ [2m421[0m | 
+ [2m422[0m |   return (
+ [2m423[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m424[0m |       {/* No Clinic Assignment Warning */}
+ [2m425[0m |       {!isAssignedToClinic && (
+ [2m426[0m |         <Alert className="border-orange-200 bg-orange-50">
+     `----
+
+
+Caused by:
+    Syntax Error
+  Plugin: vite:react-swc
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx
+  
+3:10:43 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+Error processing file src/components/forms/ConsultationManagementEnhanced.tsx: SyntaxError: Unexpected token (890:12)
+    at constructor (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:362:19)
+    at TypeScriptParserMixin.raise (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3259:19)
+    at TypeScriptParserMixin.unexpected (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3279:16)
+    at TypeScriptParserMixin.checkExpressionErrors (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3666:12)
+    at TypeScriptParserMixin.parseMaybeAssign (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10386:12)
+    at TypeScriptParserMixin.parseMaybeAssign (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:9432:20)
+    at TypeScriptParserMixin.parseExpressionBase (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10310:23)
+    at /home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10306:39
+    at TypeScriptParserMixin.allowInAnd (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:11938:12)
+    at TypeScriptParserMixin.parseExpression (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10306:17) {
+  code: 'BABEL_PARSER_SYNTAX_ERROR',
+  reasonCode: 'UnexpectedToken',
+  loc: Position { line: 890, column: 12, index: 37679 },
+  pos: 37679,
+  syntaxPlugin: undefined
+}
+3:10:43 PM [vite] Internal server error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx[0m:423:1]
+ [2m420[0m |   ];
+ [2m421[0m | 
+ [2m422[0m |   return (
+ [2m423[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m424[0m |       {/* No Clinic Assignment Warning */}
+ [2m425[0m |       {!isAssignedToClinic && (
+ [2m426[0m |         <Alert className="border-orange-200 bg-orange-50">
+     `----
+
+
+Caused by:
+    Syntax Error
+  Plugin: vite:react-swc
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx
+  
+3:10:43 PM [vite] Internal server error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx[0m:423:1]
+ [2m420[0m |   ];
+ [2m421[0m | 
+ [2m422[0m |   return (
+ [2m423[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m424[0m |       {/* No Clinic Assignment Warning */}
+ [2m425[0m |       {!isAssignedToClinic && (
+ [2m426[0m |         <Alert className="border-orange-200 bg-orange-50">
+     `----
+
+
+Caused by:
+    Syntax Error
+  Plugin: vite:react-swc
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx
+  
+3:11:25 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+Error processing file src/components/forms/ConsultationManagementEnhanced.tsx: SyntaxError: Unexpected token (890:12)
+    at constructor (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:362:19)
+    at TypeScriptParserMixin.raise (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3259:19)
+    at TypeScriptParserMixin.unexpected (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3279:16)
+    at TypeScriptParserMixin.checkExpressionErrors (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:3666:12)
+    at TypeScriptParserMixin.parseMaybeAssign (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10386:12)
+    at TypeScriptParserMixin.parseMaybeAssign (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:9432:20)
+    at TypeScriptParserMixin.parseExpressionBase (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10310:23)
+    at /home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10306:39
+    at TypeScriptParserMixin.allowInAnd (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:11938:12)
+    at TypeScriptParserMixin.parseExpression (/home/tushar/Videos/sushrusa-homepage-design-hub/node_modules/@babel/parser/lib/index.js:10306:17) {
+  code: 'BABEL_PARSER_SYNTAX_ERROR',
+  reasonCode: 'UnexpectedToken',
+  loc: Position { line: 890, column: 12, index: 37681 },
+  pos: 37681,
+  syntaxPlugin: undefined
+}
+3:11:26 PM [vite] Internal server error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx[0m:423:1]
+ [2m420[0m |   ];
+ [2m421[0m | 
+ [2m422[0m |   return (
+ [2m423[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m424[0m |       {/* No Clinic Assignment Warning */}
+ [2m425[0m |       {!isAssignedToClinic && (
+ [2m426[0m |         <Alert className="border-orange-200 bg-orange-50">
+     `----
+
+
+Caused by:
+    Syntax Error
+  Plugin: vite:react-swc
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx
+  
+3:11:26 PM [vite] Internal server error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4m/home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx[0m:423:1]
+ [2m420[0m |   ];
+ [2m421[0m | 
+ [2m422[0m |   return (
+ [2m423[0m |     <div className="space-y-6">
+     : [35;1m     ^^^[0m
+ [2m424[0m |       {/* No Clinic Assignment Warning */}
+ [2m425[0m |       {!isAssignedToClinic && (
+ [2m426[0m |         <Alert className="border-orange-200 bg-orange-50">
+     `----
+
+
+Caused by:
+    Syntax Error
+  Plugin: vite:react-swc
+  File: /home/tushar/Videos/sushrusa-homepage-design-hub/src/components/forms/ConsultationManagementEnhanced.tsx
+  
+3:11:48 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+3:11:58 PM [vite] hmr update /src/App.tsx, /src/index.css
+3:12:00 PM [vite] ✨ new dependencies optimized: @radix-ui/react-checkbox
+3:12:00 PM [vite] ✨ optimized dependencies changed. reloading
+3:13:25 PM [vite] hmr update /src/components/consultation/ConsultationRescheduleModal.tsx, /src/index.css
+3:13:25 PM [vite] hmr update /src/components/consultation/OverdueConsultationsDashboard.tsx, /src/index.css
+3:13:25 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+3:13:25 PM [vite] hmr update /src/pages/OverdueConsultationsPage.tsx, /src/index.css
+3:13:25 PM [vite] hmr update /src/App.tsx, /src/index.css
+6:27:19 PM [vite] hmr update /src/App.tsx, /src/index.css
+6:27:19 PM [vite] hmr update /src/components/forms/ConsultationManagementEnhanced.tsx, /src/index.css
+6:27:19 PM [vite] hmr update /src/pages/OverdueConsultationsPage.tsx, /src/index.css
+6:27:19 PM [vite] hmr update /src/components/consultation/OverdueConsultationsDashboard.tsx, /src/index.css
+6:27:19 PM [vite] hmr update /src/components/consultation/ConsultationRescheduleModal.tsx, /src/index.css
+6:27:19 PM [vite] hmr update /src/pages/OverdueConsultationsPage.tsx
+6:27:19 PM [vite] hmr update /src/components/consultation/ConsultationRescheduleModal.tsx
+6:27:19 PM [vite] hmr update /src/components/consultation/OverdueConsultationsDashboard.tsx

@@ -3501,9 +3501,17 @@ export const prescriptionApi = {
   },
 
   // Download PDF
-  downloadPDF: async (prescriptionId: string, version: string | number = 'latest'): Promise<{ download_url: string; filename: string }> => {
+  downloadPDF: async (prescriptionId: string, version: string | number = 'latest'): Promise<{
+    success: boolean;
+    data: {
+      download_url: string;
+      filename: string;
+    };
+    message: string;
+    timestamp: string;
+  }> => {
     const response = await api.get(`/api/prescriptions/${prescriptionId}/pdf/${version}/`);
-    return response.data.data;
+    return response.data;
   },
 
   // Get patient PDFs
@@ -3681,6 +3689,8 @@ export const doctorConsultationApi = {
   savePrescription,
   getPatientProfile,
 };
+
+
 
 
 

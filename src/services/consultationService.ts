@@ -74,6 +74,16 @@ export interface ClinicStatisticsResponse {
   timestamp: string;
 }
 
+export interface OverdueConsultationResponse {
+  success: boolean;
+  data: Consultation[];
+  message: string;
+  timestamp: string;
+  count?: number;
+  next?: string;
+  previous?: string;
+}
+
 // Consultation Service
 export const consultationService = {
   // Get consultations for admin management (using existing ConsultationViewSet)
@@ -185,6 +195,17 @@ export const consultationService = {
     
     const response = await api.get(`/api/consultations/clinic-stats/?${queryParams.toString()}`);
     return response.data;
+  },
+
+  // Get overdue consultations (admin/superadmin/doctor)
+  async getOverdueConsultations(): Promise<OverdueConsultationResponse> {
+    try {
+      const response = await api.get('/api/consultations/overdue/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching overdue consultations:', error);
+      throw error;
+    }
   }
 };
 

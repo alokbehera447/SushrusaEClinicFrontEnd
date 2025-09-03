@@ -157,6 +157,30 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
   );
 };
 
+// Basic list of common chief complaints to quickly select from
+const BASIC_COMPLAINTS: string[] = [
+  'Fever',
+  'Cough',
+  'Cold',
+  'Headache',
+  'Back pain',
+  'Stomach pain',
+  'Sore throat',
+  'Shortness of breath',
+  'Chest pain',
+  'Dizziness',
+  'Nausea',
+  'Vomiting',
+  'Diarrhea',
+  'Fatigue',
+  'Body ache',
+  'Ear pain',
+  'Eye redness',
+  'Skin rash',
+  'Toothache',
+  'Joint pain'
+];
+
 
 // --- Main Component ---
 const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => void; assignedClinicId?: string }) => {
@@ -825,6 +849,20 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: 
 
 const renderStep4 = ({ formData, handleInputChange }: any) => (
   <div className="space-y-6 max-w-2xl mx-auto">
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-2">Select Basic Complaint</label>
+      <Select value={formData.chiefComplaint} onValueChange={(value) => handleInputChange('chiefComplaint', value)}>
+        <SelectTrigger className="w-full h-12 rounded-xl border-2 border-slate-300 bg-white/80">
+          <SelectValue placeholder="Choose a complaint" />
+        </SelectTrigger>
+        <SelectContent>
+          {BASIC_COMPLAINTS.map((complaint) => (
+            <SelectItem key={complaint} value={complaint}>{complaint}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-slate-500 mt-1 pl-1">You can also type a custom complaint below.</p>
+    </div>
     <FloatingLabelInput id="chief-complaint" label="Chief Complaint *" icon={FileText} value={formData.chiefComplaint} onChange={(e: any) => handleInputChange('chiefComplaint', e.target.value)} required />
     <div className="relative">
       <Textarea id="symptoms" placeholder=" " value={formData.symptoms} onChange={(e) => handleInputChange('symptoms', e.target.value)} className="peer min-h-[120px] w-full rounded-xl border-2 border-slate-300 bg-white/80 pt-5 text-base transition-colors focus:border-orange-500 focus:bg-white resize-none" />

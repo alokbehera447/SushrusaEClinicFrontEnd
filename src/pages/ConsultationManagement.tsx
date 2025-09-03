@@ -35,7 +35,7 @@ const ConsultationManagement: React.FC = () => {
   const { user } = useAuth();
   const [userRole, setUserRole] = useState<string>('');
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
-  const [activeTab, setActiveTab] = useState('management');
+  const [activeTab, setActiveTab] = useState('management'); // Default to management tab
   const [assignedClinicId, setAssignedClinicId] = useState<string | undefined>();
 
   // Get user role from AuthContext and route

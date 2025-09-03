@@ -391,8 +391,8 @@ const ConsultationManagementFlow = () => {
       const response = await prescriptionApi.downloadPDF(prescriptionId, 'latest');
       
       // The API returns a download URL, so we can open it directly
-      if (response.download_url) {
-        window.open(response.download_url, '_blank');
+              if (response.success && response.data && response.data.download_url) {
+          window.open(response.data.download_url, '_blank');
         toast.success('Prescription download started');
       } else {
         toast.error('No download URL available');
