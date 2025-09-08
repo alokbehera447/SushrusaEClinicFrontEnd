@@ -385,13 +385,19 @@ const ConsultationWorkspace: React.FC = () => {
               },
             });
 
-            // Load investigations for this prescription
-            try {
-              const investigations = await investigationService.getPrescriptionInvestigations(pres.id);
-              setPrescriptionInvestigations(investigations);
-            } catch (investigationError) {
-              console.error('Error loading investigations:', investigationError);
-              setPrescriptionInvestigations([]);
+            // Load investigations from prescription data (already included in the response)
+            console.log('Prescription investigations from API:', pres.investigations);
+            if (pres.investigations && Array.isArray(pres.investigations)) {
+              setPrescriptionInvestigations(pres.investigations);
+            } else {
+              // Fallback: try to load investigations separately if not included in prescription
+              try {
+                const investigations = await investigationService.getPrescriptionInvestigations(pres.id);
+                setPrescriptionInvestigations(investigations);
+              } catch (investigationError) {
+                console.error('Error loading investigations:', investigationError);
+                setPrescriptionInvestigations([]);
+              }
             }
           } catch (err: any) {
             // If not found, create a new draft

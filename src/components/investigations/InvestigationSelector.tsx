@@ -390,6 +390,7 @@ export default function InvestigationSelector({
       )}
 
       {/* Existing Investigations */}
+      {console.log('InvestigationSelector - existingInvestigations:', existingInvestigations)}
       {existingInvestigations.length > 0 && (
         <Card>
           <CardHeader>
