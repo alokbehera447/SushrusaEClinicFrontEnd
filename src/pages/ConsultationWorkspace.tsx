@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useIsMobile } from '@/lib/deviceDetection';
+import MobileConsultationWorkspace from '@/components/mobile/MobileConsultationWorkspace';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -158,6 +160,12 @@ type Consultation = any;
 const ConsultationWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const { consultationId } = useParams<{ consultationId: string }>();
+  const isMobile = useIsMobile();
+
+  // Show mobile component if on mobile device
+  if (isMobile) {
+    return <MobileConsultationWorkspace />;
+  }
 
   // Loading states
   const [loading, setLoading] = useState(true);
