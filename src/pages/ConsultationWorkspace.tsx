@@ -162,11 +162,6 @@ const ConsultationWorkspace: React.FC = () => {
   const { consultationId } = useParams<{ consultationId: string }>();
   const isMobile = useIsMobile();
 
-  // Show mobile component if on mobile device
-  if (isMobile) {
-    return <MobileConsultationWorkspace />;
-  }
-
   // Loading states
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -477,6 +472,11 @@ const ConsultationWorkspace: React.FC = () => {
     }, 1000);
     return () => clearTimeout(handler);
   }, [formData, medications, prescription?.id]);
+
+  // Show mobile component if on mobile device (after all hooks)
+  if (isMobile) {
+    return <MobileConsultationWorkspace />;
+  }
 
   const handleSaveDraft = async () => {
     if (!prescription?.id) return;
