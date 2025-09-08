@@ -85,13 +85,17 @@ class InvestigationService {
   // Get investigations for a specific prescription
   async getPrescriptionInvestigations(prescriptionId: number): Promise<PrescriptionInvestigation[]> {
     const response = await api.get(`${this.baseUrl}/investigations/prescription/?prescription_id=${prescriptionId}`);
-    return response.data.data;
+    console.log('getPrescriptionInvestigations API response:', response.data);
+    // The response structure might be different, let's handle both cases
+    return response.data.data || response.data || [];
   }
 
   // Add investigations to a prescription
   async addInvestigationsToPrescription(data: AddInvestigationRequest): Promise<PrescriptionInvestigation[]> {
     const response = await api.post(`${this.baseUrl}/investigations/prescription/`, data);
-    return response.data.data;
+    console.log('addInvestigationsToPrescription API response:', response.data);
+    // The response structure might be different, let's handle both cases
+    return response.data.data || response.data || [];
   }
 
   // Remove investigations from a prescription

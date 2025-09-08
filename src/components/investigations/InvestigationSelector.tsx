@@ -138,11 +138,7 @@ export default function InvestigationSelector({
 
   const handleAddInvestigations = async () => {
     if (selectedTests.size === 0) {
-      toast({
-        title: "Warning",
-        description: "Please select at least one test",
-        variant: "destructive"
-      });
+      toast.error("Please select at least one test");
       return;
     }
 
@@ -174,17 +170,10 @@ export default function InvestigationSelector({
       console.log('Calling onInvestigationsUpdated with:', allInvestigations);
       onInvestigationsUpdated(allInvestigations);
       
-      toast({
-        title: "Success",
-        description: `${newInvestigations.length} investigation(s) added successfully`,
-      });
+      toast.success(`${newInvestigations.length} investigation(s) added successfully`);
     } catch (error) {
       console.error('Error adding investigations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add investigations",
-        variant: "destructive"
-      });
+      toast.error("Failed to add investigations");
     } finally {
       setLoading(false);
     }
