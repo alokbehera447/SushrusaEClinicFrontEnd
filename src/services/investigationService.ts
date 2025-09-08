@@ -86,7 +86,11 @@ class InvestigationService {
   async getPrescriptionInvestigations(prescriptionId: number): Promise<PrescriptionInvestigation[]> {
     const response = await api.get(`${this.baseUrl}/investigations/prescription/?prescription_id=${prescriptionId}`);
     console.log('getPrescriptionInvestigations API response:', response.data);
-    // The response structure might be different, let's handle both cases
+    // Handle paginated response - investigations are in the 'results' array
+    if (response.data.results && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    // Fallback for other response structures
     return response.data.data || response.data || [];
   }
 
@@ -94,7 +98,11 @@ class InvestigationService {
   async addInvestigationsToPrescription(data: AddInvestigationRequest): Promise<PrescriptionInvestigation[]> {
     const response = await api.post(`${this.baseUrl}/investigations/prescription/`, data);
     console.log('addInvestigationsToPrescription API response:', response.data);
-    // The response structure might be different, let's handle both cases
+    // Handle paginated response - investigations are in the 'results' array
+    if (response.data.results && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    // Fallback for other response structures
     return response.data.data || response.data || [];
   }
 
