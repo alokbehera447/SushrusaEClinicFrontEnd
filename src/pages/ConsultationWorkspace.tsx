@@ -672,6 +672,7 @@ const ConsultationWorkspace: React.FC = () => {
   };
 
   const handleInvestigationsUpdated = (investigations: PrescriptionInvestigation[]) => {
+    console.log('ConsultationWorkspace - handleInvestigationsUpdated called with:', investigations);
     setPrescriptionInvestigations(investigations);
   };
 

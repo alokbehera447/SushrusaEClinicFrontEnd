@@ -63,6 +63,11 @@ export default function InvestigationSelector({
     filterTests();
   }, [tests, searchTerm, selectedCategory]);
 
+  // Update internal state when existingInvestigations prop changes
+  useEffect(() => {
+    console.log('InvestigationSelector - existingInvestigations prop changed:', existingInvestigations);
+  }, [existingInvestigations]);
+
   const loadInvestigations = async () => {
     try {
       setLoading(true);
@@ -154,9 +159,11 @@ export default function InvestigationSelector({
       };
 
       const newInvestigations = await investigationService.addInvestigationsToPrescription(request);
+      console.log('New investigations added:', newInvestigations);
       
       // Fetch all investigations for this prescription to get the complete list
       const allInvestigations = await investigationService.getPrescriptionInvestigations(prescriptionId);
+      console.log('All investigations after adding:', allInvestigations);
       
       // Reset form
       setSelectedTests(new Set());
@@ -164,6 +171,7 @@ export default function InvestigationSelector({
       setShowAddForm(false);
       
       // Notify parent component with all investigations
+      console.log('Calling onInvestigationsUpdated with:', allInvestigations);
       onInvestigationsUpdated(allInvestigations);
       
       toast({
