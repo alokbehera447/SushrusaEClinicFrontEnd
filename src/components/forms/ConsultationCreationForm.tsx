@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { debounce } from 'lodash';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 // --- Restored Original API and Type Imports ---
 import { adminPatientApi, doctorApi, superAdminApi, PatientProfile, DoctorProfile, EClinic, createConsultation, calculateAvailableSlots, adminConsultationApi } from '@/lib/api';
@@ -529,6 +530,8 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     );
   };
 
+  const navigate = useNavigate();
+
   return (
     <>
       <SuccessModal
@@ -537,11 +540,27 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
           setShowSuccessModal(false);
           setCreatedConsultation(null);
           setMeetingLink('');
-          onClose();
+          navigate('/dashboard/consultations');
         }}
-        patientName={selectedPatient?.user_name}
-        doctorName={selectedDoctor?.user_name}
-        appointmentTime={formData.consultationDate && formData.selectedSlot ? `${format(formData.consultationDate, 'MMMM dd, yyyy')} at ${formData.selectedSlot.startTime}` : ''}
+        patientName={
+          selectedPatient?.user_name ||
+          createdConsultation?.patient_name ||
+          createdConsultation?.patient?.name ||
+          'Patient'
+        }
+        doctorName={
+          selectedDoctor?.user_name ||
+          createdConsultation?.doctor_name ||
+          createdConsultation?.doctor?.name ||
+          'Doctor'
+        }
+        appointmentTime={
+          formData.consultationDate && formData.selectedSlot
+            ? `${format(formData.consultationDate, 'MMMM dd, yyyy')} at ${formData.selectedSlot.startTime}`
+            : createdConsultation?.scheduled_date && createdConsultation?.scheduled_time
+              ? `${createdConsultation.scheduled_date} at ${createdConsultation.scheduled_time}`
+              : ''
+        }
         consultation={createdConsultation}
         meetingLink={meetingLink}
       />

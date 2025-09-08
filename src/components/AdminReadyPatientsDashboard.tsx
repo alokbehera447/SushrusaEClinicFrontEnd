@@ -31,6 +31,7 @@ import {
   formatDateTime, 
   formatTime 
 } from '@/services/consultationService';
+import ConsultationDetailsModal from './forms/ConsultationDetailsModal';
 
 interface AdminReadyPatientsDashboardProps {
   onConsultationSelect?: (consultation: Consultation) => void;
@@ -42,6 +43,8 @@ export const AdminReadyPatientsDashboard: React.FC<AdminReadyPatientsDashboardPr
   const { toast } = useToast();
   const [readyPatients, setReadyPatients] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // Load ready patients using admin endpoint
   const loadReadyPatients = async () => {
@@ -206,7 +209,10 @@ export const AdminReadyPatientsDashboard: React.FC<AdminReadyPatientsDashboardPr
                     <div className="flex items-center gap-2 ml-6">
                       {/* View Details Button */}
                       <Button
-                        onClick={() => onConsultationSelect?.(consultation)}
+                        onClick={() => {
+                          setSelectedConsultation(consultation);
+                          setShowDetailsModal(true);
+                        }}
                         variant="outline"
                         size="sm"
                         className="border-green-500 text-green-700 hover:bg-green-50"
@@ -273,6 +279,29 @@ export const AdminReadyPatientsDashboard: React.FC<AdminReadyPatientsDashboardPr
             </div>
           </CardContent>
         </Card>
+      )}
+      {selectedConsultation && (
+        <ConsultationDetailsModal
+          consultation={{
+            ...selectedConsultation,
+            consultationType: selectedConsultation.consultation_type || 'video',
+            consultationDate: selectedConsultation.scheduled_date,
+            consultationTime: selectedConsultation.scheduled_time,
+            duration: selectedConsultation.duration,
+            chiefComplaint: selectedConsultation.chief_complaint,
+            symptoms: selectedConsultation.symptoms,
+            consultationFee: selectedConsultation.consultation_fee,
+            paymentMethod: selectedConsultation.payment_method || '',
+            paymentStatus: selectedConsultation.payment_status as any,
+            createdAt: selectedConsultation.created_at,
+            updatedAt: selectedConsultation.updated_at,
+            notes: '',
+          }}
+          isOpen={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          userRole="admin"
+          showBasicOnly={true}
+        />
       )}
     </div>
   );

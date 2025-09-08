@@ -90,7 +90,9 @@ const PatientIDCard: React.FC<PatientIDCardProps> = ({
             <div><span className="font-semibold">Gender:</span> {gender || '--'}</div>
             <div><span className="font-semibold">Mobile:</span> {phone || '--'}</div>
           </div>
-          <div className="absolute bottom-2 right-4 text-xs text-orange-600 font-semibold tracking-wide opacity-80">
+          {/* Add space before the label at the bottom */}
+          <div className="mt-6" />
+          <div className="text-xs text-orange-600 font-semibold tracking-wide opacity-80">
             Sushrusa eClinic Virtual ID Card
           </div>
         </div>

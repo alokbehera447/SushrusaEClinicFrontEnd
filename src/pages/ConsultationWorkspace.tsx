@@ -376,12 +376,12 @@ const ConsultationWorkspace: React.FC = () => {
               general_instructions: pres.general_instructions || '',
               next_visit: pres.next_visit || '',
               vital_signs: {
-                pulse: pres.pulse?.toString() || pres.vital_signs?.pulse?.toString() || '',
-                blood_pressure_systolic: pres.blood_pressure_systolic?.toString() || pres.vital_signs?.blood_pressure_systolic?.toString() || '',
-                blood_pressure_diastolic: pres.blood_pressure_diastolic?.toString() || pres.vital_signs?.blood_pressure_diastolic?.toString() || '',
-                temperature: pres.temperature?.toString() || pres.vital_signs?.temperature?.toString() || '',
-                weight: pres.weight?.toString() || pres.vital_signs?.weight?.toString() || '',
-                height: pres.height?.toString() || pres.vital_signs?.height?.toString() || '',
+                pulse: consultData?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || pres.vital_signs?.pulse?.toString() || '',
+                blood_pressure_systolic: consultData?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || pres.vital_signs?.blood_pressure_systolic?.toString() || '',
+                blood_pressure_diastolic: consultData?.vital_signs?.blood_pressure_diastolic?.toString() || pres.blood_pressure_diastolic?.toString() || pres.vital_signs?.blood_pressure_diastolic?.toString() || '',
+                temperature: consultData?.vital_signs?.temperature?.toString() || pres.temperature?.toString() || pres.vital_signs?.temperature?.toString() || '',
+                weight: consultData?.vital_signs?.weight?.toString() || pres.weight?.toString() || pres.vital_signs?.weight?.toString() || '',
+                height: consultData?.vital_signs?.height?.toString() || pres.height?.toString() || pres.vital_signs?.height?.toString() || '',
               },
             });
 
@@ -773,26 +773,34 @@ const ConsultationWorkspace: React.FC = () => {
         dosage_form: 'Tablet'
       });
 
-      if (response.success) {
-        // Add the newly created medication to the prescription
+      let medObj = null;
+      if (response.success && response.data) {
+        if (Array.isArray(response.data.medications) && response.data.medications.length > 0) {
+          medObj = response.data.medications[0];
+        } else if (response.data.medication) {
+          medObj = response.data.medication;
+        }
+      }
+
+      if (medObj) {
         const newMedication = {
           ...medicationForm,
-          medicine_name: response.data.medications[0].name,
-          dosage: response.data.medications[0].strength,
+          medicine_name: medObj.name,
+          dosage: medObj.strength,
           id: Date.now(), // Temporary ID for frontend
         };
-        
         setMedications([...medications, newMedication]);
         setMedicationSearchQuery('');
         setMedicationSearchResults([]);
         setShowSearchResults(false);
         setShowMedicationModal(false);
-        
         toast({
           title: 'Success',
           description: 'Medication added to inventory and prescription',
           variant: 'default'
         });
+      } else {
+        setSearchError('Failed to create medication. Please try again.');
       }
     } catch (error) {
       console.error('Error creating medication:', error);

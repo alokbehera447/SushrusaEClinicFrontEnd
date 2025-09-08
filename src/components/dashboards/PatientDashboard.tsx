@@ -91,6 +91,7 @@ import { useToast } from '@/components/ui/use-toast';
 import PatientOverview from './patient/PatientOverview';
 import PatientConsultations from './patient/PatientConsultations';
 import PatientRecordsManager from './patient/PatientRecordsManager';
+import PatientIDCard from '../patient/PatientIDCard';
 
 // Define interfaces
 interface TransformedPrescription {
@@ -956,12 +957,25 @@ const PatientDashboard = () => {
                     onClick={() => setEditProfileOpen(true)}
                     className="w-full bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white"
                   >
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Edit className="w-5 h-5 mr-2" />
                     Edit Profile
                   </Button>
+                  {/* Patient ID Card at the bottom of Profile Summary */}
+                  {userProfile && (
+                    <div className="mt-6">
+                      <PatientIDCard
+                        name={getDisplayName(userProfile)}
+                        patientId={userProfile.id || 'ID'}
+                        dateOfBirth={userProfile.date_of_birth}
+                        age={userProfile.age}
+                        gender={userProfile.gender}
+                        phone={userProfile.phone}
+                        profilePicture={userProfile.profile_picture}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-
               {/* Health Information */}
               <Card className="lg:col-span-2">
                 <CardHeader>

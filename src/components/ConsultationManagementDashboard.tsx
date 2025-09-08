@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -62,6 +62,7 @@ import {
   formatTime 
 } from '@/services/consultationService';
 import { api } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface ConsultationManagementDashboardProps {
   onConsultationSelect?: (consultation: Consultation) => void;
@@ -87,6 +88,21 @@ interface ReceiptData {
   };
 }
 
+interface VitalSigns {
+  id: string;
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  heart_rate?: number;
+  temperature?: number;
+  respiratory_rate?: number;
+  oxygen_saturation?: number;
+  weight?: number;
+  height?: number;
+  bmi?: number;
+  blood_glucose?: number;
+  notes?: string;
+}
+
 export const ConsultationManagementDashboard: React.FC<ConsultationManagementDashboardProps> = ({
   onConsultationSelect,
   userRole = 'admin', // Default to admin
@@ -96,7 +112,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<ConsultationManagementParams>({
-    status: 'all',
+    status: 'scheduled', // Default to scheduled
     search: '',
     ordering: '-scheduled_date',
     page: 1,
@@ -121,6 +137,39 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
   const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [loadingPrescription, setLoadingPrescription] = useState(false);
+
+  const { user } = useAuth();
+  const [showVitalsModal, setShowVitalsModal] = useState(false);
+  const [vitalsConsultation, setVitalsConsultation] = useState<Consultation | null>(null);
+  const [vitalsForm, setVitalsForm] = useState({
+    blood_pressure_systolic: '',
+    blood_pressure_diastolic: '',
+    heart_rate: '',
+    temperature: '',
+    respiratory_rate: '',
+    oxygen_saturation: '',
+    weight: '',
+    height: '',
+    bmi: '',
+    blood_glucose: '',
+    notes: ''
+  });
+  const [vitalsLoading, setVitalsLoading] = useState(false);
+  const [vitalsError, setVitalsError] = useState<string | null>(null);
+  const [vitalSignsMap, setVitalSignsMap] = useState<Record<string, VitalSigns | null>>({});
+
+  const fetchVitalSigns = useCallback(async (consultationId: string) => {
+    try {
+      const response = await api.get(`/api/consultations/${consultationId}/vital-signs/`);
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setVitalSignsMap(prev => ({ ...prev, [consultationId]: response.data[0] }));
+      } else {
+        setVitalSignsMap(prev => ({ ...prev, [consultationId]: null }));
+      }
+    } catch {
+      setVitalSignsMap(prev => ({ ...prev, [consultationId]: null }));
+    }
+  }, []);
 
   // Load consultation details popup
   const handleViewDetails = async (consultation: Consultation) => {
@@ -210,6 +259,120 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
     }
   };
 
+  const handleOpenVitals = async (consultation: Consultation, mode: 'add' | 'edit') => {
+    setVitalsConsultation(consultation);
+    setShowVitalsModal(true);
+    setVitalsError(null);
+    // Always refetch latest vital signs before opening modal
+    try {
+      const response = await api.get(`/api/consultations/${consultation.id}/vital-signs/`);
+      let v = null;
+      if (response.data && Array.isArray(response.data.results) && response.data.results.length > 0) {
+        v = response.data.results[0];
+        setVitalSignsMap(prev => ({ ...prev, [consultation.id]: v }));
+      } else if (Array.isArray(response.data) && response.data.length > 0) {
+        v = response.data[0];
+        setVitalSignsMap(prev => ({ ...prev, [consultation.id]: v }));
+      } else {
+        setVitalSignsMap(prev => ({ ...prev, [consultation.id]: null }));
+      }
+      if (mode === 'edit' && v) {
+        setVitalsForm({
+          blood_pressure_systolic: v.blood_pressure_systolic !== null && v.blood_pressure_systolic !== undefined ? String(v.blood_pressure_systolic) : '',
+          blood_pressure_diastolic: v.blood_pressure_diastolic !== null && v.blood_pressure_diastolic !== undefined ? String(v.blood_pressure_diastolic) : '',
+          heart_rate: v.heart_rate !== null && v.heart_rate !== undefined ? String(v.heart_rate) : '',
+          temperature: v.temperature !== null && v.temperature !== undefined ? String(v.temperature) : '',
+          respiratory_rate: v.respiratory_rate !== null && v.respiratory_rate !== undefined ? String(v.respiratory_rate) : '',
+          oxygen_saturation: v.oxygen_saturation !== null && v.oxygen_saturation !== undefined ? String(v.oxygen_saturation) : '',
+          weight: v.weight !== null && v.weight !== undefined ? String(v.weight) : '',
+          height: v.height !== null && v.height !== undefined ? String(v.height) : '',
+          bmi: v.bmi !== null && v.bmi !== undefined ? String(v.bmi) : '',
+          blood_glucose: v.blood_glucose !== null && v.blood_glucose !== undefined ? String(v.blood_glucose) : '',
+          notes: v.notes !== null && v.notes !== undefined ? v.notes : ''
+        });
+      } else {
+        setVitalsForm({
+          blood_pressure_systolic: '',
+          blood_pressure_diastolic: '',
+          heart_rate: '',
+          temperature: '',
+          respiratory_rate: '',
+          oxygen_saturation: '',
+          weight: '',
+          height: '',
+          bmi: '',
+          blood_glucose: '',
+          notes: ''
+        });
+      }
+    } catch {
+      setVitalsForm({
+        blood_pressure_systolic: '',
+        blood_pressure_diastolic: '',
+        heart_rate: '',
+        temperature: '',
+        respiratory_rate: '',
+        oxygen_saturation: '',
+        weight: '',
+        height: '',
+        bmi: '',
+        blood_glucose: '',
+        notes: ''
+      });
+    }
+  };
+  const handleCloseVitals = () => {
+    setShowVitalsModal(false);
+    setVitalsConsultation(null);
+    setVitalsForm({
+      blood_pressure_systolic: '',
+      blood_pressure_diastolic: '',
+      heart_rate: '',
+      temperature: '',
+      respiratory_rate: '',
+      oxygen_saturation: '',
+      weight: '',
+      height: '',
+      bmi: '',
+      blood_glucose: '',
+      notes: ''
+    });
+    setVitalsError(null);
+  };
+  const handleVitalsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setVitalsForm({ ...vitalsForm, [e.target.name]: e.target.value });
+  };
+  const handleSubmitVitals = async () => {
+    if (!vitalsConsultation) return;
+    if (!vitalsForm.blood_pressure_systolic) {
+      setVitalsError('Systolic BP is required.');
+      return;
+    }
+    setVitalsLoading(true);
+    setVitalsError(null);
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(vitalsForm).filter(([_, v]) => v !== '')
+      );
+      const existing = vitalSignsMap[vitalsConsultation.id];
+      if (existing) {
+        // Edit mode: PATCH
+        await api.patch(`/api/consultations/${vitalsConsultation.id}/vital-signs/${existing.id}/`, payload);
+        toast({ title: 'Success', description: 'Vital signs updated successfully!' });
+      } else {
+        // Add mode: POST
+        await api.post(`/api/consultations/${vitalsConsultation.id}/vital-signs/`, payload);
+        toast({ title: 'Success', description: 'Vital signs added successfully!' });
+      }
+      handleCloseVitals();
+      loadConsultations();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to save vital signs', variant: 'destructive' });
+    } finally {
+      setVitalsLoading(false);
+    }
+  };
+
   // Load consultations
   const loadConsultations = async () => {
     try {
@@ -245,6 +408,8 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
           };
           setStats(statsData);
         }
+        // Fetch vital signs for each consultation
+        consultationsData.forEach((c: Consultation) => fetchVitalSigns(c.id));
       } else {
         toast({
           title: "Error",
@@ -691,6 +856,28 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
+                      {/* Add Vital Signs Button (admin only) */}
+                      {userRole === 'admin' && (
+                        vitalSignsMap[consultation.id] ? (
+                          <Button
+                            onClick={() => handleOpenVitals(consultation, 'edit')}
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                          >
+                            Edit Vital Signs
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleOpenVitals(consultation, 'add')}
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                          >
+                            Add Vital Signs
+                          </Button>
+                        )
+                      )}
                     </div>
                   </div>
                   
@@ -1030,6 +1217,70 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
               </TabsContent>
             </Tabs>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showVitalsModal} onOpenChange={setShowVitalsModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Vital Signs</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {vitalsError && <div className="text-red-600 text-sm mb-2">{vitalsError}</div>}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs">Systolic BP</label>
+                <Input name="blood_pressure_systolic" value={vitalsForm.blood_pressure_systolic} onChange={handleVitalsChange} placeholder="mmHg" />
+              </div>
+              <div>
+                <label className="text-xs">Diastolic BP</label>
+                <Input name="blood_pressure_diastolic" value={vitalsForm.blood_pressure_diastolic} onChange={handleVitalsChange} placeholder="mmHg" />
+              </div>
+              <div>
+                <label className="text-xs">Heart Rate</label>
+                <Input name="heart_rate" value={vitalsForm.heart_rate} onChange={handleVitalsChange} placeholder="bpm" />
+              </div>
+              <div>
+                <label className="text-xs">Temperature</label>
+                <Input name="temperature" value={vitalsForm.temperature} onChange={handleVitalsChange} placeholder="°C" />
+              </div>
+              <div>
+                <label className="text-xs">Respiratory Rate</label>
+                <Input name="respiratory_rate" value={vitalsForm.respiratory_rate} onChange={handleVitalsChange} placeholder="/min" />
+              </div>
+              <div>
+                <label className="text-xs">SpO₂</label>
+                <Input name="oxygen_saturation" value={vitalsForm.oxygen_saturation} onChange={handleVitalsChange} placeholder="%" />
+              </div>
+              <div>
+                <label className="text-xs">Weight</label>
+                <Input name="weight" value={vitalsForm.weight} onChange={handleVitalsChange} placeholder="kg" />
+              </div>
+              <div>
+                <label className="text-xs">Height</label>
+                <Input name="height" value={vitalsForm.height} onChange={handleVitalsChange} placeholder="cm" />
+              </div>
+              <div>
+                <label className="text-xs">BMI</label>
+                <Input name="bmi" value={vitalsForm.bmi} onChange={handleVitalsChange} placeholder="" />
+              </div>
+              <div>
+                <label className="text-xs">Blood Glucose</label>
+                <Input name="blood_glucose" value={vitalsForm.blood_glucose} onChange={handleVitalsChange} placeholder="mg/dL" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs">Notes</label>
+              <textarea name="notes" value={vitalsForm.notes} onChange={handleVitalsChange} className="w-full border rounded p-2 text-sm" rows={2} />
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <Button variant="outline" onClick={handleCloseVitals} disabled={vitalsLoading}>Cancel</Button>
+              <Button onClick={handleSubmitVitals} disabled={vitalsLoading} className="bg-blue-600 text-white">
+                {vitalsLoading ? <span className="animate-spin mr-2 inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> : null}
+                Save
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
