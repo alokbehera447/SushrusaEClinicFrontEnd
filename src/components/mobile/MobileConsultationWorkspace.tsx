@@ -22,9 +22,13 @@ import {
   Upload,
   Camera,
   Download,
-  CheckCircle
+  CheckCircle,
+  Stethoscope,
+  AlertCircle,
+  History
 } from 'lucide-react';
 import { prescriptionApi, doctorConsultationApi, api } from '@/lib/api';
+import { format } from 'date-fns';
 
 interface PatientProfile {
   id: string;
@@ -38,16 +42,33 @@ interface PatientProfile {
   gender?: string;
   address?: string;
   profile_picture?: string;
+  age?: number;
+  emergency_contact?: string;
+  medical_history?: string;
+  allergies?: string;
+}
+
+interface Doctor {
+  id: string;
+  name: string;
+  specialization: string;
+  qualification: string;
+  registration_number: string;
+  profile_picture?: string;
 }
 
 interface Consultation {
   id: string;
   patient: PatientProfile;
-  doctor: any;
+  doctor: Doctor;
   scheduled_date: string;
   scheduled_time: string;
   status: string;
   chief_complaint?: string;
+  consultation_type?: string;
+  duration_minutes?: number;
+  notes?: string;
+  vital_signs?: any;
 }
 
 interface Prescription {
@@ -79,6 +100,7 @@ const MobileConsultationWorkspace: React.FC = () => {
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [patientProfile, setPatientProfile] = useState<PatientProfile | null>(null);
   const [patientHistory, setPatientHistory] = useState<any[]>([]);
+  const [consultationHistory, setConsultationHistory] = useState<any[]>([]);
   
   // Vital signs state
   const [vitalSigns, setVitalSigns] = useState({
@@ -115,15 +137,16 @@ const MobileConsultationWorkspace: React.FC = () => {
           const pres = await prescriptionApi.getConsultationPrescription(consultationId);
           setPrescription(pres);
           
-          // Set vital signs from prescription
-          if (pres.vital_signs) {
+          // Set vital signs from prescription or consultation
+          const vitals = pres.vital_signs || consultData.vital_signs;
+          if (vitals) {
             setVitalSigns({
-              pulse: pres.vital_signs.pulse?.toString() || '',
-              blood_pressure_systolic: pres.vital_signs.blood_pressure_systolic?.toString() || '',
-              blood_pressure_diastolic: pres.vital_signs.blood_pressure_diastolic?.toString() || '',
-              temperature: pres.vital_signs.temperature?.toString() || '',
-              weight: pres.vital_signs.weight?.toString() || '',
-              height: pres.vital_signs.height?.toString() || '',
+              pulse: vitals.pulse?.toString() || '',
+              blood_pressure_systolic: vitals.blood_pressure_systolic?.toString() || '',
+              blood_pressure_diastolic: vitals.blood_pressure_diastolic?.toString() || '',
+              temperature: vitals.temperature?.toString() || '',
+              weight: vitals.weight?.toString() || '',
+              height: vitals.height?.toString() || '',
             });
           }
           
@@ -131,6 +154,14 @@ const MobileConsultationWorkspace: React.FC = () => {
           setPatientHistory(pres.patient_history || []);
         } catch (err) {
           console.error('Error loading prescription:', err);
+        }
+
+        // Load patient's consultation history
+        try {
+          const historyResponse = await api.get(`/api/consultations/?patient_id=${consultData.patient.id}&limit=5`);
+          setConsultationHistory(historyResponse.data.results || []);
+        } catch (err) {
+          console.error('Error loading consultation history:', err);
         }
       } catch (error) {
         console.error('Error loading consultation:', error);
@@ -276,32 +307,35 @@ const MobileConsultationWorkspace: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-3 py-2 flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/dashboard/consultations')}
-            className="p-2"
+            className="p-1"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h1 className="text-lg font-semibold text-gray-900">Mobile Consultation</h1>
-          <div className="w-9" /> {/* Spacer */}
+          <div className="text-center">
+            <h1 className="text-sm font-semibold text-gray-900">Mobile Consultation</h1>
+            <p className="text-xs text-gray-500">{consultationId}</p>
+          </div>
+          <div className="w-8" /> {/* Spacer */}
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-3 space-y-3">
         {/* Meeting Section */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center">
-              <Video className="w-4 h-4 mr-2 text-blue-600" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center">
+              <Video className="w-3 h-3 mr-2 text-blue-600" />
               Video Consultation
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-              <Video className="w-4 h-4 mr-2" />
+          <CardContent className="pt-0">
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2">
+              <Video className="w-3 h-3 mr-2" />
               Join Meeting
             </Button>
           </CardContent>
@@ -309,30 +343,30 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         {/* Patient Profile */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center">
-              <User className="w-4 h-4 mr-2 text-green-600" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center">
+              <User className="w-3 h-3 mr-2 text-green-600" />
               Patient Profile
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-3">
-              <Avatar className="w-12 h-12">
+          <CardContent className="pt-0">
+            <div className="flex items-center space-x-2">
+              <Avatar className="w-10 h-10">
                 {patientProfile.profile_picture ? (
                   <AvatarImage src={patientProfile.profile_picture} alt={patientProfile.name} />
                 ) : (
-                  <AvatarFallback className="bg-green-100 text-green-700">
+                  <AvatarFallback className="bg-green-100 text-green-700 text-xs">
                     {patientProfile.name?.[0] || 'P'}
                   </AvatarFallback>
                 )}
               </Avatar>
               <div className="flex-1">
-                <h3 className="font-medium text-gray-900">{patientProfile.name}</h3>
-                <p className="text-sm text-gray-600">{patientProfile.phone}</p>
-                <p className="text-sm text-gray-600">{patientProfile.email}</p>
+                <h3 className="font-medium text-gray-900 text-sm">{patientProfile.name}</h3>
+                <p className="text-xs text-gray-600">{patientProfile.phone}</p>
+                <p className="text-xs text-gray-600">{patientProfile.email}</p>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="font-medium text-gray-700">DOB:</span>
                 <p className="text-gray-600">{patientProfile.date_of_birth || 'N/A'}</p>
@@ -341,28 +375,121 @@ const MobileConsultationWorkspace: React.FC = () => {
                 <span className="font-medium text-gray-700">Gender:</span>
                 <p className="text-gray-600">{patientProfile.gender || 'N/A'}</p>
               </div>
+              <div>
+                <span className="font-medium text-gray-700">Age:</span>
+                <p className="text-gray-600">{patientProfile.age || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">ID:</span>
+                <p className="text-gray-600">{patientProfile.id}</p>
+              </div>
+            </div>
+            {patientProfile.address && (
+              <div className="mt-2 text-xs">
+                <span className="font-medium text-gray-700">Address:</span>
+                <p className="text-gray-600">{patientProfile.address}</p>
+              </div>
+            )}
+            {patientProfile.emergency_contact && (
+              <div className="mt-2 text-xs">
+                <span className="font-medium text-gray-700">Emergency Contact:</span>
+                <p className="text-gray-600">{patientProfile.emergency_contact}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Current Consultation Details */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center">
+              <Stethoscope className="w-3 h-3 mr-2 text-blue-600" />
+              Current Consultation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Date:</span>
+                <span className="text-gray-600">{consultation?.scheduled_date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Time:</span>
+                <span className="text-gray-600">{consultation?.scheduled_time}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Status:</span>
+                <Badge variant="outline" className="text-xs">
+                  {consultation?.status}
+                </Badge>
+              </div>
+              {consultation?.chief_complaint && (
+                <div>
+                  <span className="font-medium text-gray-700">Chief Complaint:</span>
+                  <p className="text-gray-600 mt-1">{consultation.chief_complaint}</p>
+                </div>
+              )}
+              {consultation?.doctor && (
+                <div>
+                  <span className="font-medium text-gray-700">Doctor:</span>
+                  <p className="text-gray-600">{consultation.doctor.name} - {consultation.doctor.specialization}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
+        {/* Consultation History */}
+        {consultationHistory.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center">
+                <History className="w-3 h-3 mr-2 text-purple-600" />
+                Consultation History ({consultationHistory.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {consultationHistory.slice(0, 3).map((consultation) => (
+                  <div key={consultation.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                    <div>
+                      <p className="font-medium">{consultation.id}</p>
+                      <p className="text-gray-600">{consultation.scheduled_date}</p>
+                      {consultation.chief_complaint && (
+                        <p className="text-gray-500 truncate max-w-[150px]">{consultation.chief_complaint}</p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {consultation.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Previous Prescriptions */}
         {patientHistory.length > 0 && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center">
-                <FileText className="w-4 h-4 mr-2 text-purple-600" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center">
+                <FileText className="w-3 h-3 mr-2 text-orange-600" />
                 Previous Prescriptions ({patientHistory.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="space-y-2">
                 {patientHistory.slice(0, 3).map((prescription) => (
-                  <div key={prescription.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div key={prescription.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
                     <div>
-                      <p className="text-sm font-medium">CON{prescription.consultation}</p>
-                      <p className="text-xs text-gray-600">{prescription.issued_date}</p>
+                      <p className="font-medium">CON{prescription.consultation}</p>
+                      <p className="text-gray-600">{prescription.issued_date}</p>
+                      {prescription.primary_diagnosis && (
+                        <p className="text-gray-500 truncate max-w-[150px]">{prescription.primary_diagnosis}</p>
+                      )}
                     </div>
-                    <Badge variant={prescription.is_finalized ? "default" : "secondary"}>
+                    <Badge variant={prescription.is_finalized ? "default" : "secondary"} className="text-xs">
                       {prescription.is_finalized ? "Finalized" : "Draft"}
                     </Badge>
                   </div>
@@ -374,86 +501,86 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         {/* Vital Signs */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center">
-              <Heart className="w-4 h-4 mr-2 text-red-600" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center">
+              <Heart className="w-3 h-3 mr-2 text-red-600" />
               Vital Signs
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="pulse" className="text-sm">Pulse (bpm)</Label>
+                <Label htmlFor="pulse" className="text-xs">Pulse (bpm)</Label>
                 <Input
                   id="pulse"
                   type="number"
                   value={vitalSigns.pulse}
                   onChange={(e) => setVitalSigns(prev => ({ ...prev, pulse: e.target.value }))}
                   placeholder="72"
-                  className="mt-1"
+                  className="mt-1 text-xs h-8"
                 />
               </div>
               <div>
-                <Label htmlFor="systolic" className="text-sm">Systolic BP</Label>
+                <Label htmlFor="systolic" className="text-xs">Systolic BP</Label>
                 <Input
                   id="systolic"
                   type="number"
                   value={vitalSigns.blood_pressure_systolic}
                   onChange={(e) => setVitalSigns(prev => ({ ...prev, blood_pressure_systolic: e.target.value }))}
                   placeholder="120"
-                  className="mt-1"
+                  className="mt-1 text-xs h-8"
                 />
               </div>
               <div>
-                <Label htmlFor="diastolic" className="text-sm">Diastolic BP</Label>
+                <Label htmlFor="diastolic" className="text-xs">Diastolic BP</Label>
                 <Input
                   id="diastolic"
                   type="number"
                   value={vitalSigns.blood_pressure_diastolic}
                   onChange={(e) => setVitalSigns(prev => ({ ...prev, blood_pressure_diastolic: e.target.value }))}
                   placeholder="80"
-                  className="mt-1"
+                  className="mt-1 text-xs h-8"
                 />
               </div>
               <div>
-                <Label htmlFor="temperature" className="text-sm">Temperature (°F)</Label>
+                <Label htmlFor="temperature" className="text-xs">Temperature (°F)</Label>
                 <Input
                   id="temperature"
                   type="number"
                   value={vitalSigns.temperature}
                   onChange={(e) => setVitalSigns(prev => ({ ...prev, temperature: e.target.value }))}
                   placeholder="98.6"
-                  className="mt-1"
+                  className="mt-1 text-xs h-8"
                 />
               </div>
               <div>
-                <Label htmlFor="weight" className="text-sm">Weight (kg)</Label>
+                <Label htmlFor="weight" className="text-xs">Weight (kg)</Label>
                 <Input
                   id="weight"
                   type="number"
                   value={vitalSigns.weight}
                   onChange={(e) => setVitalSigns(prev => ({ ...prev, weight: e.target.value }))}
                   placeholder="70"
-                  className="mt-1"
+                  className="mt-1 text-xs h-8"
                 />
               </div>
               <div>
-                <Label htmlFor="height" className="text-sm">Height (cm)</Label>
+                <Label htmlFor="height" className="text-xs">Height (cm)</Label>
                 <Input
                   id="height"
                   type="number"
                   value={vitalSigns.height}
                   onChange={(e) => setVitalSigns(prev => ({ ...prev, height: e.target.value }))}
                   placeholder="170"
-                  className="mt-1"
+                  className="mt-1 text-xs h-8"
                 />
               </div>
             </div>
             <Button 
               onClick={handleSaveVitalSigns}
-              className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white"
+              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs py-2"
             >
-              <CheckCircle className="w-4 h-4 mr-2" />
+              <CheckCircle className="w-3 h-3 mr-2" />
               Save Vital Signs
             </Button>
           </CardContent>
@@ -461,13 +588,13 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         {/* Photo Upload */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center">
-              <Camera className="w-4 h-4 mr-2 text-orange-600" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center">
+              <Camera className="w-3 h-3 mr-2 text-orange-600" />
               Prescription Image
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <input
               ref={fileInputRef}
               type="file"
@@ -480,23 +607,23 @@ const MobileConsultationWorkspace: React.FC = () => {
               <Button
                 onClick={handleCameraCapture}
                 variant="outline"
-                className="w-full border-dashed border-2 border-gray-300 hover:border-orange-500"
+                className="w-full border-dashed border-2 border-gray-300 hover:border-orange-500 text-xs py-3"
               >
-                <Upload className="w-4 h-4 mr-2" />
+                <Upload className="w-3 h-3 mr-2" />
                 Upload Prescription Image
               </Button>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">Image uploaded successfully</p>
-                  <p className="text-xs text-gray-500">{uploadedImage.name}</p>
+                  <p className="text-xs text-gray-600 mb-1">Image uploaded successfully</p>
+                  <p className="text-xs text-gray-500 truncate">{uploadedImage.name}</p>
                 </div>
                 <Button
                   onClick={handleCameraCapture}
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-xs py-2"
                 >
-                  <Camera className="w-4 h-4 mr-2" />
+                  <Camera className="w-3 h-3 mr-2" />
                   Change Image
                 </Button>
               </div>
@@ -506,20 +633,20 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         {/* Generate PDF */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4">
             <Button
               onClick={handleGeneratePDF}
               disabled={!uploadedImage || generating}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white h-10 text-sm"
             >
               {generating ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Generating PDF...
                 </>
               ) : (
                 <>
-                  <Download className="w-5 h-5 mr-2" />
+                  <Download className="w-4 h-4 mr-2" />
                   Generate Prescription PDF
                 </>
               )}
