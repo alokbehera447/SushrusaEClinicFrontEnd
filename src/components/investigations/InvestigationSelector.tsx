@@ -155,13 +155,16 @@ export default function InvestigationSelector({
 
       const newInvestigations = await investigationService.addInvestigationsToPrescription(request);
       
+      // Fetch all investigations for this prescription to get the complete list
+      const allInvestigations = await investigationService.getPrescriptionInvestigations(prescriptionId);
+      
       // Reset form
       setSelectedTests(new Set());
       setInvestigationDetails({});
       setShowAddForm(false);
       
-      // Notify parent component
-      onInvestigationsUpdated(newInvestigations);
+      // Notify parent component with all investigations
+      onInvestigationsUpdated(allInvestigations);
       
       toast({
         title: "Success",
