@@ -721,11 +721,11 @@ const ConsultationWorkspace: React.FC = () => {
     
     // If consultation doesn't have clinic, try to get from doctor's clinic associations
     // For now, using a default clinic ID - in production, you'd query the doctor's clinic
-    return 'CLI001'; // Using a valid clinic ID from the database
+    return 'CLI011'; // Using a valid clinic ID from the database (CLI011 exists)
     
     // TODO: In production, implement this logic:
     // const doctorClinics = await api.get(`/api/doctors/${consultation.doctor_id}/clinics/`);
-    // return doctorClinics.data[0]?.clinic_id || 'CLI001';
+    // return doctorClinics.data[0]?.clinic_id || 'CLI011';
   };
 
   // Search medications when user types
