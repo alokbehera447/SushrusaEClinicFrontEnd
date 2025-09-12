@@ -60,9 +60,9 @@ export const medicationService = {
     return response.data;
   },
 
-  // Auto-create medication in inventory
-  async autoCreateMedication(clinicId: string, medication: AutoCreateMedicationRequest): Promise<MedicationSearchResponse> {
-    const response = await api.post(`/api/eclinic/${clinicId}/inventory/medications/auto-create/`, medication);
+  // Auto-create medication in global catalog
+  async autoCreateMedication(medication: AutoCreateMedicationRequest): Promise<MedicationSearchResponse> {
+    const response = await api.post(`/api/eclinic/medications/public-auto-create/`, medication);
     return response.data;
   }
 };

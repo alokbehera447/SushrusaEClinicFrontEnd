@@ -782,18 +782,17 @@ const ConsultationWorkspace: React.FC = () => {
     if (!medicationSearchQuery.trim()) return;
 
     try {
-      const clinicId = getClinicId();
-      const response = await medicationService.autoCreateMedication(clinicId, {
+      const response = await medicationService.autoCreateMedication({
         name: medicationSearchQuery,
         dosage_form: 'Tablet'
       });
 
       let medObj = null;
       if (response.success && response.data) {
-        if (Array.isArray(response.data.medications) && response.data.medications.length > 0) {
-          medObj = response.data.medications[0];
-        } else if (response.data.medication) {
+        if (response.data.medication) {
           medObj = response.data.medication;
+        } else if (Array.isArray(response.data.medications) && response.data.medications.length > 0) {
+          medObj = response.data.medications[0];
         }
       }
 
