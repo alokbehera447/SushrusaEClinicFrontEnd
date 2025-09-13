@@ -163,25 +163,35 @@ const ManageAdmins: React.FC<ManageAdminsProps> = ({ isDarkMode = false }) => {
       .finally(() => setLoading(false));
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!showEdit || !editFormData.name || !editFormData.email || !editFormData.phone) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
     }
     
     setLoading(true);
-    api.put(`/api/auth/superadmin/admins/${showEdit.id}/`, editFormData)
-      .then(() => {
-        toast({ title: "Admin updated successfully" });
-        setShowEdit(null);
-        setEditFormData({ name: '', email: '', phone: '' });
-        fetchAdmins();
-      })
-      .catch((error) => {
-        console.error('Update admin error:', error);
-        toast({ title: "Failed to update admin", variant: "destructive" });
-      })
-      .finally(() => setLoading(false));
+    try {
+      const response = await api.put(`/api/auth/superadmin/admins/${showEdit.id}/`, editFormData);
+      
+      // Update the admin in the local state immediately
+      const updatedAdmin = response.data.data;
+      setAdmins(prevAdmins => 
+        prevAdmins.map(admin => 
+          admin.id === showEdit.id 
+            ? { ...admin, ...updatedAdmin }
+            : admin
+        )
+      );
+      
+      toast({ title: "Admin updated successfully" });
+      setShowEdit(null);
+      setEditFormData({ name: '', email: '', phone: '' });
+    } catch (error) {
+      console.error('Update admin error:', error);
+      toast({ title: "Failed to update admin", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeactivate = (admin: Admin) => {
