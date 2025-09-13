@@ -58,7 +58,7 @@ import {
 import { toast } from 'sonner';
 import { formatDate, formatTime, formatDateTime } from '@/lib/utils';
 
-const ConsultationDetailsPage: React.FC = () => {
+const ConsultationDetails: React.FC = () => {
   const { consultationId } = useParams<{ consultationId: string }>();
   const navigate = useNavigate();
   
@@ -1036,4 +1036,4 @@ const ConsultationDetailsPage: React.FC = () => {
   );
 };
 
-export default ConsultationDetailsPage;
+export default ConsultationDetails;
