@@ -72,6 +72,7 @@ const ConsultationDetails: React.FC = () => {
   // Separate state for prescription and receipt data
   const [prescriptionData, setPrescriptionData] = useState<any>(null);
   const [receiptData, setReceiptData] = useState<any>(null);
+  const [prescriptionPdfVersions, setPrescriptionPdfVersions] = useState<any[]>([]);
   const [loadingPrescription, setLoadingPrescription] = useState(false);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([
@@ -105,10 +106,23 @@ const ConsultationDetails: React.FC = () => {
       const prescription = await prescriptionApi.getConsultationPrescription(consultationId);
       setPrescriptionData(prescription);
       console.log('Prescription data loaded:', prescription);
+      
+      // Fetch PDF versions for the prescription
+      if (prescription && prescription.id) {
+        try {
+          const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+          setPrescriptionPdfVersions(pdfVersions);
+          console.log('Prescription PDF versions loaded:', pdfVersions);
+        } catch (pdfError) {
+          console.error('Error fetching prescription PDF versions:', pdfError);
+          setPrescriptionPdfVersions([]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching prescription:', error);
       // Don't show error toast for prescription as it might not exist
       setPrescriptionData(null);
+      setPrescriptionPdfVersions([]);
     } finally {
       setLoadingPrescription(false);
     }
@@ -123,10 +137,16 @@ const ConsultationDetails: React.FC = () => {
       const receipt = await adminConsultationApi.getReceipt(consultationId);
       setReceiptData(receipt);
       console.log('Receipt data loaded:', receipt);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching receipt:', error);
-      // Don't show error toast for receipt as it might not exist
-      setReceiptData(null);
+      // Handle 404 specifically - receipt doesn't exist yet
+      if (error.response?.status === 404) {
+        console.log('No receipt found for this consultation');
+        setReceiptData(null);
+      } else {
+        // For other errors, still don't show toast as receipt might not exist
+        setReceiptData(null);
+      }
     } finally {
       setLoadingReceipt(false);
     }
@@ -745,217 +765,6 @@ const ConsultationDetails: React.FC = () => {
               </Card>
             )}
 
-            {/* Prescription */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => toggleSection('prescription')}
-              >
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center text-lg font-semibold">
-                    <Pill className="w-5 h-5 mr-2 text-green-600" />
-                    Prescription
-                    {loadingPrescription && (
-                      <div className="ml-2 w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
-                    )}
-                  </CardTitle>
-                  {expandedSections.has('prescription') ? 
-                    <ChevronDown className="w-5 h-5 text-gray-400" /> : 
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  }
-                </div>
-              </CardHeader>
-              
-              {expandedSections.has('prescription') && (
-                <CardContent className="space-y-4">
-                  {loadingPrescription ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-center">
-                        <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading prescription data...</p>
-                      </div>
-                    </div>
-                  ) : prescriptionData ? (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Issued Date</label>
-                          <p className="text-gray-900">{formatDate(prescriptionData.issued_date || prescriptionData.created_at)}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Primary Diagnosis</label>
-                          <p className="text-gray-900">{prescriptionData.primary_diagnosis || 'Not specified'}</p>
-                        </div>
-                      </div>
-                      
-                      {prescriptionData.general_instructions && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">General Instructions</label>
-                          <p className="text-gray-900 mt-1">{prescriptionData.general_instructions}</p>
-                        </div>
-                      )}
-                      
-                      {prescriptionData.medications && prescriptionData.medications.length > 0 && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Medications</label>
-                          <div className="mt-2 space-y-3">
-                            {prescriptionData.medications.map((medication: any, index: number) => (
-                              <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900">{medication.medication_name}</h4>
-                                    <div className="mt-1 space-y-1 text-sm text-gray-600">
-                                    <p><span className="font-medium">Dosage:</span> {medication.dosage}</p>
-                                    <p><span className="font-medium">Frequency:</span> {medication.frequency}</p>
-                                    <p><span className="font-medium">Duration:</span> {medication.duration}</p>
-                                    {medication.instructions && (
-                                      <p><span className="font-medium">Instructions:</span> {medication.instructions}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                <Badge variant="outline">#{medication.order || index + 1}</Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* PDF Download Button */}
-                    {prescriptionData.pdf_url && (
-                      <div className="flex justify-end pt-4 border-t">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => window.open(prescriptionData.pdf_url, '_blank')}
-                          className="flex items-center gap-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          Download PDF
-                        </Button>
-                      </div>
-                    )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Pill className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">No prescription found for this consultation</p>
-                    </div>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Receipt */}
-            <Card className="border-0 shadow-lg">
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => toggleSection('receipt')}
-              >
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center text-lg font-semibold">
-                    <Receipt className="w-5 h-5 mr-2 text-blue-600" />
-                    Receipt
-                    {loadingReceipt && (
-                      <div className="ml-2 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    )}
-                  </CardTitle>
-                  {expandedSections.has('receipt') ? 
-                    <ChevronDown className="w-5 h-5 text-gray-400" /> : 
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  }
-                </div>
-              </CardHeader>
-              
-              {expandedSections.has('receipt') && (
-                <CardContent className="space-y-4">
-                  {loadingReceipt ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-center">
-                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading receipt data...</p>
-                      </div>
-                    </div>
-                  ) : receiptData ? (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Receipt Number</label>
-                          <p className="text-gray-900">{receiptData.receipt_number || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Amount</label>
-                          <p className="text-gray-900">₹{receiptData.amount || consultation?.consultation_fee || '0'}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Payment Method</label>
-                          <p className="text-gray-900">{receiptData.payment_method || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Payment Status</label>
-                          <Badge className={receiptData.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
-                            {receiptData.payment_status || 'Pending'}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      {receiptData.issued_at && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Issued At</label>
-                          <p className="text-gray-900">{formatDateTime(receiptData.issued_at)}</p>
-                        </div>
-                      )}
-                      
-                      {receiptData.issued_by && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500">Issued By</label>
-                          <p className="text-gray-900">{receiptData.issued_by}</p>
-                        </div>
-                      )}
-                      
-                      {/* PDF Download Button */}
-                      {receiptData.pdf_url && (
-                        <div className="flex justify-end pt-4 border-t">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(receiptData.pdf_url, '_blank')}
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download PDF
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">No receipt found for this consultation</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="mt-4"
-                        onClick={async () => {
-                          try {
-                            // Generate receipt
-                            const response = await adminConsultationApi.generateReceipt(consultationId!);
-                            setReceiptData(response);
-                            toast.success('Receipt generated successfully');
-                          } catch (error) {
-                            console.error('Error generating receipt:', error);
-                            toast.error('Failed to generate receipt');
-                          }
-                        }}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Generate Receipt
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              )}
-            </Card>
 
             {/* Attachments */}
             {consultation.attachments && consultation.attachments.length > 0 && (
@@ -1052,33 +861,215 @@ const ConsultationDetails: React.FC = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Quick Actions */}
+            {/* Chief Complaint & Symptoms */}
             <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleSection('complaint-symptoms')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-lg font-semibold">
+                    <MessageSquare className="w-5 h-5 mr-2 text-orange-600" />
+                    Chief Complaint & Symptoms
+                  </CardTitle>
+                  {expandedSections.has('complaint-symptoms') ? 
+                    <ChevronDown className="w-5 h-5 text-gray-400" /> : 
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  }
+                </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full justify-start" variant="outline">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Consultation
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Add Note
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Add Attachment
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <ClipboardList className="w-4 h-4 mr-2" />
-                  Add Diagnosis
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <Activity className="w-4 h-4 mr-2" />
-                  Record Vitals
-                </Button>
-                {consultation.doctor_meeting_link && (
+              
+              {expandedSections.has('complaint-symptoms') && (
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Chief Complaint</label>
+                    <p className="text-gray-900 mt-1">{consultation.chief_complaint || 'Not specified'}</p>
+                  </div>
+                  
+                  {consultation.symptoms && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Symptoms</label>
+                      <p className="text-gray-900 mt-1">{consultation.symptoms}</p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Prescription */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleSection('prescription')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-lg font-semibold">
+                    <Pill className="w-5 h-5 mr-2 text-green-600" />
+                    Prescription
+                    {loadingPrescription && (
+                      <div className="ml-2 w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                  </CardTitle>
+                  {expandedSections.has('prescription') ? 
+                    <ChevronDown className="w-5 h-5 text-gray-400" /> : 
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  }
+                </div>
+              </CardHeader>
+              
+              {expandedSections.has('prescription') && (
+                <CardContent className="space-y-4">
+                  {loadingPrescription ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-center">
+                        <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading prescription data...</p>
+                      </div>
+                    </div>
+                  ) : prescriptionData ? (
+                    <>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Issued Date</label>
+                          <p className="text-gray-900 text-sm">{formatDate(prescriptionData.issued_date || prescriptionData.created_at)}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Primary Diagnosis</label>
+                          <p className="text-gray-900 text-sm">{prescriptionData.primary_diagnosis || 'Not specified'}</p>
+                        </div>
+                      </div>
+                      
+                      {prescriptionData.general_instructions && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Instructions</label>
+                          <p className="text-gray-900 text-sm mt-1">{prescriptionData.general_instructions}</p>
+                        </div>
+                      )}
+                      
+                      {prescriptionPdfVersions.length > 0 && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 mb-2 block">Latest PDF</label>
+                          <div className="flex flex-wrap gap-2">
+                            {prescriptionPdfVersions.slice(0, 2).map((pdf: any, index: number) => (
+                              <Button 
+                                key={pdf.id}
+                                variant={index === 0 ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => window.open(pdf.download_url || pdf.file_url, '_blank')}
+                                className="flex items-center gap-1 text-xs"
+                              >
+                                <Download className="w-3 h-3" />
+                                {index === 0 ? 'Latest' : `V${pdf.version}`}
+                              </Button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            By Dr. {prescriptionPdfVersions[0]?.generated_by?.name || 'Unknown'}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <Pill className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 text-sm">No prescription found</p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Receipt */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleSection('receipt')}
+              >
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-lg font-semibold">
+                    <Receipt className="w-5 h-5 mr-2 text-blue-600" />
+                    Receipt
+                    {loadingReceipt && (
+                      <div className="ml-2 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                  </CardTitle>
+                  {expandedSections.has('receipt') ? 
+                    <ChevronDown className="w-5 h-5 text-gray-400" /> : 
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  }
+                </div>
+              </CardHeader>
+              
+              {expandedSections.has('receipt') && (
+                <CardContent className="space-y-4">
+                  {loadingReceipt ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-center">
+                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading receipt data...</p>
+                      </div>
+                    </div>
+                  ) : receiptData ? (
+                    <>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Amount</label>
+                          <p className="text-gray-900 text-sm">₹{receiptData.amount || consultation?.consultation_fee || '0'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Payment Status</label>
+                          <Badge className={receiptData.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
+                            {receiptData.payment_status || 'Pending'}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {receiptData.pdf_url && (
+                        <div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(receiptData.pdf_url, '_blank')}
+                            className="w-full flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download Receipt PDF
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <Receipt className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 text-sm">No receipt found</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="mt-2"
+                        onClick={async () => {
+                          try {
+                            const response = await adminConsultationApi.generateReceipt(consultationId!);
+                            setReceiptData(response);
+                            toast.success('Receipt generated successfully');
+                          } catch (error) {
+                            console.error('Error generating receipt:', error);
+                            toast.error('Failed to generate receipt');
+                          }
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Generate Receipt
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Join Meeting */}
+            {consultation.doctor_meeting_link && (
+              <Card className="border-0 shadow-lg">
+                <CardContent className="pt-6">
                   <Button 
                     className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => window.open(consultation.doctor_meeting_link, '_blank')}
@@ -1086,9 +1077,9 @@ const ConsultationDetails: React.FC = () => {
                     <Video className="w-4 h-4 mr-2" />
                     Join Meeting
                   </Button>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Consultation Timeline */}
             <Card className="border-0 shadow-lg">
