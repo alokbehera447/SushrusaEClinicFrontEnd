@@ -183,6 +183,122 @@ export interface Consultation {
   doctor_meeting_link?: string;
 }
 
+// Enhanced consultation details interface with all related data
+export interface ConsultationDetails extends Consultation {
+  patient_phone?: string;
+  patient_email?: string;
+  patient_age?: number;
+  patient_gender?: string;
+  doctor_phone?: string;
+  doctor_email?: string;
+  doctor_specialty?: string;
+  recorded_symptoms?: ConsultationSymptom[];
+  diagnoses?: ConsultationDiagnosis[];
+  vital_signs?: ConsultationVitalSigns;
+  attachments?: ConsultationAttachment[];
+  notes?: ConsultationNote[];
+  reschedules?: ConsultationReschedule[];
+  prescription_data?: PrescriptionDetails;
+}
+
+export interface ConsultationSymptom {
+  id: number;
+  consultation: string;
+  symptom: string;
+  severity: 'mild' | 'moderate' | 'severe';
+  duration: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface ConsultationDiagnosis {
+  id: number;
+  consultation: string;
+  diagnosis: string;
+  diagnosis_type: 'primary' | 'secondary' | 'differential' | 'provisional';
+  icd_code: string;
+  notes: string;
+  confidence_level: 'low' | 'medium' | 'high';
+  created_at: string;
+}
+
+export interface ConsultationVitalSigns {
+  id: number;
+  consultation: string;
+  blood_pressure_systolic?: number;
+  blood_pressure_diastolic?: number;
+  heart_rate?: number;
+  temperature?: number;
+  respiratory_rate?: number;
+  oxygen_saturation?: number;
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  blood_glucose?: number;
+  notes: string;
+  recorded_at: string;
+  recorded_by?: string;
+}
+
+export interface ConsultationAttachment {
+  id: number;
+  consultation: string;
+  file: string;
+  attachment_type: 'image' | 'document' | 'lab_report' | 'prescription' | 'xray' | 'scan' | 'other';
+  title: string;
+  description: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+export interface ConsultationNote {
+  id: number;
+  consultation: string;
+  note_type: 'general' | 'examination' | 'treatment' | 'advice' | 'follow_up';
+  content: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsultationReschedule {
+  id: number;
+  consultation: string;
+  old_date: string;
+  old_time: string;
+  new_date: string;
+  new_time: string;
+  reason: string;
+  requested_by: string;
+  created_at: string;
+}
+
+export interface PrescriptionDetails {
+  id: string;
+  issued_date: string;
+  issued_time: string;
+  primary_diagnosis: string;
+  patient_previous_history: string;
+  general_instructions: string;
+  diet_instructions: string;
+  lifestyle_advice: string;
+  next_visit: string;
+  follow_up_notes: string;
+  is_finalized: boolean;
+  medications: PrescriptionMedication[];
+}
+
+export interface PrescriptionMedication {
+  id: string;
+  prescription: string;
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+  order: number;
+}
+
 export interface Prescription {
   id: string;
   consultation: string;
@@ -2050,6 +2166,36 @@ export const adminConsultationApi = {
   // Get consultation by ID (alias for getConsultation)
   getConsultationById: async (consultationId: string): Promise<Consultation> => {
     const response = await api.get<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`);
+    return response.data.data;
+  },
+
+  // Get detailed consultation information with all related data
+  getConsultationDetails: async (consultationId: string): Promise<ConsultationDetails> => {
+    const response = await api.get<ApiResponse<ConsultationDetails>>(`/api/consultations/${consultationId}/`);
+    return response.data.data;
+  },
+
+  // Get consultation vital signs
+  getConsultationVitalSigns: async (consultationId: string): Promise<ConsultationVitalSigns> => {
+    const response = await api.get<ApiResponse<ConsultationVitalSigns>>(`/api/consultations/${consultationId}/vital-signs/`);
+    return response.data.data;
+  },
+
+  // Get consultation attachments/documents
+  getConsultationAttachments: async (consultationId: string): Promise<ConsultationAttachment[]> => {
+    const response = await api.get<ApiResponse<ConsultationAttachment[]>>(`/api/consultations/${consultationId}/documents/`);
+    return response.data.data;
+  },
+
+  // Get consultation notes
+  getConsultationNotes: async (consultationId: string): Promise<ConsultationNote[]> => {
+    const response = await api.get<ApiResponse<ConsultationNote[]>>(`/api/consultations/${consultationId}/notes/`);
+    return response.data.data;
+  },
+
+  // Get consultation diagnoses
+  getConsultationDiagnoses: async (consultationId: string): Promise<ConsultationDiagnosis[]> => {
+    const response = await api.get<ApiResponse<ConsultationDiagnosis[]>>(`/api/consultations/${consultationId}/diagnosis/`);
     return response.data.data;
   },
 

@@ -21,7 +21,7 @@ import PatientDashboardPage from "./pages/PatientDashboard";
 import ConsultationMeeting from "./pages/ConsultationMeeting";
 import ConsultationWorkspace from "./pages/ConsultationWorkspace";
 import SlotManagementPage from "./pages/SlotManagementPage";
-import ConsultationDetailPage from "./pages/ConsultationDetailPage";
+import ConsultationDetails from "./pages/ConsultationDetails";
 
 // Import all workflow components
 import AppointmentBooking from "@/components/workflow/AppointmentBooking";
@@ -88,7 +88,7 @@ const App = () => (
             } />
             <Route path="/dashboard/consultations/:consultationId" element={
               <ProtectedRoute requiredRole="admin">
-                <ConsultationDetailPage />
+                <ConsultationDetails />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/consultations/new" element={
