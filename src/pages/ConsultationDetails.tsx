@@ -45,7 +45,8 @@ import {
   ExternalLink,
   ChevronRight,
   ChevronDown,
-  Receipt
+  Receipt,
+  Plus
 } from 'lucide-react';
 import { 
   adminConsultationApi, 
