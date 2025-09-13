@@ -304,8 +304,10 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
   // Handle consultation actions
   const handleConsultationAction = async (action: string, consultation: Consultation) => {
     try {
+      console.log('🔍 HandleConsultationAction called:', { action, consultationId: consultation.id });
       switch (action) {
         case 'view':
+          console.log('🚀 Navigating to:', `/dashboard/consultations/${consultation.id}`);
           navigate(`/dashboard/consultations/${consultation.id}`);
           break;
         case 'edit':
@@ -716,7 +718,12 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleConsultationAction('view', consultation)}>
+                              <DropdownMenuItem onClick={(e) => {
+                                console.log('🖱️ View Details button clicked:', { consultationId: consultation.id });
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleConsultationAction('view', consultation);
+                              }}>
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
