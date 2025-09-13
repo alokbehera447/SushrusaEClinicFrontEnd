@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, X, Stethoscope, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Search, Plus, X, Stethoscope, Clock, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import investigationService, { 
   InvestigationTest, 
@@ -179,6 +179,26 @@ export default function InvestigationSelector({
     }
   };
 
+  const handleRemoveInvestigation = async (investigationId: number) => {
+    try {
+      setLoading(true);
+      await investigationService.deleteInvestigation(investigationId);
+      
+      // Fetch updated investigations list
+      const updatedInvestigations = await investigationService.getPrescriptionInvestigations(prescriptionId);
+      
+      // Notify parent component with updated investigations
+      onInvestigationsUpdated(updatedInvestigations);
+      
+      toast.success('Investigation removed successfully');
+    } catch (error) {
+      console.error('Error removing investigation:', error);
+      toast.error('Failed to remove investigation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getPriorityIcon = (priority: 'routine' | 'urgent' | 'emergency') => {
     const IconComponent = priorityIcons[priority];
     return <IconComponent className="w-4 h-4" />;
@@ -286,10 +306,7 @@ export default function InvestigationSelector({
                           
                           <p className="text-sm text-gray-600 mb-2">{test.description}</p>
                           
-                          <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
-                            <div>
-                              <span className="font-medium">Normal Range:</span> {test.normal_range}
-                            </div>
+                          <div className="text-xs text-gray-500">
                             <div>
                               <span className="font-medium">Unit:</span> {test.unit}
                             </div>
@@ -298,12 +315,6 @@ export default function InvestigationSelector({
                           {test.preparation_instructions && (
                             <div className="mt-2 text-xs text-gray-500">
                               <span className="font-medium">Preparation:</span> {test.preparation_instructions}
-                            </div>
-                          )}
-                          
-                          {test.estimated_cost && (
-                            <div className="mt-2 text-sm font-medium text-green-600">
-                              Estimated Cost: ₹{test.estimated_cost}
                             </div>
                           )}
                         </div>
@@ -421,9 +432,21 @@ export default function InvestigationSelector({
                     </div>
                   </div>
                   
-                  <Badge variant="outline" className="text-xs">
-                    {investigation.test.code}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {investigation.test.code}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveInvestigation(investigation.id)}
+                      disabled={loading}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title="Remove investigation"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
