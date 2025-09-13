@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -108,6 +109,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
   userRole = 'admin', // Default to admin
   assignedClinicId // Add assigned clinic ID
 }) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -171,12 +173,10 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
     }
   }, []);
 
-  // Load consultation details popup
+  // Navigate to consultation details page
   const handleViewDetails = async (consultation: Consultation) => {
-    setSelectedConsultation(consultation);
-    setIsPopupOpen(true);
-    await loadReceipt(consultation.id);
-    await loadPrescription(consultation.id);
+    console.log('🚀 Navigating to consultation details page:', `/dashboard/consultations/${consultation.id}`);
+    navigate(`/dashboard/consultations/${consultation.id}`);
   };
 
   const loadReceipt = async (consultationId: string) => {
