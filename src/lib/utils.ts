@@ -5,6 +5,62 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Date formatting utilities
+export function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+}
+
+export function formatTime(timeString: string): string {
+  try {
+    // Handle both time strings and datetime strings
+    let time: Date;
+    if (timeString.includes('T')) {
+      time = new Date(timeString);
+    } else {
+      // If it's just a time string, create a date object for today with that time
+      const today = new Date();
+      const [hours, minutes] = timeString.split(':');
+      time = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
+    }
+    
+    return time.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return timeString;
+  }
+}
+
+export function formatDateTime(dateTimeString: string): string {
+  try {
+    const dateTime = new Date(dateTimeString);
+    return dateTime.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (error) {
+    console.error('Error formatting datetime:', error);
+    return dateTimeString;
+  }
+}
+
 // API base URL utility
 // export const API_BASE_URL = 'https://sushrusaeclinic.com';
 export const API_BASE_URL = 'http://127.0.0.1:8000';  
