@@ -108,8 +108,8 @@ const ConsultationDetails: React.FC = () => {
       setPrescriptionData(prescription);
       console.log('Prescription data loaded:', prescription);
       
-      // Fetch PDF versions for the prescription
-      if (prescription && prescription.id) {
+      // Fetch PDF versions for the prescription (only if finalized)
+      if (prescription && prescription.id && prescription.is_finalized) {
         try {
           const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
           setPrescriptionPdfVersions(pdfVersions);
@@ -118,6 +118,9 @@ const ConsultationDetails: React.FC = () => {
           console.error('Error fetching prescription PDF versions:', pdfError);
           setPrescriptionPdfVersions([]);
         }
+      } else if (prescription && prescription.id && !prescription.is_finalized) {
+        console.log('Prescription not finalized yet, no PDF versions available');
+        setPrescriptionPdfVersions([]);
       }
     } catch (error) {
       console.error('Error fetching prescription:', error);
@@ -947,26 +950,39 @@ const ConsultationDetails: React.FC = () => {
                         </div>
                       )}
                       
-                      {prescriptionPdfVersions.length > 0 && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 mb-2 block">Latest PDF</label>
-                          <div className="flex flex-wrap gap-2">
-                            {prescriptionPdfVersions.slice(0, 2).map((pdf: any, index: number) => (
-                              <Button 
-                                key={pdf.id}
-                                variant={index === 0 ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => window.open(pdf.download_url || pdf.file_url, '_blank')}
-                                className="flex items-center gap-1 text-xs"
-                              >
-                                <Download className="w-3 h-3" />
-                                {index === 0 ? 'Latest' : `V${pdf.version}`}
-                              </Button>
-                            ))}
+                      {prescriptionData.is_finalized ? (
+                        prescriptionPdfVersions.length > 0 ? (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500 mb-2 block">Latest PDF</label>
+                            <div className="flex flex-wrap gap-2">
+                              {prescriptionPdfVersions.slice(0, 2).map((pdf: any, index: number) => (
+                                <Button 
+                                  key={pdf.id}
+                                  variant={index === 0 ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => window.open(pdf.download_url || pdf.file_url, '_blank')}
+                                  className="flex items-center gap-1 text-xs"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  {index === 0 ? 'Latest' : `V${pdf.version}`}
+                                </Button>
+                              ))}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              By Dr. {prescriptionPdfVersions[0]?.generated_by?.name || 'Unknown'}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            By Dr. {prescriptionPdfVersions[0]?.generated_by?.name || 'Unknown'}
-                          </p>
+                        ) : (
+                          <div className="text-center py-2">
+                            <AlertCircle className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+                            <p className="text-xs text-orange-600">Prescription finalized but no PDF generated</p>
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-2">
+                          <FileText className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                          <p className="text-xs text-blue-600">Prescription not finalized yet</p>
+                          <p className="text-xs text-gray-500 mt-1">PDF will be available after finalization</p>
                         </div>
                       )}
                     </>
