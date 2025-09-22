@@ -44,6 +44,7 @@ import {
 } from '@/services/patientService';
 import { adminPatientApi } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 // OTP Verification Modal Component
 interface OTPVerificationModalProps {
@@ -171,6 +172,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
   showBookConsultation = false
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [patients, setPatients] = useState<PatientProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useState<PatientSearchParams>({
@@ -263,14 +265,25 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
   const handleViewPatientDetails = async (patient: PatientProfile) => {
     console.log('🔍 handleViewPatientDetails called for patient:', patient.id);
     
-    // For testing - bypass API call and show modal directly
-    console.log('🎯 Showing OTP modal directly for testing');
+    // Check if user is superadmin - if so, bypass OTP authentication
+    if (user?.role === 'superadmin') {
+      console.log('🔑 Superadmin detected - bypassing OTP authentication');
+      // Directly navigate to patient details without OTP
+      if (onPatientSelect) {
+        onPatientSelect(patient);
+      } else {
+        // Navigate to patient dashboard directly
+        navigate(`/dashboard/patients/${patient.id}`);
+      }
+      return;
+    }
+    
+    // For admin users - require OTP authentication
+    console.log('🔒 Admin user - requiring OTP authentication');
     setPendingPatient(patient);
     setShowOTPModal(true);
     setOtpValue('');
     setOtpError('');
-    
-    console.log('🎯 OTP Modal should be visible now');
     
     toast({
       title: "OTP Required",
@@ -674,7 +687,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
                             variant="outline" 
                             size="sm"
                             onClick={() => handleViewPatientDetails(patient)}
-                            title="View Details (Requires OTP)"
+                            title={user?.role === 'superadmin' ? "View Details" : "View Details (Requires OTP)"}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

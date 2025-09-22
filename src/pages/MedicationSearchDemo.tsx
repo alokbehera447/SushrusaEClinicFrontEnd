@@ -114,7 +114,7 @@ const MedicationSearchDemo: React.FC = () => {
               <MedicationSearch
                 onMedicationSelect={handleMedicationSelect}
                 placeholder="Search for medications (e.g., aspirin, ibuprofen, amoxicillin)..."
-                includeFDA={true}
+                includeFDA={false}
               />
             </div>
           </div>
@@ -238,11 +238,11 @@ const MedicationSearchDemo: React.FC = () => {
         <CardContent>
           <div className="space-y-2 text-sm">
             <div><strong>Endpoint:</strong> <code className="bg-gray-100 px-2 py-1 rounded">/api/eclinic/medications/search/</code></div>
-                            <div><strong>Parameters:</strong> <code className="bg-gray-100 px-2 py-1 rounded">q=medication_name&include_fda=true&limit=20</code></div>
-            <div><strong>Data Source:</strong> FDA OpenFDA Drug API</div>
-            <div><strong>Total Medications:</strong> 50,000+ FDA-approved drugs</div>
-            <div><strong>Update Frequency:</strong> Weekly FDA updates</div>
-            <div><strong>Cost:</strong> Free (no licensing fees)</div>
+                            <div><strong>Parameters:</strong> <code className="bg-gray-100 px-2 py-1 rounded">q=medication_name&include_fda=false&limit=20</code></div>
+            <div><strong>Data Source:</strong> Local Database Only</div>
+            <div><strong>Total Medications:</strong> Local medication inventory</div>
+            <div><strong>Update Frequency:</strong> Manual updates by admin</div>
+            <div><strong>Cost:</strong> Free (local database)</div>
           </div>
         </CardContent>
       </Card>

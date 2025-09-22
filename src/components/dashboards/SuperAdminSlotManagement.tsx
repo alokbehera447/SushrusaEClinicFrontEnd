@@ -72,42 +72,92 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
   // Fetch slots for the month
   React.useEffect(() => {
     if (!doctorId || !isOpen) return;
+    console.log('🔍 SuperAdminSlotManagement - Fetching slots for doctor:', doctorId, 'month:', currentMonth + 1, 'year:', currentYear);
     setLoading(true);
-    api.get(`/api/doctors/${doctorId}/slots/?month=${currentMonth + 1}&year=${currentYear}`)
-      .then(response => {
+    
+    // Function to fetch all pages of slots
+    const fetchAllSlots = async (url: string) => {
+      let allSlots: any[] = [];
+      let currentUrl = url;
+      
+      while (currentUrl) {
+        console.log('🔍 Fetching slots from URL:', currentUrl);
+        const response = await api.get(currentUrl);
+        console.log('🔍 API response:', response.data);
+        
         // Handle both array and paginated response formats
         let slots = [];
         if (Array.isArray(response.data)) {
           slots = response.data;
+          currentUrl = null; // No pagination
         } else if (response.data && Array.isArray(response.data.results)) {
           slots = response.data.results;
+          currentUrl = response.data.next; // Get next page URL
         } else if (response.data && Array.isArray(response.data.data)) {
           slots = response.data.data;
+          currentUrl = response.data.next; // Get next page URL
         } else {
           console.warn('Unexpected API response format:', response.data);
           slots = [];
+          currentUrl = null;
         }
         
+        allSlots = allSlots.concat(slots);
+        console.log('🔍 Fetched', slots.length, 'slots from this page. Total so far:', allSlots.length);
+      }
+      
+      return allSlots;
+    };
+    
+    fetchAllSlots(`/api/doctors/${doctorId}/slots/?month=${currentMonth + 1}&year=${currentYear}`)
+      .then(slots => {
+        console.log('🔍 SuperAdminSlotManagement - Total parsed slots:', slots.length);
+        
         const grouped: Record<string, DoctorSlotFrontend[]> = {};
-        slots.forEach((slot: { id: string; doctor: string; date: string; start_time: string; end_time: string; is_available: boolean; created_at: string; updated_at: string }) => {
+        slots.forEach((slot: { id: number; doctor: string; date: string; start_time: string; end_time: string; is_available: boolean; is_booked: boolean; booked_consultation?: any; created_at: string; updated_at: string }) => {
+          console.log('🔍 Processing slot:', {
+            id: slot.id,
+            date: slot.date,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            is_available: slot.is_available,
+            is_booked: slot.is_booked,
+            booked_consultation: slot.booked_consultation,
+            has_consultation: !!slot.booked_consultation
+          });
+          
           const frontendSlot: DoctorSlotFrontend = {
-            id: parseInt(slot.id),
-            doctor: parseInt(slot.doctor),
+            id: slot.id,
+            doctor: slot.doctor,
             date: slot.date,
             startTime: slot.start_time,
             endTime: slot.end_time,
             isAvailable: slot.is_available,
+            isBooked: slot.is_booked || !!slot.booked_consultation,
             created_at: slot.created_at,
             updated_at: slot.updated_at,
-            type: 'available'
+            type: (slot.is_booked || !!slot.booked_consultation) ? 'booked' : 'available'
           };
+          
           if (!grouped[frontendSlot.date]) grouped[frontendSlot.date] = [];
           grouped[frontendSlot.date].push(frontendSlot);
+          console.log('🔍 Added slot to date', frontendSlot.date, {
+            isBooked: frontendSlot.isBooked,
+            type: frontendSlot.type,
+            totalSlotsForDate: grouped[frontendSlot.date].length
+          });
         });
+        console.log('🔍 SuperAdminSlotManagement - Grouped slots by date:', grouped);
         setSlotsByDate(grouped);
       })
       .catch((error: AxiosError) => {
-        console.error('Failed to fetch slots:', error);
+        console.error('❌ Failed to fetch slots:', {
+          error: error,
+          response: error.response,
+          status: error.response?.status,
+          data: error.response?.data,
+          url: error.config?.url
+        });
         if (error.response?.status === 404) {
           setError(`Doctor with ID ${doctorId} not found. Please check if the doctor exists in the system.`);
         } else if (error.response?.status === 403) {
@@ -126,6 +176,8 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
           } else {
             setError('Failed to fetch doctor slots. Please try again.');
           }
+        } else {
+          setError(`Failed to fetch doctor slots: ${error.message || 'Unknown error'}`);
         }
       })
       .finally(() => setLoading(false));
@@ -135,34 +187,54 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
   React.useEffect(() => {
     if (!doctorId || !selectedDate || !isOpen) return;
     setLoading(true);
-    api.get(`/api/doctors/${doctorId}/slots/?month=${currentMonth + 1}&year=${currentYear}`)
-      .then(response => {
+    
+    // Function to fetch all pages of slots
+    const fetchAllSlots = async (url: string) => {
+      let allSlots: any[] = [];
+      let currentUrl = url;
+      
+      while (currentUrl) {
+        const response = await api.get(currentUrl);
+        
         // Handle both array and paginated response formats
         let slots = [];
         if (Array.isArray(response.data)) {
           slots = response.data;
+          currentUrl = null; // No pagination
         } else if (response.data && Array.isArray(response.data.results)) {
           slots = response.data.results;
+          currentUrl = response.data.next; // Get next page URL
         } else if (response.data && Array.isArray(response.data.data)) {
           slots = response.data.data;
+          currentUrl = response.data.next; // Get next page URL
         } else {
           console.warn('Unexpected API response format:', response.data);
           slots = [];
+          currentUrl = null;
         }
         
+        allSlots = allSlots.concat(slots);
+      }
+      
+      return allSlots;
+    };
+    
+    fetchAllSlots(`/api/doctors/${doctorId}/slots/?month=${currentMonth + 1}&year=${currentYear}`)
+      .then(slots => {
         setSlotsByDate(prev => {
           const grouped: Record<string, DoctorSlotFrontend[]> = { ...prev };
-          slots.forEach((slot: { id: string; doctor: string; date: string; start_time: string; end_time: string; is_available: boolean; created_at: string; updated_at: string }) => {
+          slots.forEach((slot: { id: number; doctor: string; date: string; start_time: string; end_time: string; is_available: boolean; is_booked: boolean; booked_consultation?: any; created_at: string; updated_at: string }) => {
             const frontendSlot: DoctorSlotFrontend = {
-              id: parseInt(slot.id),
-              doctor: parseInt(slot.doctor),
+              id: slot.id,
+              doctor: slot.doctor,
               date: slot.date,
               startTime: slot.start_time,
               endTime: slot.end_time,
               isAvailable: slot.is_available,
+              isBooked: slot.is_booked || !!slot.booked_consultation,
               created_at: slot.created_at,
               updated_at: slot.updated_at,
-              type: 'available'
+              type: (slot.is_booked || !!slot.booked_consultation) ? 'booked' : 'available'
             };
             if (!grouped[frontendSlot.date]) grouped[frontendSlot.date] = [];
             grouped[frontendSlot.date].push(frontendSlot);
@@ -187,13 +259,14 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
   }
   
   // Debug logging
-  console.log('SuperAdminSlotManagement - Doctor Data:', {
+  console.log('🔍 SuperAdminSlotManagement - Doctor Data:', {
+    fullDoctorObject: doctor,
     doctorId,
-    doctorName: doctor.user_name,
-    doctorEmail: doctor.user_email,
-    doctorPhone: doctor.user_phone,
-    isActive: doctor.is_active,
-    isVerified: doctor.is_verified
+    doctorName: doctor?.user_name,
+    doctorEmail: doctor?.user_email,
+    doctorPhone: doctor?.user_phone,
+    isActive: doctor?.is_active,
+    isVerified: doctor?.is_verified
   });
   
   // Validate doctor ID
@@ -268,15 +341,16 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
         });
         const newSlot = response.data;
         const frontendSlot: DoctorSlotFrontend = {
-          id: parseInt(newSlot.id),
-          doctor: parseInt(newSlot.doctor),
+          id: newSlot.id,
+          doctor: newSlot.doctor,
           date: newSlot.date,
           startTime: newSlot.start_time,
           endTime: newSlot.end_time,
           isAvailable: newSlot.is_available,
+          isBooked: newSlot.is_booked || !!newSlot.booked_consultation,
           created_at: newSlot.created_at,
           updated_at: newSlot.updated_at,
-          type: 'available'
+          type: (newSlot.is_booked || !!newSlot.booked_consultation) ? 'booked' : 'available'
         };
         setSlotsByDate(prev => ({
           ...prev,
@@ -305,10 +379,13 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
     const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     const slots = slotsByDate[key] || [];
 
-    if (slots.length === 0) return;
+    // Only clear non-booked slots
+    const clearableSlots = slots.filter(slot => !slot.isBooked);
+
+    if (clearableSlots.length === 0) return;
 
     // Store slots for undo
-    setUndoSlots([...slots]);
+    setUndoSlots([...clearableSlots]);
 
     // Clear timeout if exists
     if (undoTimeout) {
@@ -322,12 +399,14 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
     setUndoTimeout(timeout);
 
     try {
-      // Delete all slots for the date
-      await Promise.all(slots.map(slot => api.delete(`/api/doctors/${doctorId}/slots/${slot.id}/`)));
+      // Delete only non-booked slots for the date
+      await Promise.all(clearableSlots.map(slot => api.delete(`/api/doctors/${doctorId}/slots/${slot.id}/`)));
       
+      // Keep booked slots in the state
+      const bookedSlots = slots.filter(slot => slot.isBooked);
       setSlotsByDate(prev => ({
         ...prev,
-        [key]: []
+        [key]: bookedSlots
       }));
     } catch (error) {
       console.error('Failed to clear slots:', error);
@@ -366,15 +445,16 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
       const newSlots = responses.map(response => {
         const slot = response.data;
         return {
-          id: parseInt(slot.id),
-          doctor: parseInt(slot.doctor),
+          id: slot.id,
+          doctor: slot.doctor,
           date: slot.date,
           startTime: slot.start_time,
           endTime: slot.end_time,
           isAvailable: slot.is_available,
+          isBooked: slot.is_booked || !!slot.booked_consultation,
           created_at: slot.created_at,
           updated_at: slot.updated_at,
-          type: 'available'
+          type: (slot.is_booked || !!slot.booked_consultation) ? 'booked' : 'available'
         } as DoctorSlotFrontend;
       });
 
@@ -405,7 +485,11 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
   // Highlighted dates
   const isDateHighlighted = (day: number) => {
     const key = formatDate(currentYear, currentMonth, day);
-    return slotsByDate[key] && slotsByDate[key].length > 0;
+    const hasSlots = slotsByDate[key] && slotsByDate[key].length > 0;
+    if (day === 18) { // Debug for today
+      console.log('🔍 SuperAdminSlotManagement - Checking date', day, 'key:', key, 'hasSlots:', hasSlots, 'slots:', slotsByDate[key]);
+    }
+    return hasSlots;
   };
   
   const isToday = (day: number) => {
@@ -472,10 +556,11 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
                 <Button variant="outline" size="sm" onClick={handlePrevMonth}><ChevronLeft /></Button>
                 <div className="flex flex-col items-center">
                   <h2 className="text-2xl font-bold text-midnight tracking-tight">{monthName} {currentYear}</h2>
-                  <div className="flex gap-2 mt-2 text-xs">
+                  <div className="flex gap-2 mt-2 text-xs flex-wrap">
                     <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-[#E17726]"></span> Selected</span>
                     <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-blue-300"></span> Has Slots</span>
                     <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-green-200 border border-green-500"></span> Today</span>
+                    <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-red-400"></span> Booked</span>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleNextMonth}><ChevronRight /></Button>
@@ -531,15 +616,22 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
                     )}
                   </div>
                 </div>
-                <div className="mb-2 text-sm text-gray-500">Selected slots: <span className="font-bold text-[#E17726]">{
-                  (() => {
+                <div className="mb-2 text-sm text-gray-500">
+                  {(() => {
                     const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
                     const slots = slotsByDate[key] || [];
-                    // Count unique slots by startTime and endTime
-                    const unique = new Set(slots.map(s => `${normalizeTime(s.startTime)}-${normalizeTime(s.endTime)}`));
-                    return unique.size;
-                  })()
-                }</span></div>
+                    const availableSlots = slots.filter(s => !s.isBooked);
+                    const bookedSlots = slots.filter(s => s.isBooked);
+                    return (
+                      <>
+                        Available slots: <span className="font-bold text-[#E17726]">{availableSlots.length}</span>
+                        {bookedSlots.length > 0 && (
+                          <> • Booked slots: <span className="font-bold text-red-500">{bookedSlots.length}</span></>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
                 <div className="space-y-6">
                   {SLOT_GROUPS.map(group => (
                     <div key={group.label}>
@@ -551,10 +643,22 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
                           const globalIdx = group.range[0] + idx;
                           const key = formatDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
                           const slots = slotsByDate[key] || [];
-                          const isSelected = slots.some(s =>
+                          const matchingSlot = slots.find(s =>
                             normalizeTime(s.startTime) === normalizeTime(SLOT_TIMES[globalIdx]) &&
                             normalizeTime(s.endTime) === normalizeTime(SLOT_TIMES[globalIdx+1] || '23:59')
                           );
+                          const isSelected = !!matchingSlot;
+                          const isBooked = matchingSlot?.isBooked || false;
+                          
+                          // Debug logging for slot display
+                          if (matchingSlot && isBooked) {
+                            console.log('🔍 Found booked slot:', {
+                              slot: `${SLOT_TIMES[globalIdx]} - ${SLOT_TIMES[globalIdx+1] || 'End'}`,
+                              matchingSlot: matchingSlot,
+                              isBooked: isBooked,
+                              type: matchingSlot.type
+                            });
+                          }
                           // Disable if today and slot end time is in the past
                           let isPastSlot = false;
                           if (selectedDate) {
@@ -576,15 +680,21 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
                             <button
                               key={slot}
                               className={`rounded-lg px-3 py-2 border text-sm font-medium transition-all flex items-center gap-2
-                                ${isSelected ? 'bg-[#E17726] text-white border-[#E17726] shadow' : 'bg-white border-gray-200 text-gray-900'}
-                                hover:bg-[#E17726]/20
+                                ${isBooked ? 'bg-red-400 text-white border-red-400 shadow cursor-not-allowed' :
+                                  isSelected ? 'bg-[#E17726] text-white border-[#E17726] shadow' : 'bg-white border-gray-200 text-gray-900'}
+                                ${!isBooked && !isPastSlot ? 'hover:bg-[#E17726]/20' : ''}
                                 ${isPastSlot ? 'opacity-40 cursor-not-allowed line-through' : ''}
                               `}
-                              onClick={() => !isPastSlot && handleSlotToggle(globalIdx)}
-                              disabled={isPastSlot || loading}
+                              onClick={() => !isPastSlot && !isBooked && handleSlotToggle(globalIdx)}
+                              disabled={isPastSlot || loading || isBooked}
+                              title={isBooked ? 'This slot is already booked and cannot be modified' : ''}
                             >
-                              <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: isSelected ? '#fff' : '#E17726', border: isSelected ? '2px solid #fff' : '2px solid #E17726' }}></span>
+                              <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ 
+                                background: isBooked ? '#fff' : isSelected ? '#fff' : '#E17726', 
+                                border: isBooked ? '2px solid #fff' : isSelected ? '2px solid #fff' : '2px solid #E17726' 
+                              }}></span>
                               {slot} - {SLOT_TIMES[globalIdx+1] || 'End'}
+                              {isBooked && <span className="ml-1 text-xs">(Booked)</span>}
                             </button>
                           );
                         })}

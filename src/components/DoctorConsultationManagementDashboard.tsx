@@ -190,21 +190,21 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
   }, [filters]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Consultations</h2>
-          <p className="text-gray-600">Manage your consultations and start sessions with ready patients</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Consultations</h2>
+          <p className="text-sm sm:text-base text-gray-600">Manage your consultations and start sessions with ready patients</p>
         </div>
-        <div className="flex items-center">
-          <Button onClick={loadConsultations} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+        <div className="flex items-center space-x-2">
+          <Button onClick={loadConsultations} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-sm">
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button onClick={loadOverdue} variant="outline" disabled={loadingOverdue} className="ml-2">
-            <AlertCircle className={`h-4 w-4 mr-2 ${loadingOverdue ? 'animate-spin' : ''}`} />
-            Overdue
+          <Button onClick={loadOverdue} variant="outline" disabled={loadingOverdue} className="text-sm">
+            <AlertCircle className={`h-4 w-4 sm:mr-2 ${loadingOverdue ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Overdue</span>
           </Button>
         </div>
       </div>
@@ -262,74 +262,74 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
       )}
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
+              <Users className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total</p>
+                <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Scheduled</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.scheduled}</p>
+              <Calendar className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Scheduled</p>
+                <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.scheduled}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-yellow-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Checked In</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.checkedIn}</p>
+              <CheckCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Checked In</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600">{stats.checkedIn}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <Activity className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ready</p>
-                <p className="text-2xl font-bold text-green-600">{stats.ready}</p>
+              <Activity className="h-4 w-4 text-green-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Ready</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">{stats.ready}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <Play className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">In Progress</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.inProgress}</p>
+              <Play className="h-4 w-4 text-purple-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">In Progress</p>
+                <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.inProgress}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="border-l-4 border-l-gray-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <CheckSquare className="h-4 w-4 text-gray-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-600">{stats.completed}</p>
+              <CheckSquare className="h-4 w-4 text-gray-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Completed</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-600">{stats.completed}</p>
               </div>
             </div>
           </CardContent>
@@ -338,14 +338,14 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
 
       {/* Filters */}
       <Card className="border-0 shadow-lg">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Filter className="h-5 w-5 text-blue-600" />
+        <CardHeader className="pb-4 p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             Filters & Search
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="status-filter" className="text-sm font-medium">Status</Label>
               <Select 
@@ -423,48 +423,50 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
 
       {/* Consultations List */}
       <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-blue-600" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
+            <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             My Consultations
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Manage your consultations and start sessions with ready patients
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin mr-3 text-blue-600" />
-              <span className="text-lg text-gray-600">Loading consultations...</span>
+            <div className="flex flex-col sm:flex-row items-center justify-center py-8 sm:py-12">
+              <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mr-2 sm:mr-3 text-blue-600" />
+              <span className="text-sm sm:text-lg text-gray-600">Loading consultations...</span>
             </div>
           ) : consultations.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No consultations found</h3>
-              <p className="text-gray-500">Try adjusting your filters or search criteria</p>
+            <div className="text-center py-8 sm:py-12">
+              <Calendar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No consultations found</h3>
+              <p className="text-sm sm:text-base text-gray-500">Try adjusting your filters or search criteria</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {consultations.map((consultation) => (
                 <div
                   key={consultation.id}
-                  className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200"
+                  className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex-1 mb-4 sm:mb-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
                         <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-blue-600" />
-                          <h3 className="font-semibold text-lg text-gray-900">{consultation.patient_name}</h3>
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                          <h3 className="font-semibold text-base sm:text-lg text-gray-900 truncate">{consultation.patient_name}</h3>
                         </div>
-                        <Badge className={getStatusColor(consultation.status)}>
-                          {getStatusText(consultation.status)}
-                        </Badge>
-                        <span className="text-sm text-gray-500 font-mono">#{consultation.id}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-xs ${getStatusColor(consultation.status)}`}>
+                            {getStatusText(consultation.status)}
+                          </Badge>
+                          <span className="text-xs sm:text-sm text-gray-500 font-mono">#{consultation.id}</span>
+                        </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-3">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           <span>{formatDateTime(consultation.scheduled_date, consultation.scheduled_time)}</span>
@@ -485,23 +487,24 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
                       
                       {consultation.chief_complaint && (
                         <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                          <p className="text-sm text-gray-700">
+                          <p className="text-xs sm:text-sm text-gray-700">
                             <strong>Chief Complaint:</strong> {consultation.chief_complaint}
                           </p>
                         </div>
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-2 ml-6">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 sm:ml-6">
                       {/* Start Consultation Button - Only for Ready Patients */}
                       {consultation.status === 'ready_for_consultation' && (
                         <Button
                           onClick={() => handleStartConsultation(consultation)}
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700 shadow-lg"
+                          className="bg-green-600 hover:bg-green-700 shadow-lg text-sm"
                         >
-                          <Play className="h-4 w-4 mr-1" />
-                          Start Consultation
+                          <Play className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                          <span className="hidden sm:inline">Start Consultation</span>
+                          <span className="sm:hidden">Start</span>
                         </Button>
                       )}
                       
@@ -510,28 +513,29 @@ export const DoctorConsultationManagementDashboard: React.FC<DoctorConsultationM
                         onClick={() => onConsultationSelect?.(consultation)}
                         variant="outline"
                         size="sm"
-                        className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                        className="border-blue-500 text-blue-700 hover:bg-blue-50 text-sm"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden sm:inline">View</span>
+                        <span className="sm:hidden">Details</span>
                       </Button>
                     </div>
                   </div>
                   
                   {/* Check-in Information */}
                   {(consultation.checked_in_at || consultation.ready_for_consultation_at) && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-gray-500">
                         {consultation.checked_in_at && (
                           <div className="flex items-center gap-1">
-                            <CheckCircle className="h-3 w-3" />
-                            <span>Patient checked in: {new Date(consultation.checked_in_at).toLocaleString()}</span>
+                            <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">Patient checked in: {new Date(consultation.checked_in_at).toLocaleString()}</span>
                           </div>
                         )}
                         {consultation.ready_for_consultation_at && (
                           <div className="flex items-center gap-1">
-                            <Activity className="h-3 w-3" />
-                            <span>Marked ready: {new Date(consultation.ready_for_consultation_at).toLocaleString()}</span>
+                            <Activity className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">Marked ready: {new Date(consultation.ready_for_consultation_at).toLocaleString()}</span>
                           </div>
                         )}
                       </div>

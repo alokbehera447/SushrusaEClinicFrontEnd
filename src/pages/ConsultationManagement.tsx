@@ -21,7 +21,6 @@ import {
   Users, 
   Stethoscope, 
   Activity,
-  Settings,
   ArrowLeft
 } from 'lucide-react';
 import { ConsultationManagementDashboard } from '@/components/ConsultationManagementDashboard';
@@ -120,42 +119,17 @@ const ConsultationManagement: React.FC = () => {
                 }
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="flex items-center gap-2">
-              {(userRole === 'admin' || userRole === 'superadmin') ? (
-                <>
-                  <Users className="h-4 w-4" />
-                  Admin Access
-                </>
-              ) : (
-                <>
-                  <Stethoscope className="h-4 w-4" />
-                  Doctor Access
-                </>
-              )}
-            </Badge>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-          </div>
+          </div>  
         </div>
       </div>
 
       {/* Main Content */}
-      {console.log('Rendering with userRole:', userRole)}
-      {console.log('Current pathname:', window.location.pathname)}
-      
       {/* Determine if we should show admin view based on role or URL */}
       {(() => {
         const isAdminRoute = window.location.pathname.includes('/dashboard/');
         const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
         const shouldShowAdminView = isAdminRole || isAdminRoute;
         
-        console.log('isAdminRoute:', isAdminRoute);
-        console.log('isAdminRole:', isAdminRole);
-        console.log('shouldShowAdminView:', shouldShowAdminView);
         
         return shouldShowAdminView ? (
         // Admin View

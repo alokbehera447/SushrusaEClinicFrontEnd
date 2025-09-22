@@ -6,7 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ChevronRight, CalendarIcon, Clock, User, Stethoscope, Building2, CheckCircle, ArrowRight, ArrowLeft, Search, Phone, Star, Timer, DollarSign, FileText, X, Sparkles, Home, Video } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ChevronRight, CalendarIcon, Clock, User, Stethoscope, CheckCircle, ArrowRight, ArrowLeft, Search, Phone, Star, Timer, DollarSign, FileText, X, Video, Users, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { debounce } from 'lodash';
@@ -21,7 +23,7 @@ import { api } from '@/lib/utils';
 // This defines the structure of a slot object after being processed for the frontend.
 interface DoctorSlotFrontend {
   id: number;
-  doctor: number;
+  doctor: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -219,43 +221,152 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const [doctorSlots, setDoctorSlots] = useState<DoctorSlotFrontend[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
   
+  // Pagination state
+  const [patientPage, setPatientPage] = useState(1);
+  const [doctorPage, setDoctorPage] = useState(1);
+  const [patientHasMore, setPatientHasMore] = useState(true);
+  const [doctorHasMore, setDoctorHasMore] = useState(true);
+  const [loadingMorePatients, setLoadingMorePatients] = useState(false);
+  const [loadingMoreDoctors, setLoadingMoreDoctors] = useState(false);
+  const [searchingPatients, setSearchingPatients] = useState(false);
+  
   // --- Restored Original API Logic ---
 
   const debouncedPatientSearch = useMemo(() => debounce(async (query: string) => {
     try {
+      console.log("🔍 Patient search query:", query);
+      setSearchingPatients(true);
+      
+      // Reset pagination when search query changes
+      setPatientPage(1);
+      setPatientHasMore(true);
+      
       if (!query) {
-        const res = await adminPatientApi.getPatients({ page: 1, page_size: 8 });
+        // Load patients with pagination
+        console.log("📋 Loading all patients (no search query)");
+        const res = await adminPatientApi.getPatients({ page: 1, page_size: 20 });
+        console.log("📋 All patients response:", res);
         setPatientOptions(Array.isArray(res?.results) ? res.results : []);
+        setPatientHasMore(res?.count ? res.results.length < res.count : false);
         return;
       }
-      const results = await adminPatientApi.searchPatients({ query });
-      setPatientOptions(Array.isArray(results) ? results : []);
+      
+      // For search queries, use the getPatients API with search parameter
+      // This supports searching by name, phone number, and other fields
+      console.log("🔍 Searching patients with query:", query);
+      
+      // Try the main search first
+      let results = await adminPatientApi.getPatients({ 
+        page: 1, 
+        page_size: 50, // Get more results for search
+        search: query 
+      });
+      console.log("🔍 Search results:", results);
+      
+      // If no results and query looks like a phone number, try alternative search
+      if ((!results?.results || results.results.length === 0) && /^\d+$/.test(query.replace(/\s+/g, ''))) {
+        console.log("📱 Query looks like phone number, trying alternative search");
+        
+        // Try searching with cleaned phone number (remove spaces, dashes, etc.)
+        const cleanQuery = query.replace(/[\s\-\(\)\+]/g, '');
+        console.log("📱 Cleaned phone query:", cleanQuery);
+        
+        const altResults = await adminPatientApi.getPatients({ 
+          page: 1, 
+          page_size: 50,
+          search: cleanQuery 
+        });
+        console.log("📱 Alternative search results:", altResults);
+        
+        if (altResults?.results && altResults.results.length > 0) {
+          results = altResults;
+        }
+      }
+      
+      setPatientOptions(Array.isArray(results?.results) ? results.results : []);
+      setPatientHasMore(false); // Search results don't need pagination
     } catch (e) {
-      console.error("Failed to search patients:", e);
+      console.error("❌ Failed to search patients:", e);
       setPatientOptions([]);
       toast.error("Could not fetch patient data.");
+    } finally {
+      setSearchingPatients(false);
     }
   }, 400), []);
 
   const debouncedDoctorSearch = useMemo(() => debounce(async (query: string) => {
     try {
+      // Reset pagination when search query changes
+      setDoctorPage(1);
+      setDoctorHasMore(true);
+      
       if (!query) {
-        // Load all doctors without filters
-        const res = await doctorApi.getDoctors({});
+        // Load doctors with pagination
+        const res = await doctorApi.getDoctors({ page: 1, page_size: 20 });
         console.log('Doctor API response (no filters):', res);
-        setDoctorOptions(Array.isArray(res?.results) ? res.results.slice(0, 8) : []);
+        setDoctorOptions(Array.isArray(res?.results) ? res.results : []);
+        setDoctorHasMore(res?.count ? res.results.length < res.count : false);
         return;
       }
       // Search doctors
       const results = await doctorApi.getDoctors({ search: query });
       console.log('Doctor search response:', results);
       setDoctorOptions(Array.isArray(results?.results) ? results.results : []);
+      setDoctorHasMore(results?.count ? results.results.length < results.count : false);
     } catch (e) {
       console.error("Failed to search doctors:", e);
       setDoctorOptions([]);
       toast.error("Could not fetch doctor data.");
     }
   }, 400), []);
+
+  // Load more patients function
+  const loadMorePatients = async () => {
+    if (loadingMorePatients || !patientHasMore || patientSearch) return; // Don't load more during search
+    
+    try {
+      setLoadingMorePatients(true);
+      const nextPage = patientPage + 1;
+      const res = await adminPatientApi.getPatients({ page: nextPage, page_size: 20 });
+      
+      if (Array.isArray(res?.results) && res.results.length > 0) {
+        setPatientOptions(prev => [...prev, ...res.results]);
+        setPatientPage(nextPage);
+        setPatientHasMore(res?.count ? (patientOptions.length + res.results.length) < res.count : false);
+      } else {
+        setPatientHasMore(false);
+      }
+    } catch (e) {
+      console.error("Failed to load more patients:", e);
+      toast.error("Could not load more patients.");
+    } finally {
+      setLoadingMorePatients(false);
+    }
+  };
+
+  // Load more doctors function
+  const loadMoreDoctors = async () => {
+    if (loadingMoreDoctors || !doctorHasMore || doctorSearch) return; // Don't load more during search
+    
+    try {
+      setLoadingMoreDoctors(true);
+      const nextPage = doctorPage + 1;
+      const res = await doctorApi.getDoctors({ page: nextPage, page_size: 20 });
+      
+      if (Array.isArray(res?.results) && res.results.length > 0) {
+        setDoctorOptions(prev => [...prev, ...res.results]);
+        setDoctorPage(nextPage);
+        setDoctorHasMore(res?.count ? (doctorOptions.length + res.results.length) < res.count : false);
+      } else {
+        setDoctorHasMore(false);
+      }
+    } catch (e) {
+      console.error("Failed to load more doctors:", e);
+      toast.error("Could not load more doctors.");
+    } finally {
+      setLoadingMoreDoctors(false);
+    }
+  };
 
   const fetchAvailableSlots = async (date: Date) => {
     console.log('🚀 fetchAvailableSlots called with date:', date);
@@ -518,6 +629,11 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         patientOptions, doctorOptions,
         selectedPatient, setSelectedPatient, selectedDoctor, setSelectedDoctor, selectedClinic,
         doctorSlots, slotLoading,
+        // Pagination props
+        patientHasMore, loadingMorePatients, loadMorePatients,
+        doctorHasMore, loadingMoreDoctors, loadMoreDoctors,
+        // Search loading state
+        searchingPatients,
     };
     
     return (
@@ -671,83 +787,118 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         </Dialog>
       )}
 
-      <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-orange-50 to-orange-100 p-4 sm:p-6 lg:p-8 font-sans">
-        <header className="max-w-6xl mx-auto mb-6">
-            <div className="flex items-center text-sm text-slate-500">
-                <Home className="w-4 h-4 mr-2" />
-                <span className="font-medium">Admin</span>
-                <ChevronRight className="w-4 h-4 mx-1" />
-                <span className="font-medium">Consultations</span>
-                <ChevronRight className="w-4 h-4 mx-1" />
-                <span className="font-semibold text-orange-600">New</span>
+      {/* Compact Admin-Style Layout */}
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <span>Admin</span>
+              <ChevronRight className="w-4 h-4" />
+              <span>Consultations</span>
+              <ChevronRight className="w-4 h-4" />
+              <span className="font-medium text-gray-900">New Consultation</span>
             </div>
-        </header>
+            <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-        <main className="max-w-6xl mx-auto">
-          <Card className="w-full rounded-3xl border-0 bg-white/60 backdrop-blur-xl shadow-2xl shadow-orange-900/10 animate-in fade-in-50 slide-in-from-bottom-10 duration-700">
-            <CardHeader className="p-8 border-b border-slate-200/80">
-              <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-3xl font-bold text-slate-800 tracking-tight">New Consultation</CardTitle>
-                    <p className="mt-1 text-slate-500">Follow the steps below to schedule a new appointment.</p>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-500 hover:bg-slate-200/50 hover:text-slate-800">
-                      <X className="h-6 w-6"/>
-                  </Button>
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto p-6">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Create New Consultation</CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">Schedule a consultation appointment</p>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  Step {currentStep} of {STEPS.length}
+                </Badge>
               </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-8 lg:p-12">
-              {/* Stepper */}
-              <div className="mb-12">
-                <div className="flex items-center">
+              
+              {/* Compact Stepper */}
+              <div className="mt-4">
+                <div className="flex items-center space-x-2">
                   {STEPS.map((step, index) => (
                     <React.Fragment key={step.number}>
-                      <div className="flex flex-col items-center text-center w-24">
+                      <div className="flex items-center">
                         <div
                           className={cn(
-                            "flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-500",
-                            currentStep > step.number ? "border-green-500 bg-green-500 text-white" :
-                            currentStep === step.number ? "border-orange-500 bg-orange-500 text-white scale-110 shadow-lg shadow-orange-500/30" :
-                            "border-slate-300 bg-white text-slate-400"
+                            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium transition-all",
+                            currentStep > step.number ? "bg-green-500 text-white" :
+                            currentStep === step.number ? "bg-blue-500 text-white" :
+                            "bg-gray-200 text-gray-600"
                           )}
                         >
-                          {currentStep > step.number ? <CheckCircle className="h-6 w-6" /> : <step.icon className="h-6 w-6" />}
+                          {currentStep > step.number ? <CheckCircle className="h-3 w-3" /> : step.number}
                         </div>
-                        <p className={cn("mt-2 text-xs font-semibold sm:text-sm", currentStep >= step.number ? "text-orange-600" : "text-slate-500")}>
+                        <span className={cn(
+                          "ml-2 text-xs font-medium",
+                          currentStep >= step.number ? "text-gray-900" : "text-gray-500"
+                        )}>
                           {step.title}
-                        </p>
+                        </span>
                       </div>
                       {index < STEPS.length - 1 && (
-                        <div className="h-1 flex-1 bg-slate-200 mx-2 sm:mx-4 rounded-full relative overflow-hidden">
-                           <div className="h-full absolute left-0 top-0 rounded-full bg-orange-500 transition-transform duration-500" style={{ transform: currentStep > step.number ? 'translateX(0%)' : 'translateX(-100%)' }}></div>
-                        </div>
+                        <ChevronRight className="w-3 h-3 text-gray-400 mx-2" />
                       )}
                     </React.Fragment>
                   ))}
                 </div>
               </div>
-
+            </CardHeader>
+            
+            <CardContent className="pt-0">
               <form onSubmit={handleSubmit}>
-                <div className="min-h-[350px]">
-                    {renderStepContent()}
+                <div className="min-h-[300px]">
+                  {renderStepContent()}
                 </div>
 
-                <div className="mt-12 flex items-center justify-between border-t border-slate-200/80 pt-8">
-                  <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 1} className="h-12 px-6 text-lg rounded-xl border-2 border-slate-300 disabled:opacity-50 transition-transform hover:scale-105 active:scale-100">
-                    <ArrowLeft className="w-5 h-5 mr-2" />
-                    Back
+                {/* Compact Navigation */}
+                <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={prevStep} 
+                    disabled={currentStep === 1}
+                    className="text-sm"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-1" />
+                    Previous
                   </Button>
+                  
                   {currentStep < STEPS.length ? (
-                    <Button type="button" onClick={nextStep} disabled={!canProceedToNext()} className="h-12 px-6 text-lg rounded-xl bg-orange-500 text-white shadow-lg shadow-orange-500/30 disabled:bg-slate-300 disabled:shadow-none transition-all hover:scale-105 hover:bg-orange-600 active:scale-100">
-                      Next Step
-                      <ArrowRight className="w-5 h-5 ml-2" />
+                    <Button 
+                      type="button" 
+                      size="sm"
+                      onClick={nextStep} 
+                      disabled={!canProceedToNext()}
+                      className="text-sm"
+                    >
+                      Next
+                      <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   ) : (
-                    <Button type="submit" disabled={isSubmitting || !canProceedToNext()} className="h-12 px-8 text-lg rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/40 disabled:bg-slate-300 disabled:shadow-none transition-all hover:scale-105 active:scale-100">
+                    <Button 
+                      type="submit" 
+                      size="sm"
+                      disabled={isSubmitting || !canProceedToNext()}
+                      className="text-sm"
+                    >
                       {isSubmitting ? (
-                        <div className="flex items-center"><div className="animate-spin rounded-full h-5 w-5 border-2 border-white/50 border-t-white mr-2"></div>Scheduling...</div>
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/50 border-t-white mr-2"></div>
+                          Creating...
+                        </>
                       ) : (
-                        <><Sparkles className="w-5 h-5 mr-2" />Create Consultation</>
+                        <>
+                          <Plus className="w-4 h-4 mr-1" />
+                          Create Consultation
+                        </>
                       )}
                     </Button>
                   )}
@@ -755,7 +906,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
               </form>
             </CardContent>
           </Card>
-        </main>
+        </div>
       </div>
     </>
   );
@@ -763,163 +914,476 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
 // --- Step Renderer Functions ---
 
-const renderStep1 = ({ patientSearch, setPatientSearch, patientOptions, handlePatientSelect, selectedPatient, setSelectedPatient, setFormData }: any) => (
-  <div className="max-w-2xl mx-auto">
-    <div className="relative">
-      <FloatingLabelInput id="patient-search" label="Search Patient by Name or Phone" icon={Search} value={patientSearch} onChange={(e: any) => setPatientSearch(e.target.value)} disabled={!!selectedPatient}/>
-      {patientOptions.length > 0 && !selectedPatient && (
-        <div className="absolute z-10 mt-2 w-full space-y-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl animate-in fade-in-25">
-          {patientOptions.map((p: PatientProfile) => (
-            <div key={p.id} onClick={() => handlePatientSelect(p)} className="flex cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-orange-50">
-              <div>
-                <p className="font-semibold text-slate-800">{p.user_name}</p>
-                <p className="text-sm text-slate-500 flex items-center"><Phone className="w-3 h-3 mr-2"/>{p.user_phone}</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-slate-400" />
-            </div>
-          ))}
-        </div>
-      )}
+const renderStep1 = ({ patientSearch, setPatientSearch, patientOptions, handlePatientSelect, selectedPatient, setSelectedPatient, setFormData, patientHasMore, loadingMorePatients, loadMorePatients, searchingPatients }: any) => (
+  <div className="space-y-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Search Patient</label>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search by name or phone number..."
+          value={patientSearch}
+          onChange={(e) => setPatientSearch(e.target.value)}
+          disabled={!!selectedPatient}
+          className="pl-10 h-9 text-sm"
+        />
+        {searchingPatients && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-[#E17726] rounded-full animate-spin"></div>
+          </div>
+        )}
+      </div>
     </div>
-    {selectedPatient && (
-      <div className="mt-6 flex items-center justify-between rounded-xl bg-green-50 p-4 border border-green-200 animate-in fade-in-50">
-        <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100"><CheckCircle className="h-6 w-6 text-green-600" /></div>
-            <div>
-            <p className="font-bold text-green-800">Patient Selected</p>
-            <p className="text-green-700">{selectedPatient.user_name}</p>
-            </div>
+
+    {/* Patient List - More Visible */}
+    {!selectedPatient && (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-gray-700">Available Patients</h4>
+          <span className="text-xs text-gray-500">{patientOptions.length} found</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(null); setPatientSearch(''); setFormData((p:any) => ({...p, patientId: ''})) }}>Change</Button>
+        <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+          {patientOptions.length > 0 ? (
+            <div className="divide-y divide-gray-200">
+              {patientOptions.map((p: PatientProfile) => (
+                <div 
+                  key={p.id} 
+                  onClick={() => handlePatientSelect(p)} 
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{p.user_name}</p>
+                      <p className="text-xs text-gray-500 flex items-center">
+                        <Phone className="w-3 h-3 mr-1" />
+                        {p.user_phone}
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center text-gray-500">
+              <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm">No patients found</p>
+              <p className="text-xs">Try searching with a different term</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Load More Patients Button */}
+        {patientHasMore && !patientSearch && (
+          <div className="mt-2 text-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={loadMorePatients}
+              disabled={loadingMorePatients}
+              className="w-full text-xs"
+            >
+              {loadingMorePatients ? (
+                <>
+                  <div className="w-3 h-3 mr-2 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                `Load More Patients (${patientOptions.length} shown)`
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Selected Patient */}
+    {selectedPatient && (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-800">Patient Selected</p>
+              <p className="text-sm text-green-700">{selectedPatient.user_name}</p>
+              <p className="text-xs text-green-600">{selectedPatient.user_phone}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => { 
+              setSelectedPatient(null); 
+              setPatientSearch(''); 
+              setFormData((p:any) => ({...p, patientId: ''}))
+            }}
+            className="text-green-700 hover:text-green-800 hover:bg-green-100"
+          >
+            Change
+          </Button>
+        </div>
       </div>
     )}
   </div>
 );
 
-const renderStep2 = ({ doctorSearch, setDoctorSearch, doctorOptions, handleDoctorSelect, selectedDoctor, setSelectedDoctor, setFormData }: any) => (
-  <div className="max-w-2xl mx-auto">
-    <div className="relative">
-      <FloatingLabelInput id="doctor-search" label="Search for a Doctor" icon={Stethoscope} value={doctorSearch} onChange={(e: any) => setDoctorSearch(e.target.value)} disabled={!!selectedDoctor} />
-       {doctorOptions.length > 0 && !selectedDoctor && (
-           <div className="absolute z-10 mt-2 w-full space-y-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl animate-in fade-in-25">
-           {doctorOptions.map((d: DoctorProfile) => (
-               <div key={d.user} onClick={() => handleDoctorSelect(d)} className="flex cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-orange-50">
-               <div>
-                   <p className="font-semibold text-slate-800">{d.user_name}</p>
-                   <p className="text-sm text-slate-500 flex items-center"><Star className="w-3 h-3 mr-2"/>{d.specialization}</p>
-               </div>
-               <ArrowRight className="h-5 w-5 text-slate-400" />
-               </div>
-           ))}
-           </div>
-       )}
+const renderStep2 = ({ doctorSearch, setDoctorSearch, doctorOptions, handleDoctorSelect, selectedDoctor, setSelectedDoctor, setFormData, doctorHasMore, loadingMoreDoctors, loadMoreDoctors }: any) => (
+  <div className="space-y-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Search Doctor</label>
+      <div className="relative">
+        <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search by name or specialization..."
+          value={doctorSearch}
+          onChange={(e) => setDoctorSearch(e.target.value)}
+          disabled={!!selectedDoctor}
+          className="pl-10 h-9 text-sm"
+        />
+      </div>
     </div>
-    {selectedDoctor && (
-      <div className="mt-6 flex items-center justify-between rounded-xl bg-green-50 p-4 border border-green-200 animate-in fade-in-50">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100"><CheckCircle className="h-6 w-6 text-green-600" /></div>
-          <div>
-            <p className="font-bold text-green-800">Doctor Selected</p>
-            <p className="text-green-700">{selectedDoctor.user_name}</p>
-          </div>
+
+    {/* Doctor List - More Visible */}
+    {!selectedDoctor && (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-gray-700">Available Doctors</h4>
+          <span className="text-xs text-gray-500">{doctorOptions.length} found</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => { setSelectedDoctor(null); setDoctorSearch(''); setFormData((p:any) => ({...p, doctorId: ''}))}}>Change</Button>
+        <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+          {doctorOptions.length > 0 ? (
+            <div className="divide-y divide-gray-200">
+              {doctorOptions.map((d: DoctorProfile) => (
+                <div 
+                  key={d.user} 
+                  onClick={() => handleDoctorSelect(d)} 
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Stethoscope className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{d.user_name}</p>
+                      <p className="text-xs text-gray-500 flex items-center">
+                        <Star className="w-3 h-3 mr-1" />
+                        {d.specialization}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Fee: ${d.consultation_fee} • Duration: {d.consultation_duration || 15} min
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-6 text-center text-gray-500">
+              <Stethoscope className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm">No doctors found</p>
+              <p className="text-xs">Try searching with a different term</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Load More Doctors Button */}
+        {doctorHasMore && !doctorSearch && (
+          <div className="mt-2 text-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={loadMoreDoctors}
+              disabled={loadingMoreDoctors}
+              className="w-full text-xs"
+            >
+              {loadingMoreDoctors ? (
+                <>
+                  <div className="w-3 h-3 mr-2 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                `Load More Doctors (${doctorOptions.length} shown)`
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Selected Doctor */}
+    {selectedDoctor && (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-800">Doctor Selected</p>
+              <p className="text-sm text-green-700">{selectedDoctor.user_name}</p>
+              <p className="text-xs text-green-600">{selectedDoctor.specialization}</p>
+              <p className="text-xs text-green-500">
+                Fee: ${selectedDoctor.consultation_fee} • Duration: {selectedDoctor.consultation_duration || 15} min
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => { 
+              setSelectedDoctor(null); 
+              setDoctorSearch(''); 
+              setFormData((p:any) => ({...p, doctorId: ''}))
+            }}
+            className="text-green-700 hover:text-green-800 hover:bg-green-100"
+          >
+            Change
+          </Button>
+        </div>
       </div>
     )}
   </div>
 );
 
 const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: any) => (
-  <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+  <div className="space-y-6">
+    {/* Date Selection */}
     <div>
-      <h3 className="font-bold text-slate-700 mb-2 text-lg">Select Date</h3>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className={cn("w-full h-14 justify-start text-left font-normal text-base rounded-xl border-2 border-slate-300", !formData.consultationDate && "text-slate-500")}>
-            <CalendarIcon className="mr-3 h-5 w-5" />
-            {formData.consultationDate ? format(formData.consultationDate, "PPP") : <span>Pick a date</span>}
+          <Button 
+            variant="outline" 
+            className={cn(
+              "w-full h-9 justify-start text-left text-sm border border-gray-300",
+              !formData.consultationDate && "text-gray-500"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {formData.consultationDate ? format(formData.consultationDate, "PPP") : "Pick a date"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.consultationDate} onSelect={(d: any) => handleInputChange('consultationDate', d)} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus /></PopoverContent>
+        <PopoverContent className="w-auto p-0">
+          <Calendar 
+            mode="single" 
+            selected={formData.consultationDate} 
+            onSelect={(d: any) => handleInputChange('consultationDate', d)} 
+            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
+            initialFocus 
+          />
+        </PopoverContent>
       </Popover>
     </div>
+
+    {/* Time Slots */}
     <div>
-      <h3 className="font-bold text-slate-700 mb-2 text-lg">Available Slots</h3>
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-sm font-medium text-gray-700">Available Time Slots</label>
+        {formData.consultationDate && (
+          <span className="text-xs text-gray-500">
+            {format(formData.consultationDate, "EEEE, MMMM dd, yyyy")}
+          </span>
+        )}
+      </div>
+      
       {slotLoading ? (
-        <div className="flex items-center justify-center h-48 rounded-xl bg-slate-100/80"><div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-orange-500"></div></div>
+        <div className="flex items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50">
+          <div className="flex items-center space-x-2 text-gray-500">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-500"></div>
+            <span className="text-sm">Loading available slots...</span>
+          </div>
+        </div>
       ) : doctorSlots.filter((slot: DoctorSlotFrontend) => slot.isAvailable).length > 0 ? (
-        <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
+        <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
           {doctorSlots.filter((slot: DoctorSlotFrontend) => slot.isAvailable).map((slot: DoctorSlotFrontend, index: number) => (
-            <button type="button" key={index} onClick={() => handleInputChange('selectedSlot', slot)} className={cn("rounded-lg p-3 text-center font-semibold transition-all duration-200 border-2", formData.selectedSlot?.startTime === slot.startTime ? "bg-orange-500 text-white border-orange-500 shadow-md scale-105" : "bg-white border-slate-200 hover:border-orange-400")}>
+            <button 
+              type="button" 
+              key={index} 
+              onClick={() => handleInputChange('selectedSlot', slot)} 
+              className={cn(
+                "rounded-md p-2 text-center text-sm font-medium transition-all duration-200 border",
+                formData.selectedSlot?.startTime === slot.startTime 
+                  ? "bg-blue-500 text-white border-blue-500 shadow-sm" 
+                  : "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+              )}
+            >
               {slot.startTime}
             </button>
           ))}
         </div>
+      ) : formData.consultationDate ? (
+        <div className="flex flex-col items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
+          <Clock className="w-6 h-6 mb-2"/>
+          <p className="text-sm font-medium">No slots available</p>
+          <p className="text-xs">Please select another date</p>
+        </div>
       ) : (
-        <div className="flex flex-col items-center justify-center h-48 rounded-xl bg-slate-100/80 text-slate-500">
-            <Clock className="w-10 h-10 mb-2"/>
-            <p className="font-semibold">No slots available.</p>
-            <p className="text-sm">Please select another date.</p>
+        <div className="flex flex-col items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
+          <CalendarIcon className="w-6 h-6 mb-2"/>
+          <p className="text-sm font-medium">Select a date first</p>
+          <p className="text-xs">Available slots will appear here</p>
         </div>
       )}
     </div>
+
+    {/* Selected Slot Display */}
+    {formData.selectedSlot && (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center space-x-2">
+          <Clock className="h-4 w-4 text-blue-600" />
+          <div>
+            <p className="text-sm font-medium text-blue-800">Time Slot Selected</p>
+            <p className="text-sm text-blue-700">
+              {formData.selectedSlot.startTime} - {formData.selectedSlot.endTime}
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 );
 
 const renderStep4 = ({ formData, handleInputChange }: any) => (
-  <div className="space-y-6 max-w-2xl mx-auto">
+  <div className="space-y-4">
+    {/* Chief Complaint */}
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-2">Select Basic Complaint</label>
-      <Select value={formData.chiefComplaint} onValueChange={(value) => handleInputChange('chiefComplaint', value)}>
-        <SelectTrigger className="w-full h-12 rounded-xl border-2 border-slate-300 bg-white/80">
-          <SelectValue placeholder="Choose a complaint" />
-        </SelectTrigger>
-        <SelectContent>
-          {BASIC_COMPLAINTS.map((complaint) => (
-            <SelectItem key={complaint} value={complaint}>{complaint}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <p className="text-xs text-slate-500 mt-1 pl-1">You can also type a custom complaint below.</p>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Chief Complaint *</label>
+      <div className="space-y-2">
+        <Select value={formData.chiefComplaint} onValueChange={(value) => handleInputChange('chiefComplaint', value)}>
+          <SelectTrigger className="w-full h-9 text-sm border border-gray-300">
+            <SelectValue placeholder="Choose a common complaint" />
+          </SelectTrigger>
+          <SelectContent>
+            {BASIC_COMPLAINTS.map((complaint) => (
+              <SelectItem key={complaint} value={complaint}>{complaint}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder="Or enter custom complaint..."
+          value={formData.chiefComplaint}
+          onChange={(e) => handleInputChange('chiefComplaint', e.target.value)}
+          className="h-9 text-sm"
+        />
+      </div>
     </div>
-    <FloatingLabelInput id="chief-complaint" label="Chief Complaint *" icon={FileText} value={formData.chiefComplaint} onChange={(e: any) => handleInputChange('chiefComplaint', e.target.value)} required />
-    <div className="relative">
-      <Textarea id="symptoms" placeholder=" " value={formData.symptoms} onChange={(e) => handleInputChange('symptoms', e.target.value)} className="peer min-h-[120px] w-full rounded-xl border-2 border-slate-300 bg-white/80 pt-5 text-base transition-colors focus:border-orange-500 focus:bg-white resize-none" />
-      <label htmlFor="symptoms" className="absolute left-4 top-4 -translate-y-0 scale-100 cursor-text text-base text-slate-500 transition-all peer-placeholder-shown:scale-100 peer-focus:top-1 peer-focus:-translate-y-1/2 peer-focus:scale-75 peer-focus:text-xs peer-focus:text-orange-600">Symptoms (Optional)</label>
+
+    {/* Symptoms */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Symptoms (Optional)</label>
+      <Textarea 
+        placeholder="Describe symptoms in detail..."
+        value={formData.symptoms} 
+        onChange={(e) => handleInputChange('symptoms', e.target.value)} 
+        className="min-h-[80px] text-sm border border-gray-300 resize-none" 
+      />
     </div>
-    <div className="grid sm:grid-cols-2 gap-6">
-      <FloatingLabelInput id="consultation-fee" label="Consultation Fee" icon={DollarSign} type="number" value={formData.consultationFee} onChange={(e: any) => handleInputChange('consultationFee', e.target.value)} disabled />
+
+    {/* Fee and Duration */}
+    <div className="grid grid-cols-2 gap-4">
       <div>
-        <FloatingLabelInput id="duration" label="Duration (minutes)" icon={Timer} value={formData.duration} disabled />
-        <p className="text-xs text-slate-500 mt-1 pl-1">Duration is set by clinic.</p>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Fee</label>
+        <div className="relative">
+          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="number"
+            value={formData.consultationFee}
+            disabled
+            className="pl-10 h-9 text-sm bg-gray-50"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+        <div className="relative">
+          <Timer className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            value={`${formData.duration} minutes`}
+            disabled
+            className="pl-10 h-9 text-sm bg-gray-50"
+          />
+        </div>
       </div>
     </div>
     
-    <div className="grid sm:grid-cols-2 gap-6">
+    {/* Payment Method and Status */}
+    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
-        <select 
-          value={formData.paymentMethod} 
-          onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="cash">Cash</option>
-          <option value="online">Online Payment</option>
-          <option value="card">Card</option>
-          <option value="upi">UPI</option>
-        </select>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+        <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
+          <SelectTrigger className="w-full h-9 text-sm border border-gray-300">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="cash">Cash</SelectItem>
+            <SelectItem value="online">Online Payment</SelectItem>
+            <SelectItem value="card">Card</SelectItem>
+            <SelectItem value="upi">UPI</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+        <div className="h-9 flex items-center px-3 bg-gray-50 border border-gray-200 rounded-md">
+          <Badge 
+            variant="outline" 
+            className={`text-xs ${
+              formData.paymentMethod === 'cash' 
+                ? 'bg-green-100 text-green-800 border-green-200' 
+                : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+            }`}
+          >
+            {formData.paymentMethod === 'cash' ? 'Completed' : 'Pending'}
+          </Badge>
+        </div>
         {formData.paymentMethod === 'cash' && (
           <p className="text-xs text-green-600 mt-1">Payment will be marked as completed</p>
         )}
       </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Payment Status</label>
-        <div className="px-3 py-2 bg-slate-100 rounded-lg">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            formData.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            {formData.paymentMethod === 'cash' ? 'Completed' : 'Pending'}
-          </span>
+    </div>
+
+    {/* Consultation Type */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Type</label>
+      <Select value={formData.consultationType} onValueChange={(value) => handleInputChange('consultationType', value)}>
+        <SelectTrigger className="w-full h-9 text-sm border border-gray-300">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="video_call">Video Call</SelectItem>
+          <SelectItem value="phone_call">Phone Call</SelectItem>
+          <SelectItem value="in_person">In Person</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Summary */}
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <h4 className="text-sm font-medium text-gray-700 mb-2">Consultation Summary</h4>
+      <div className="space-y-1 text-xs text-gray-600">
+        <div className="flex justify-between">
+          <span>Type:</span>
+          <span className="capitalize">{formData.consultationType?.replace('_', ' ')}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Fee:</span>
+          <span>${formData.consultationFee}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Duration:</span>
+          <span>{formData.duration} minutes</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Payment:</span>
+          <span className="capitalize">{formData.paymentMethod}</span>
         </div>
       </div>
     </div>

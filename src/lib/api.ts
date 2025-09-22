@@ -64,28 +64,39 @@ export const del = <T = unknown>(url: string, config?: Record<string, unknown>) 
 
 // Types for e-clinic data
 export interface EClinic {
-  id: number;
+  id: string;
   name: string;
+  clinic_type: string;
   description?: string;
-  address: string;
+  phone: string;
+  email: string;
+  website?: string;
+  street: string;
   city: string;
   state: string;
   pincode: string;
   country: string;
-  latitude?: number;
-  longitude?: number;
-  phone: string;
-  email: string;
-  website?: string;
-  logo?: string;
+  latitude?: string;
+  longitude?: string;
+  operating_hours?: Record<string, string>;
+  specialties?: string[];
+  services?: string[];
+  facilities?: string[];
+  registration_number: string;
+  license_number?: string;
+  accreditation?: string;
   cover_image?: string;
+  gallery_images?: string[];
   is_active: boolean;
   is_verified: boolean;
+  accepts_online_consultations?: boolean;
+  consultation_duration?: number;
+  admin: string;
+  admin_name?: string;
+  admin_phone?: string;
   rating?: number;
   total_reviews?: number;
   consultation_fee?: number;
-  services?: string[];
-  working_hours?: string;
   created_at: string;
   updated_at: string;
 }
@@ -147,6 +158,31 @@ export interface UserProfile {
   date_joined: string;
   age: number | null;
   full_address: string;
+}
+
+// Public patient registration interfaces
+export interface PublicPatientRegistrationData {
+  name: string;
+  email: string;
+  phone: string;
+  age: number;
+  gender: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country?: string;
+}
+
+export interface PublicPatientRegistrationResponse {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  success: boolean;
+  nearest_eclinics?: EClinic[];
 }
 
 export interface Consultation {
@@ -386,40 +422,6 @@ export interface PatientNote {
 }
 
 // E-Clinic interfaces
-export interface EClinic {
-  id: string;
-  name: string;
-  clinic_type: string;
-  description: string;
-  phone: string;
-  email: string;
-  website: string;
-  street: string;
-  city: string;
-  state: string;
-  pincode: string;
-  country: string;
-  latitude: number | null;
-  longitude: number | null;
-  operating_hours: Record<string, string>;
-  specialties: string[];
-  services: string[];
-  facilities: string[];
-  registration_number: string;
-  license_number: string;
-  accreditation: string;
-  cover_image: string | null;
-  gallery_images: string[];
-  is_active: boolean;
-  is_verified: boolean;
-  accepts_online_consultations: boolean;
-  consultation_duration: number; // Duration in minutes
-  admin: string;
-  admin_name?: string;
-  admin_phone?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface CreateEClinicData {
   name: string;
@@ -741,10 +743,12 @@ export const patientApi = {
       const response = await api.get(url, { params });
       
       console.log('Patient consultations API response:', response);
+      console.log('Response data structure:', response.data);
       
-      // Handle the actual API response structure
-      // Response structure: { data: { count, next, previous, results: [...] } }
+      // Handle Django REST Framework paginated response structure
+      // Response structure: { count, next, previous, results: [...] }
       if (response && response.data && response.data.results && Array.isArray(response.data.results)) {
+        console.log('Using paginated response structure');
         return {
           consultations: response.data.results,
           pagination: {
@@ -755,8 +759,18 @@ export const patientApi = {
         };
       }
       
+      // Handle direct data response (non-paginated)
+      if (response && response.data && response.data.data && Array.isArray(response.data.data)) {
+        console.log('Using direct data response structure');
+        return {
+          consultations: response.data.data,
+          pagination: { count: response.data.data.length, next: null, previous: null }
+        };
+      }
+      
       // Fallback: if response.data exists and is an array
       if (response && response.data && Array.isArray(response.data)) {
+        console.log('Using fallback array response structure');
         return {
           consultations: response.data,
           pagination: { count: response.data.length, next: null, previous: null }
@@ -1759,7 +1773,18 @@ export const superAdminApi = {
     }
     
     const response = await api.get(`/api/eclinic/?${queryParams.toString()}`);
-    return response.data;
+    console.log('Raw getEClinics response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.results) {
+      // If response is in paginated format
+      return response.data;
+    } else if (Array.isArray(response.data)) {
+      // If response is direct array
+      return { results: response.data, count: response.data.length };
+    } else {
+      throw new Error('Invalid response format from getEClinics API');
+    }
   },
 
   // Get clinic statistics for dashboard
@@ -1775,8 +1800,19 @@ export const superAdminApi = {
 
   // Get single e-clinic
   getEClinic: async (clinicId: string): Promise<EClinic> => {
-    const response = await api.get<ApiResponse<EClinic>>(`/api/eclinic/${clinicId}/`);
-    return response.data.data;
+    const response = await api.get(`/api/eclinic/${clinicId}/`);
+    console.log('Raw getEClinic response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      // If response is wrapped in ApiResponse format
+      return response.data.data;
+    } else if (response.data) {
+      // If response is direct clinic data
+      return response.data;
+    } else {
+      throw new Error('Invalid response format from API');
+    }
   },
 
   // Create new e-clinic
@@ -1893,6 +1929,12 @@ export const publicApi = {
     if (params?.state) queryParams.append('state', params.state);
     
     const response = await api.get(`/api/eclinic/public/?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  // Public patient registration (no authentication required)
+  registerPatient: async (patientData: PublicPatientRegistrationData): Promise<PublicPatientRegistrationResponse> => {
+    const response = await api.post<ApiResponse<PublicPatientRegistrationResponse>>('/api/auth/public/register/', patientData);
     return response.data.data;
   }
 };
@@ -2258,8 +2300,8 @@ export const adminConsultationApi = {
   // Reschedule consultation
   rescheduleConsultation: async (consultationId: string, newDate: string, newTime: string): Promise<Consultation> => {
     const response = await api.post<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/reschedule/`, {
-      scheduled_date: newDate,
-      scheduled_time: newTime
+      new_date: newDate,
+      new_time: newTime
     });
     return response.data.data;
   },
@@ -3166,11 +3208,12 @@ export interface DoctorSchedule {
 // Add a type for frontend slot objects
 export interface DoctorSlotFrontend {
   id: number;
-  doctor: number;
+  doctor: string;
   date: string;
   startTime: string;
   endTime: string;
   isAvailable: boolean;
+  isBooked: boolean;
   created_at: string;
   updated_at: string;
   type: string;

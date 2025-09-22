@@ -293,7 +293,7 @@ const EnhancedPrescriptionWriter: React.FC<EnhancedPrescriptionWriterProps> = ({
     const newMedication: Omit<PrescriptionMedication, 'id'> = {
       medicine_name: '',
       composition: '',
-      dosage_form: 'Tablet',
+      dosage_form: 'tablet',
       morning_dose: 0,
       afternoon_dose: 0,
       evening_dose: 0,
@@ -774,20 +774,20 @@ const MedicationCard: React.FC<MedicationCardProps> = ({ medication, onUpdate, o
         <div>
           <Label>Dosage Form</Label>
           <Select
-            value={medication.dosage_form || 'Tablet'}
+            value={medication.dosage_form || 'tablet'}
             onValueChange={(value) => onUpdate({ dosage_form: value })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Tablet">Tablet</SelectItem>
-              <SelectItem value="Capsule">Capsule</SelectItem>
-              <SelectItem value="Syrup">Syrup</SelectItem>
-              <SelectItem value="Injection">Injection</SelectItem>
-              <SelectItem value="Drops">Drops</SelectItem>
-              <SelectItem value="Cream">Cream</SelectItem>
-              <SelectItem value="Ointment">Ointment</SelectItem>
+              <SelectItem value="tablet">Tablet</SelectItem>
+              <SelectItem value="capsule">Capsule</SelectItem>
+              <SelectItem value="syrup">Syrup</SelectItem>
+              <SelectItem value="injection">Injection</SelectItem>
+              <SelectItem value="drops">Drops</SelectItem>
+              <SelectItem value="cream">Cream</SelectItem>
+              <SelectItem value="ointment">Ointment</SelectItem>
             </SelectContent>
           </Select>
         </div>

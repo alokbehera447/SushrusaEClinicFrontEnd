@@ -16,7 +16,6 @@ import {
   DollarSign,
   Calendar,
   Bell,
-  RefreshCw,
   Search,
   Filter,
   Eye,
@@ -66,7 +65,6 @@ const EnhancedConsultationDashboard = () => {
     activePatients: 0
   });
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
@@ -113,33 +111,39 @@ const EnhancedConsultationDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('Fetching dashboard data...');
       await Promise.all([
         fetchConsultations(),
         fetchStats(),
         fetchAnalytics(),
         fetchRealTimeUpdates()
       ]);
+      console.log('Dashboard data fetched successfully');
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+      console.log('Loading set to false');
     }
   };
 
   const fetchConsultations = async (page: number = currentPage) => {
     try {
       setPaginationLoading(true);
+      console.log('Fetching consultations...');
       const response = await consultationService.getDoctorConsultations({
         page: page,
         page_size: pageSize,
         status: filter !== 'all' ? filter : undefined,
         search: debouncedSearchTerm || undefined
       });
+      console.log('Consultations response:', response);
       // Ensure we always have an array
       const consultationsArray = Array.isArray(response?.consultations) ? response.consultations : [];
       setConsultations(consultationsArray);
       setTotalPages(response?.total_pages || 1);
       setTotalConsultations(response?.total || 0);
+      console.log('Consultations fetched:', consultationsArray.length);
     } catch (error) {
       console.error('Error fetching consultations:', error);
       setConsultations([]);
@@ -224,11 +228,6 @@ const EnhancedConsultationDashboard = () => {
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchDashboardData();
-    setRefreshing(false);
-  };
 
   const handleConsultationAction = async (consultationId: string, action: 'start' | 'complete' | 'cancel' | 'open') => {
     try {
@@ -317,10 +316,30 @@ const EnhancedConsultationDashboard = () => {
   // Since we're now fetching filtered data from the backend, we can use consultations directly
   const filteredConsultations = consultations || [];
 
+  // Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('Loading timeout - forcing component to render');
+        setLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+        <p className="text-gray-600">Loading consultations...</p>
+        <Button 
+          variant="outline" 
+          onClick={() => setLoading(false)}
+          className="text-sm"
+        >
+          Skip Loading
+        </Button>
       </div>
     );
   }
@@ -394,15 +413,6 @@ const EnhancedConsultationDashboard = () => {
                 <Activity className="w-4 h-4 mr-2" />
                 Manage Consultations
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -410,80 +420,78 @@ const EnhancedConsultationDashboard = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-            <Activity className="w-4 h-4 mr-2" />
-            Overview
+        <TabsList className="grid w-full grid-cols-3 bg-white rounded-xl p-1 sm:p-2 shadow-sm border border-gray-200 gap-1">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+            <Activity className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Overview</span>
+            <span className="sm:hidden">Overview</span>
           </TabsTrigger>
-          {/* <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-            <Video className="w-4 h-4 mr-2" />
-            Consultations
-          </TabsTrigger> */}
-          <TabsTrigger value="analytics" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Analytics
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+            <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Analytics</span>
+            <span className="sm:hidden">Analytics</span>
           </TabsTrigger>
-          <TabsTrigger value="performance" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
-            <Award className="w-4 h-4 mr-2" />
-            Performance
+          <TabsTrigger value="performance" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+            <Award className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Performance</span>
+            <span className="sm:hidden">Performance</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Recent Consultations */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Recent Consultations</span>
-                  <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
-                    <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  </Button>
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="text-sm sm:text-base">
+                  Recent Consultations
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-3 sm:p-6 pt-0">
+                <div className="space-y-2 sm:space-y-3">
                   {Array.isArray(filteredConsultations) && filteredConsultations.length > 0 ? (
                     filteredConsultations.slice(0, 5).map((consultation) => (
-                      <div key={consultation.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-8 w-8">
+                      <div key={consultation.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-0">
+                          <Avatar className="h-6 w-6 sm:h-8 sm:w-8">
                             <AvatarImage src={consultation.patient?.profile_picture} />
-                            <AvatarFallback>{consultation.patient?.name?.charAt(0) || 'P'}</AvatarFallback>
+                            <AvatarFallback className="text-xs">{consultation.patient?.name?.charAt(0) || 'P'}</AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{consultation.patient?.name || 'Unknown Patient'}</p>
-                            <p className="text-xs text-gray-500">{consultation.consultation_id || consultation.id}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs sm:text-sm truncate">{consultation.patient?.name || 'Unknown Patient'}</p>
+                            <p className="text-xs text-gray-500 truncate">{consultation.consultation_id || consultation.id}</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge className={getStatusColor(consultation.status)}>
+                        <div className="flex items-center justify-between sm:justify-end space-x-1 sm:space-x-2">
+                          <Badge className={`text-xs ${getStatusColor(consultation.status)}`}>
                             {consultation.status?.replace('_', ' ') || 'Unknown'}
                           </Badge>
-                          <Button
-                            size="sm"
-                            onClick={() => openConsultationWorkflow(consultation)}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Video className="w-3 h-3 mr-1" />
-                            Open
-                          </Button>
-                          {consultation.status === 'scheduled' && (
+                          <div className="flex space-x-1">
                             <Button
                               size="sm"
-                              onClick={() => handleConsultationAction(consultation.id, 'start')}
-                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => openConsultationWorkflow(consultation)}
+                              className="bg-blue-600 hover:bg-blue-700 text-xs px-2 sm:px-3"
                             >
-                              <PlayCircle className="w-3 h-3 mr-1" />
-                              Start
+                              <Video className="w-3 h-3 sm:mr-1" />
+                              <span className="hidden sm:inline">Open</span>
                             </Button>
-                          )}
+                            {consultation.status === 'scheduled' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleConsultationAction(consultation.id, 'start')}
+                                className="bg-green-600 hover:bg-green-700 text-xs px-2 sm:px-3"
+                              >
+                                <PlayCircle className="w-3 h-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Start</span>
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-gray-500 text-center py-4">No consultations available</p>
+                    <p className="text-gray-500 text-center py-4 text-sm sm:text-base">No consultations available</p>
                   )}
                 </div>
               </CardContent>
@@ -491,32 +499,32 @@ const EnhancedConsultationDashboard = () => {
 
             {/* Quick Stats */}
             <Card>
-              <CardHeader>
-                <CardTitle>Quick Statistics</CardTitle>
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="text-sm sm:text-base">Quick Statistics</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 {stats && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-blue-600">{stats.total_consultations}</p>
-                        <p className="text-sm text-gray-600">Total Consultations</p>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="text-center p-2 sm:p-3 bg-blue-50 rounded-lg">
+                        <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.total_consultations}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Total Consultations</p>
                       </div>
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <p className="text-2xl font-bold text-green-600">
+                      <div className="text-center p-2 sm:p-3 bg-green-50 rounded-lg">
+                        <p className="text-lg sm:text-2xl font-bold text-green-600">
                           {stats.total_consultations > 0 ? Math.round((stats.completed_consultations / stats.total_consultations) * 100) : 0}%
                         </p>
-                        <p className="text-sm text-gray-600">Completion Rate</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Completion Rate</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-purple-50 rounded-lg">
-                        <p className="text-2xl font-bold text-purple-600">₹{stats.total_revenue}</p>
-                        <p className="text-sm text-gray-600">Total Revenue</p>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="text-center p-2 sm:p-3 bg-purple-50 rounded-lg">
+                        <p className="text-lg sm:text-2xl font-bold text-purple-600">₹{stats.total_revenue}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Total Revenue</p>
                       </div>
-                      <div className="text-center p-3 bg-orange-50 rounded-lg">
-                        <p className="text-2xl font-bold text-orange-600">{stats.doctor_consultation_stats?.average_duration || 0}min</p>
-                        <p className="text-sm text-gray-600">Avg Duration</p>
+                      <div className="text-center p-2 sm:p-3 bg-orange-50 rounded-lg">
+                        <p className="text-lg sm:text-2xl font-bold text-orange-600">{stats.doctor_consultation_stats?.average_duration || 0}min</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Avg Duration</p>
                       </div>
                     </div>
                   </div>
@@ -527,57 +535,57 @@ const EnhancedConsultationDashboard = () => {
         </TabsContent>
 
         {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
+        <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
           {analytics && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <Card>
-                <CardHeader>
-                  <CardTitle>Consultation Types</CardTitle>
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="text-sm sm:text-base">Consultation Types</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     {Array.isArray(stats?.doctor_consultation_stats?.consultation_type_distribution) 
                       ? stats.doctor_consultation_stats.consultation_type_distribution.map((type) => (
                         <div key={type.type} className="flex items-center justify-between">
-                          <span className="capitalize">{type.type.replace('_', ' ')}</span>
+                          <span className="capitalize text-xs sm:text-sm">{type.type.replace('_', ' ')}</span>
                           <div className="flex items-center space-x-2">
-                            <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div className="w-16 sm:w-20 bg-gray-200 rounded-full h-2">
                               <div
                                 className="bg-[#E17726] h-2 rounded-full"
                                 style={{ width: `${type.percentage || 0}%` }}
                               ></div>
                             </div>
-                            <span className="text-sm font-medium">{type.count || 0}</span>
+                            <span className="text-xs sm:text-sm font-medium">{type.count || 0}</span>
                           </div>
                         </div>
                       ))
-                      : <p className="text-gray-500 text-center py-4">No consultation type data available</p>
+                      : <p className="text-gray-500 text-center py-4 text-sm sm:text-base">No consultation type data available</p>
                     }
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle>Status Distribution</CardTitle>
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="text-sm sm:text-base">Status Distribution</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     {[
                       { status: 'scheduled', count: stats?.scheduled_consultations || 0, percentage: stats?.scheduled_consultations ? (stats.scheduled_consultations / stats.total_consultations) * 100 : 0 },
                       { status: 'completed', count: stats?.completed_consultations || 0, percentage: stats?.completed_consultations ? (stats.completed_consultations / stats.total_consultations) * 100 : 0 },
                       { status: 'cancelled', count: stats?.cancelled_consultations || 0, percentage: stats?.cancelled_consultations ? (stats.cancelled_consultations / stats.total_consultations) * 100 : 0 }
                     ].map((status) => (
                       <div key={status.status} className="flex items-center justify-between">
-                        <span className="capitalize">{status.status.replace('_', ' ')}</span>
+                        <span className="capitalize text-xs sm:text-sm">{status.status.replace('_', ' ')}</span>
                         <div className="flex items-center space-x-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                          <div className="w-16 sm:w-20 bg-gray-200 rounded-full h-2">
                             <div
                               className="bg-[#E17726] h-2 rounded-full"
                               style={{ width: `${status.percentage}%` }}
                             ></div>
                           </div>
-                          <span className="text-sm font-medium">{status.count}</span>
+                          <span className="text-xs sm:text-sm font-medium">{status.count}</span>
                         </div>
                       </div>
                     ))}
@@ -589,35 +597,35 @@ const EnhancedConsultationDashboard = () => {
         </TabsContent>
 
         {/* Performance Tab */}
-        <TabsContent value="performance" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <TabsContent value="performance" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             <Card className="text-center">
-              <CardContent className="p-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Star className="w-8 h-8 text-green-600" />
+              <CardContent className="p-4 sm:p-6">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <Star className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-green-600">{stats?.doctor_consultation_stats?.average_rating || 0}</h3>
-                <p className="text-gray-600">Average Rating</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-green-600">{stats?.doctor_consultation_stats?.average_rating || 0}</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Average Rating</p>
               </CardContent>
             </Card>
 
             <Card className="text-center">
-              <CardContent className="p-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-8 h-8 text-blue-600" />
+              <CardContent className="p-4 sm:p-6">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-blue-600">{stats?.doctor_consultation_stats?.average_duration || 0} min</h3>
-                <p className="text-gray-600">Average Duration</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-blue-600">{stats?.doctor_consultation_stats?.average_duration || 0} min</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Average Duration</p>
               </CardContent>
             </Card>
 
             <Card className="text-center">
-              <CardContent className="p-6">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <DollarSign className="w-8 h-8 text-purple-600" />
+              <CardContent className="p-4 sm:p-6">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-purple-600">₹{stats?.doctor_consultation_stats?.revenue_stats?.average_consultation_fee || 0}</h3>
-                <p className="text-gray-600">Average Fee</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-purple-600">₹{stats?.doctor_consultation_stats?.revenue_stats?.average_consultation_fee || 0}</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Average Fee</p>
               </CardContent>
             </Card>
           </div>

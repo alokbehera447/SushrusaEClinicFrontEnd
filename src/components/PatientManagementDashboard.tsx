@@ -42,7 +42,12 @@ import {
   Trash2, 
   Download, 
   User,
-  Eye
+  Eye,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { 
   patientService, 
@@ -53,6 +58,7 @@ import {
   type Consultation,
   type PatientStats 
 } from '@/services/patientService';
+import { patientApi, prescriptionApi } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 interface PatientManagementDashboardProps {
@@ -69,6 +75,21 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // PDF version and pagination state
+  const [latestPdfVersions, setLatestPdfVersions] = useState<Record<string, {
+    prescriptionId: string;
+    version: number;
+    downloadUrl: string;
+    generatedBy: string;
+    generatedAt: string;
+  }>>({});
+  const [loadingPdfVersions, setLoadingPdfVersions] = useState<Record<string, boolean>>({});
+  
+  // Consultation pagination state
+  const [consultationCurrentPage, setConsultationCurrentPage] = useState(1);
+  const [consultationPageSize, setConsultationPageSize] = useState(10);
+  const [consultationTotalCount, setConsultationTotalCount] = useState(0);
 
   // Form states
   const [showMedicalRecordDialog, setShowMedicalRecordDialog] = useState(false);
@@ -107,6 +128,25 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
   useEffect(() => {
     loadPatientData();
   }, [patientId]);
+
+  // Load consultations when consultations tab is active
+  useEffect(() => {
+    if (activeTab === 'consultations') {
+      console.log(`🔄 Tab changed to consultations, loading consultations...`);
+      loadConsultations(consultationCurrentPage, consultationPageSize);
+    }
+  }, [activeTab, consultationCurrentPage, consultationPageSize, patientId]);
+
+  // Fetch PDF versions when consultations change
+  useEffect(() => {
+    if (consultations.length > 0) {
+      console.log(`📄 Consultations loaded, fetching PDF versions for ${consultations.length} consultations`);
+      consultations.forEach((consultation) => {
+        console.log(`📄 Fetching PDF for consultation ${consultation.id}`);
+        fetchLatestPdfVersion(consultation.id);
+      });
+    }
+  }, [consultations]);
 
   const loadPatientData = async (page = currentPage) => {
     try {
@@ -241,6 +281,151 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch latest PDF version for a consultation
+  const fetchLatestPdfVersion = async (consultationId: string) => {
+    // Check if PDF version is already loaded
+    if (latestPdfVersions[consultationId]) {
+      console.log(`📄 PDF version already loaded for consultation ${consultationId}`);
+      return; // Already loaded
+    }
+
+    try {
+      console.log(`🔍 Fetching PDF version for consultation ${consultationId}`);
+      setLoadingPdfVersions(prev => ({ ...prev, [consultationId]: true }));
+      
+      // First get prescriptions for this consultation
+      console.log(`📋 Getting prescriptions for consultation ${consultationId}`);
+      const prescriptions = await patientApi.getConsultationPrescriptions(consultationId);
+      console.log(`📋 Prescriptions response:`, prescriptions);
+      
+      if (prescriptions && prescriptions.length > 0) {
+        console.log(`📋 Found ${prescriptions.length} prescriptions`);
+        // Find the first finalized prescription
+        const finalizedPrescription = prescriptions.find(p => p.status !== 'draft');
+        console.log(`📋 Finalized prescription:`, finalizedPrescription);
+        
+        if (finalizedPrescription) {
+          try {
+            console.log(`📄 Getting PDF versions for prescription ${finalizedPrescription.id}`);
+            // Get PDF versions for this prescription
+            const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(finalizedPrescription.id);
+            console.log(`📄 PDF versions response:`, pdfVersions);
+            
+            if (pdfVersions && pdfVersions.length > 0) {
+              // Get the latest version (first in array)
+              const latestVersion = pdfVersions[0];
+              console.log(`📄 Latest PDF version:`, latestVersion);
+              setLatestPdfVersions(prev => ({
+                ...prev,
+                [consultationId]: {
+                  prescriptionId: finalizedPrescription.id,
+                  version: latestVersion.version,
+                  downloadUrl: latestVersion.file_url,
+                  generatedBy: latestVersion.generated_by?.name || 'Doctor',
+                  generatedAt: latestVersion.generated_at
+                }
+              }));
+              console.log(`✅ PDF version set for consultation ${consultationId}`);
+            } else {
+              console.log(`❌ No PDF versions found for prescription ${finalizedPrescription.id}`);
+            }
+          } catch (pdfError) {
+            console.error(`❌ Error fetching PDF versions for prescription ${finalizedPrescription.id}:`, pdfError);
+          }
+        } else {
+          console.log(`❌ No finalized prescription found for consultation ${consultationId}`);
+        }
+      } else {
+        console.log(`❌ No prescriptions found for consultation ${consultationId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching latest PDF version for consultation ${consultationId}:`, error);
+    } finally {
+      setLoadingPdfVersions(prev => ({ ...prev, [consultationId]: false }));
+    }
+  };
+
+  // Handle viewing latest PDF version for a consultation
+  const handleViewLatestPdf = async (consultationId: string) => {
+    const pdfVersion = latestPdfVersions[consultationId];
+    if (pdfVersion && pdfVersion.downloadUrl) {
+      window.open(pdfVersion.downloadUrl, '_blank');
+    } else {
+      alert('PDF not available. Please try again later.');
+    }
+  };
+
+  // Load consultations with pagination
+  const loadConsultations = async (page: number = 1, size: number = 10) => {
+    try {
+      console.log(`🔍 Loading consultations for patient ${patientId}, page ${page}, size ${size}`);
+      const consultationsRes = await patientService.getPatientConsultations(patientId, {
+        page,
+        page_size: size
+      });
+      console.log(`📋 Consultations API response:`, consultationsRes);
+
+      const consultationsResponse = consultationsRes as { 
+        results?: Consultation[] | { data?: Consultation[] };
+        count?: number;
+        total?: number;
+      };
+
+      let consultationsToProcess: any[] = [];
+
+      if (consultationsResponse?.results && Array.isArray(consultationsResponse.results)) {
+        setConsultations(consultationsResponse.results);
+        setConsultationTotalCount(consultationsResponse.count || consultationsResponse.total || consultationsResponse.results.length);
+        consultationsToProcess = consultationsResponse.results;
+        console.log(`✅ Set consultations from results array:`, consultationsResponse.results.length);
+      } else if (consultationsResponse?.results && typeof consultationsResponse.results === 'object' && consultationsResponse.results.data && Array.isArray(consultationsResponse.results.data)) {
+        setConsultations(consultationsResponse.results.data);
+        setConsultationTotalCount(consultationsResponse.count || consultationsResponse.total || consultationsResponse.results.data.length);
+        consultationsToProcess = consultationsResponse.results.data;
+        console.log(`✅ Set consultations from results.data:`, consultationsResponse.results.data.length);
+      } else if (consultationsRes?.data) {
+        if (Array.isArray(consultationsRes.data)) {
+          setConsultations(consultationsRes.data);
+          setConsultationTotalCount(consultationsRes.data.length);
+          consultationsToProcess = consultationsRes.data;
+          console.log(`✅ Set consultations from data array:`, consultationsRes.data.length);
+        } else if (consultationsRes.data?.results && Array.isArray(consultationsRes.data.results)) {
+          setConsultations(consultationsRes.data.results);
+          setConsultationTotalCount(consultationsRes.data.count || consultationsRes.data.results.length);
+          consultationsToProcess = consultationsRes.data.results;
+          console.log(`✅ Set consultations from data.results:`, consultationsRes.data.results.length);
+        } else {
+          setConsultations([]);
+          setConsultationTotalCount(0);
+          console.log(`❌ No consultations found in data`);
+        }
+      } else {
+        setConsultations([]);
+        setConsultationTotalCount(0);
+        console.log(`❌ No consultations found in response`);
+      }
+
+      // Fetch PDF versions for loaded consultations
+      console.log(`📄 Processing ${consultationsToProcess.length} consultations for PDF versions`);
+      if (Array.isArray(consultationsToProcess) && consultationsToProcess.length > 0) {
+        consultationsToProcess.forEach((consultation: any) => {
+          console.log(`📄 Fetching PDF for consultation ${consultation.id}`);
+          fetchLatestPdfVersion(consultation.id);
+        });
+      } else {
+        console.log(`❌ No consultations to process for PDF versions`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error loading consultations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load consultations",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1032,7 +1217,21 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
         {/* Consultations Tab */}
         <TabsContent value="consultations" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Consultation History ({consultations.length})</h3>
+            <h3 className="text-lg font-semibold">Consultation History ({consultationTotalCount})</h3>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  console.log(`🔄 Manual refresh of consultations and PDFs`);
+                  loadConsultations(consultationCurrentPage, consultationPageSize);
+                }}
+                className="text-xs"
+              >
+                <Loader2 className="w-3 h-3 mr-1" />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-4">
@@ -1081,6 +1280,50 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
                       <p>{consultation.prescription_required ? 'Yes' : 'No'}</p>
                     </div>
                   </div>
+                  
+                  {/* Latest PDF Version Display */}
+                  <div className="mt-4 pt-4 border-t">
+                    {loadingPdfVersions[consultation.id] ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Loading PDF...</span>
+                      </div>
+                    ) : latestPdfVersions[consultation.id] ? (
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#E17726]" />
+                        <span className="text-sm text-gray-600">Latest PDF:</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewLatestPdf(consultation.id)}
+                          className="h-6 px-2 text-xs border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white"
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          View PDF
+                        </Button>
+                        <span className="text-xs text-gray-500">
+                          v{latestPdfVersions[consultation.id].version}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                        <span>No PDF available</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            console.log(`🔄 Manual PDF fetch for consultation ${consultation.id}`);
+                            fetchLatestPdfVersion(consultation.id);
+                          }}
+                          className="h-6 px-2 text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
+                        >
+                          <Loader2 className="w-3 h-3 mr-1" />
+                          Retry
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -1090,6 +1333,110 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {Math.ceil(consultationTotalCount / consultationPageSize) > 1 && (
+            <Card className="border-gray-200">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <span>
+                      Showing {((consultationCurrentPage - 1) * consultationPageSize) + 1} to {Math.min(consultationCurrentPage * consultationPageSize, consultationTotalCount)} of {consultationTotalCount} consultations
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    {/* Page Size Selector */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">Show:</span>
+                      <select
+                        value={consultationPageSize}
+                        onChange={(e) => {
+                          setConsultationPageSize(Number(e.target.value));
+                          setConsultationCurrentPage(1);
+                        }}
+                        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:border-[#E17726] focus:ring-[#E17726]"
+                      >
+                        <option value={10}>10 per page</option>
+                        <option value={20}>20 per page</option>
+                        <option value={50}>50 per page</option>
+                      </select>
+                    </div>
+                    
+                    {/* Pagination Buttons */}
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConsultationCurrentPage(1)}
+                        disabled={consultationCurrentPage === 1}
+                        className="h-8 w-8 p-0 border-gray-300 hover:bg-gray-50"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConsultationCurrentPage(consultationCurrentPage - 1)}
+                        disabled={consultationCurrentPage === 1}
+                        className="h-8 w-8 p-0 border-gray-300 hover:bg-gray-50"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Page Numbers */}
+                      {Array.from({ length: Math.min(5, Math.ceil(consultationTotalCount / consultationPageSize)) }, (_, i) => {
+                        let pageNum;
+                        const totalPages = Math.ceil(consultationTotalCount / consultationPageSize);
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (consultationCurrentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (consultationCurrentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = consultationCurrentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={consultationCurrentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setConsultationCurrentPage(pageNum)}
+                            className="h-8 w-8 p-0 border-gray-300 hover:bg-gray-50"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConsultationCurrentPage(consultationCurrentPage + 1)}
+                        disabled={consultationCurrentPage >= Math.ceil(consultationTotalCount / consultationPageSize)}
+                        className="h-8 w-8 p-0 border-gray-300 hover:bg-gray-50"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConsultationCurrentPage(Math.ceil(consultationTotalCount / consultationPageSize))}
+                        disabled={consultationCurrentPage >= Math.ceil(consultationTotalCount / consultationPageSize)}
+                        className="h-8 w-8 p-0 border-gray-300 hover:bg-gray-50"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

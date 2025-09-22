@@ -76,6 +76,8 @@ import EnhancedPatientManagementTab from '@/components/forms/EnhancedPatientMana
 import ConsultationManagementEnhanced from '@/components/forms/ConsultationManagementEnhanced';
 import PaymentTrackingDashboard from '@/components/dashboards/PaymentTrackingDashboard';
 import DetailedAnalyticsDashboard from '@/components/dashboards/DetailedAnalyticsDashboard';
+import EClinicManagement from '@/components/eclinic/EClinicManagement';
+import AdminAssignmentInfo from '@/components/eclinic/AdminAssignmentInfo';
 import { 
   Dialog, 
   DialogContent, 
@@ -155,6 +157,23 @@ const AdminDashboardEnhanced = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [userProfile, setUserProfile] = useState<any>(null);
+  
+  // Profile editing state
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    age: '',
+    gender: '',
+    blood_group: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    country: ''
+  });
 
   // Check if admin is assigned to any clinic
   const isAssignedToClinic = assignedClinics.length > 0;
@@ -230,6 +249,66 @@ const AdminDashboardEnhanced = () => {
     }
   }, [currentPage, pageSize, searchQuery, statusFilter, genderFilter]);
 
+  // Fetch user profile
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const profile = await superAdminApi.getCurrentUserProfile();
+      setUserProfile(profile);
+      
+      // Update edit form with profile data
+      setEditForm({
+        name: profile.name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        age: profile.age?.toString() || '',
+        gender: profile.gender || '',
+        blood_group: profile.blood_group || '',
+        address: profile.street || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        pincode: profile.pincode || '',
+        country: profile.country || ''
+      });
+    } catch (error) {
+      console.error('Error fetching admin profile:', error);
+      toast.error('Failed to load profile information');
+    }
+  }, []);
+
+  // Update admin profile
+  const updateAdminProfile = async () => {
+    try {
+      setEditLoading(true);
+      
+      const updateData = {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        age: editForm.age ? parseInt(editForm.age) : null,
+        gender: editForm.gender,
+        blood_group: editForm.blood_group,
+        street: editForm.address,
+        city: editForm.city,
+        state: editForm.state,
+        pincode: editForm.pincode,
+        country: editForm.country
+      };
+      
+      await superAdminApi.updateUserProfile(updateData);
+      
+      toast.success('Profile updated successfully!');
+      setEditProfileOpen(false);
+      
+      // Refresh profile data
+      await fetchUserProfile();
+    } catch (error) {
+      console.error('Error updating admin profile:', error);
+      toast.error('Failed to update profile. Please try again.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   // Fetch assigned clinics
   const fetchAssignedClinics = useCallback(async () => {
     if (!user || user.role !== 'admin') return;
@@ -238,7 +317,10 @@ const AdminDashboardEnhanced = () => {
       setLoadingClinics(true);
       setClinicsError(null);
       const data = await superAdminApi.getEClinics({ page: 1, page_size: 10 });
+      console.log('Fetched clinics data:', data);
+      console.log('Current user ID:', user.id);
       const filteredClinics = data.results.filter((clinic) => clinic.admin === user.id);
+      console.log('Filtered assigned clinics:', filteredClinics);
       setAssignedClinics(filteredClinics);
     } catch (error) {
       console.error('Error fetching assigned clinics:', error);
@@ -256,7 +338,8 @@ const AdminDashboardEnhanced = () => {
     fetchConsultations();
     fetchPatients();
     fetchAssignedClinics();
-  }, [fetchDashboardStats, fetchPatientStats, fetchConsultations, fetchPatients, fetchAssignedClinics]);
+    fetchUserProfile();
+  }, [fetchDashboardStats, fetchPatientStats, fetchConsultations, fetchPatients, fetchAssignedClinics, fetchUserProfile]);
 
   // Show warning when admin is not assigned to any clinic
   useEffect(() => {
@@ -443,6 +526,10 @@ const AdminDashboardEnhanced = () => {
                     <CreditCard className="w-4 h-4 mr-2" />
                     Payment Tracking
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveTab('eclinic')} disabled={!isAssignedToClinic}>
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Manage E-Clinic
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleRefresh} disabled={loadingStats}>
                     <RefreshCw className={`w-4 h-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
@@ -507,9 +594,9 @@ const AdminDashboardEnhanced = () => {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="w-4 h-4 mr-2" />
-                    View Profile
+                  <DropdownMenuItem onClick={() => setEditProfileOpen(true)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings className="w-4 h-4 mr-2" />
@@ -621,6 +708,18 @@ const AdminDashboardEnhanced = () => {
               <BarChart3 className="w-4 h-4" />
               <span>Analytics</span>
             </button>
+            <button
+              onClick={() => setActiveTab('eclinic')}
+              disabled={!isAssignedToClinic}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeTab === 'eclinic'
+                  ? 'bg-[#E17726] text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              } ${!isAssignedToClinic ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>E-Clinic</span>
+            </button>
           </div>
         </div>
 
@@ -707,6 +806,15 @@ const AdminDashboardEnhanced = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Admin Assignment Info */}
+            {user && user.role === 'admin' && assignedClinics.length > 0 && (
+              <AdminAssignmentInfo 
+                assignedClinic={assignedClinics[0]}
+                adminName={user.name || 'Admin'}
+                onManageClinic={() => setActiveTab('eclinic')}
+              />
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -797,6 +905,14 @@ const AdminDashboardEnhanced = () => {
                   >
                     <BarChart3 className="w-4 h-4 mr-2" />
                     View Analytics
+                  </Button>
+                  <Button 
+                    className="w-full justify-start bg-indigo-600 hover:bg-indigo-700 text-white"
+                    onClick={() => setActiveTab('eclinic')}
+                    disabled={!isAssignedToClinic}
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Manage E-Clinic
                   </Button>
                 </CardContent>
               </Card>
@@ -1093,6 +1209,55 @@ const AdminDashboardEnhanced = () => {
             <DetailedAnalyticsDashboard />
           </div>
         )}
+
+        {activeTab === 'eclinic' && (
+          <div className="space-y-8">
+            {loadingClinics ? (
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E17726] mx-auto mb-4"></div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Loading E-Clinic Data</h3>
+                  <p className="text-gray-500">Please wait while we fetch your assigned clinic information...</p>
+                </CardContent>
+              </Card>
+            ) : assignedClinics.length > 0 ? (
+              <EClinicManagement 
+                clinicId={assignedClinics[0].id}
+                showBackButton={false}
+              />
+            ) : (
+              <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No E-Clinic Assigned</h3>
+                  <p className="text-gray-500 mb-4">
+                    You have not been assigned to any e-clinic yet. Please contact the super admin to get assigned to an e-clinic.
+                  </p>
+                  <div className="space-y-3">
+                    <Button 
+                      className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+                      onClick={() => {
+                        toast.info('Please contact the super admin to get assigned to an e-clinic');
+                      }}
+                    >
+                      Contact Super Admin
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        // For testing purposes - you can manually test with a known clinic ID
+                        console.log('Testing with clinic ID: CLI002');
+                        // You can temporarily set a test clinic ID here
+                      }}
+                    >
+                      Debug: Check Console
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
       {/* No Clinic Assignment Warning Dialog */}
@@ -1133,6 +1298,201 @@ const AdminDashboardEnhanced = () => {
                 Contact Super Admin
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Modal */}
+      <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <User className="w-5 h-5 mr-2" />
+              Edit Profile
+            </DialogTitle>
+            <DialogDescription>
+              Update your personal information and contact details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Personal Information */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name *
+                  </label>
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address *
+                  </label>
+                  <Input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    placeholder="Enter your email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number *
+                  </label>
+                  <Input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Age
+                  </label>
+                  <Input
+                    type="number"
+                    value={editForm.age}
+                    onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                    placeholder="Enter your age"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender
+                  </label>
+                  <Select
+                    value={editForm.gender}
+                    onValueChange={(value) => setEditForm({ ...editForm, gender: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Blood Group
+                  </label>
+                  <Select
+                    value={editForm.blood_group}
+                    onValueChange={(value) => setEditForm({ ...editForm, blood_group: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select blood group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A+">A+</SelectItem>
+                      <SelectItem value="A-">A-</SelectItem>
+                      <SelectItem value="B+">B+</SelectItem>
+                      <SelectItem value="B-">B-</SelectItem>
+                      <SelectItem value="AB+">AB+</SelectItem>
+                      <SelectItem value="AB-">AB-</SelectItem>
+                      <SelectItem value="O+">O+</SelectItem>
+                      <SelectItem value="O-">O-</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Address Information */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Address Information</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <Input
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    placeholder="Enter your address"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <Input
+                      value={editForm.city}
+                      onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                      placeholder="Enter city"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State
+                    </label>
+                    <Input
+                      value={editForm.state}
+                      onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                      placeholder="Enter state"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Pincode
+                    </label>
+                    <Input
+                      value={editForm.pincode}
+                      onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                      placeholder="Enter pincode"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Country
+                  </label>
+                  <Input
+                    value={editForm.country}
+                    onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                    placeholder="Enter country"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setEditProfileOpen(false)}
+              disabled={editLoading}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={updateAdminProfile}
+              disabled={editLoading}
+              className="flex-1 bg-[#E17726] hover:bg-[#c9651e] text-white"
+            >
+              {editLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <User className="w-4 h-4 mr-2" />
+                  Update Profile
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

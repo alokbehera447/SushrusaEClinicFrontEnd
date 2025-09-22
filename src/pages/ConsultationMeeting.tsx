@@ -274,7 +274,7 @@ export default function ConsultationMeeting() {
     setSearchError(null);
 
     try {
-      const response = await medicationService.searchMedications(query, 20, true);
+      const response = await medicationService.searchMedications(query, 20, false);
       
       if (response.success) {
         setMedicationSearchResults(response.data.medications);
@@ -318,7 +318,7 @@ export default function ConsultationMeeting() {
       const clinicId = getClinicId();
       const response = await medicationService.autoCreateMedication(clinicId, {
         name: medicationSearchQuery,
-        dosage_form: 'Tablet'
+        dosage_form: 'tablet'
       });
 
       if (response.success) {

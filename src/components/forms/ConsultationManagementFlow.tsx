@@ -674,6 +674,14 @@ const ConsultationManagementFlow = () => {
                       <Bell className="w-4 h-4 mr-2" />
                       Send Reminder
                     </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => navigate(`/dashboard/consultations/${consultation.id}/reschedule`)}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reschedule
+                    </Button>
                   </>
                 )}
 
@@ -774,6 +782,18 @@ const ConsultationManagementFlow = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   View Details
                 </Button>
+
+                {/* Reschedule Button - Show for scheduled and overdue consultations */}
+                {(consultation.status === 'scheduled' || consultation.status === 'overdue') && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => navigate(`/dashboard/consultations/${consultation.id}/reschedule`)}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reschedule
+                  </Button>
+                )}
 
                 {/* Download Prescription Button - Show for completed consultations */}
                 {consultation.status === 'completed' && (

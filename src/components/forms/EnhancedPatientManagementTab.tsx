@@ -415,7 +415,7 @@ const EnhancedPatientManagementTab: React.FC = () => {
 
     try {
       // Delete the user account (which will cascade delete the patient profile)
-      await adminPatientApi.deletePatient(patient.user);
+      await adminPatientApi.deletePatient(patient.id);
       setPatients(prev => prev.filter(p => p.id !== patient.id));
       if (selectedPatient?.id === patient.id) {
         setSelectedPatient(null);
@@ -1043,84 +1043,7 @@ const EnhancedPatientManagementTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Permission System Info */}
-        {user?.role === 'admin' && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-medium text-blue-800">Patient Permission System</h3>
-                <p className="text-sm text-blue-700 mt-1">
-                  As an admin, you can only edit or delete patients with explicit consent. 
-                  Super admins have full access. Patients with lock icons require permission.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Statistics Cards */}
-        {patientStats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Total Patients</p>
-                    <p className="text-2xl font-bold text-gray-900">{patientStats.total_patients}</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#E17726]/10 to-[#E17726]/5 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-[#E17726]" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Active Patients</p>
-                    <p className="text-2xl font-bold text-gray-900">{patientStats.active_patients}</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 flex items-center justify-center">
-                    <UserCheck className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">New This Month</p>
-                    <p className="text-2xl font-bold text-gray-900">{patientStats.new_patients_this_month}</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 flex items-center justify-center">
-                    <UserPlus className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Top City</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {patientStats.top_cities.length > 0 ? patientStats.top_cities[0].city : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 flex items-center justify-center">
-                    <MapPin className="w-6 h-6 text-purple-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Search and Filters */}
         <Card className="mb-6">

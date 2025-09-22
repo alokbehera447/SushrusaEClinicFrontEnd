@@ -148,12 +148,8 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
     blood_pressure_diastolic: '',
     heart_rate: '',
     temperature: '',
-    respiratory_rate: '',
-    oxygen_saturation: '',
     weight: '',
     height: '',
-    bmi: '',
-    blood_glucose: '',
     notes: ''
   });
   const [vitalsLoading, setVitalsLoading] = useState(false);
@@ -282,12 +278,8 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
           blood_pressure_diastolic: v.blood_pressure_diastolic !== null && v.blood_pressure_diastolic !== undefined ? String(v.blood_pressure_diastolic) : '',
           heart_rate: v.heart_rate !== null && v.heart_rate !== undefined ? String(v.heart_rate) : '',
           temperature: v.temperature !== null && v.temperature !== undefined ? String(v.temperature) : '',
-          respiratory_rate: v.respiratory_rate !== null && v.respiratory_rate !== undefined ? String(v.respiratory_rate) : '',
-          oxygen_saturation: v.oxygen_saturation !== null && v.oxygen_saturation !== undefined ? String(v.oxygen_saturation) : '',
           weight: v.weight !== null && v.weight !== undefined ? String(v.weight) : '',
           height: v.height !== null && v.height !== undefined ? String(v.height) : '',
-          bmi: v.bmi !== null && v.bmi !== undefined ? String(v.bmi) : '',
-          blood_glucose: v.blood_glucose !== null && v.blood_glucose !== undefined ? String(v.blood_glucose) : '',
           notes: v.notes !== null && v.notes !== undefined ? v.notes : ''
         });
       } else {
@@ -296,12 +288,8 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
           blood_pressure_diastolic: '',
           heart_rate: '',
           temperature: '',
-          respiratory_rate: '',
-          oxygen_saturation: '',
           weight: '',
           height: '',
-          bmi: '',
-          blood_glucose: '',
           notes: ''
         });
       }
@@ -311,12 +299,8 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
         blood_pressure_diastolic: '',
         heart_rate: '',
         temperature: '',
-        respiratory_rate: '',
-        oxygen_saturation: '',
         weight: '',
         height: '',
-        bmi: '',
-        blood_glucose: '',
         notes: ''
       });
     }
@@ -549,16 +533,9 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
           </Button>
           {(userRole === 'admin' || userRole === 'superadmin') && (
             <Button 
-              onClick={async () => {
-                try {
-                  const response = await consultationService.getOverdueConsultations();
-                  if (response.success) {
-                    toast({ title: 'Overdue Consultations', description: `Found ${response.data.length} overdue consultations` });
-                    // You can add logic here to display the overdue consultations
-                  }
-                } catch (error) {
-                  toast({ title: 'Error', description: 'Failed to load overdue consultations', variant: 'destructive' });
-                }
+              onClick={() => {
+                // Navigate to dedicated overdue consultations page
+                window.location.href = '/dashboard/consultations/overdue';
               }} 
               variant="outline" 
               className="border-red-200 text-red-700 hover:bg-red-50"
@@ -665,8 +642,9 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                                          <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="patient_checked_in">Checked In</SelectItem>
                   <SelectItem value="ready_for_consultation">Ready</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
@@ -1237,20 +1215,12 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                 <Input name="blood_pressure_diastolic" value={vitalsForm.blood_pressure_diastolic} onChange={handleVitalsChange} placeholder="mmHg" />
               </div>
               <div>
-                <label className="text-xs">Heart Rate</label>
+                <label className="text-xs">Pulse (Heart Rate)</label>
                 <Input name="heart_rate" value={vitalsForm.heart_rate} onChange={handleVitalsChange} placeholder="bpm" />
               </div>
               <div>
                 <label className="text-xs">Temperature</label>
                 <Input name="temperature" value={vitalsForm.temperature} onChange={handleVitalsChange} placeholder="°C" />
-              </div>
-              <div>
-                <label className="text-xs">Respiratory Rate</label>
-                <Input name="respiratory_rate" value={vitalsForm.respiratory_rate} onChange={handleVitalsChange} placeholder="/min" />
-              </div>
-              <div>
-                <label className="text-xs">SpO₂</label>
-                <Input name="oxygen_saturation" value={vitalsForm.oxygen_saturation} onChange={handleVitalsChange} placeholder="%" />
               </div>
               <div>
                 <label className="text-xs">Weight</label>
@@ -1259,14 +1229,6 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
               <div>
                 <label className="text-xs">Height</label>
                 <Input name="height" value={vitalsForm.height} onChange={handleVitalsChange} placeholder="cm" />
-              </div>
-              <div>
-                <label className="text-xs">BMI</label>
-                <Input name="bmi" value={vitalsForm.bmi} onChange={handleVitalsChange} placeholder="" />
-              </div>
-              <div>
-                <label className="text-xs">Blood Glucose</label>
-                <Input name="blood_glucose" value={vitalsForm.blood_glucose} onChange={handleVitalsChange} placeholder="mg/dL" />
               </div>
             </div>
             <div>

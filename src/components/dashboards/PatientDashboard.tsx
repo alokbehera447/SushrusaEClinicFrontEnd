@@ -316,6 +316,12 @@ const PatientDashboard = () => {
       if (response && response.consultations && Array.isArray(response.consultations)) {
         // Handle new response structure with pagination
         console.log(`Setting ${response.consultations.length} consultations from API response`);
+        console.log('API Response consultations:', response.consultations.map(c => ({
+          id: c.id,
+          scheduled_date: c.scheduled_date,
+          doctor_name: c.doctor_name,
+          status: c.status
+        })));
         setConsultations(response.consultations);
         setTotalCount(response.pagination.count || 0);
         setTotalPages(Math.ceil((response.pagination.count || 0) / pageSize));
@@ -323,6 +329,12 @@ const PatientDashboard = () => {
       } else if (Array.isArray(response)) {
         // Handle array response from new patient-specific endpoint
         console.log(`Setting ${response.length} consultations from array response`);
+        console.log('API Response consultations (array):', response.map(c => ({
+          id: c.id,
+          scheduled_date: c.scheduled_date,
+          doctor_name: c.doctor_name,
+          status: c.status
+        })));
         setConsultations(response);
         setTotalCount(response.length || 0);
         setTotalPages(Math.ceil((response.length || 0) / pageSize));
@@ -492,12 +504,12 @@ const PatientDashboard = () => {
     await fetchUserProfile();
   }, [fetchUserProfile]);
 
-  // Fetch secondary data after user profile is loaded
+  // Fetch secondary data after user profile is loaded (excluding consultations)
   const fetchSecondaryData = useCallback(async () => {
     if (userProfile?.id) {
       console.log('Fetching secondary data for user:', userProfile.id);
       await Promise.allSettled([
-        fetchConsultations(),
+        // Removed fetchConsultations() to prevent duplicate calls
         fetchPrescriptions(),
         fetchMedicalRecords(),
         fetchDocuments(),
@@ -509,7 +521,7 @@ const PatientDashboard = () => {
     }
   }, [
     userProfile?.id, 
-    fetchConsultations, 
+    // Removed fetchConsultations from dependencies
     fetchPrescriptions, 
     fetchMedicalRecords,
     fetchDocuments, 
@@ -543,12 +555,16 @@ const PatientDashboard = () => {
     console.log('Start date changed to:', date);
     setConsultationStartDate(date);
     setCurrentPage(1);
+    // Immediately show loading state for better UX
+    setConsultationsLoading(true);
   };
 
   const handleConsultationEndDateChange = (date: string) => {
     console.log('End date changed to:', date);
     setConsultationEndDate(date);
     setCurrentPage(1);
+    // Immediately show loading state for better UX
+    setConsultationsLoading(true);
   };
 
   // Load data on component mount
@@ -562,12 +578,46 @@ const PatientDashboard = () => {
     fetchSecondaryData();
   }, [fetchSecondaryData]);
 
+  // Load consultations when user profile is loaded (separate from secondary data)
+  useEffect(() => {
+    if (userProfile?.id) {
+      console.log('User profile loaded, fetching consultations...');
+      fetchConsultations(1);
+    }
+  }, [userProfile?.id]); // Removed fetchConsultations from dependencies to prevent re-runs
+
   // Refetch consultations when filters or search change
   useEffect(() => {
     if (userProfile?.id) {
+      console.log('Filters changed, refetching consultations...', {
+        filter: consultationFilter,
+        search: consultationSearch,
+        startDate: consultationStartDate,
+        endDate: consultationEndDate,
+        pageSize
+      });
       fetchConsultations(1);
     }
-  }, [consultationFilter, consultationSearch, consultationStartDate, consultationEndDate, pageSize, fetchConsultations, userProfile?.id]);
+  }, [consultationFilter, consultationSearch, consultationStartDate, consultationEndDate, pageSize, userProfile?.id]); // Removed fetchConsultations from dependencies
+
+  // Debug: Track consultations state changes
+  useEffect(() => {
+    console.log('🔍 Consultations state changed:', {
+      consultationsCount: consultations.length,
+      consultations: consultations.map(c => ({
+        id: c.id,
+        scheduled_date: c.scheduled_date,
+        doctor_name: c.doctor_name,
+        status: c.status
+      })),
+      currentFilters: {
+        startDate: consultationStartDate,
+        endDate: consultationEndDate,
+        filter: consultationFilter,
+        search: consultationSearch
+      }
+    });
+  }, [consultations, consultationStartDate, consultationEndDate, consultationFilter, consultationSearch]);
 
   // Update edit form when user profile changes
   useEffect(() => {

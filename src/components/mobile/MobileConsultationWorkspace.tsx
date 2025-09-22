@@ -334,8 +334,14 @@ const MobileConsultationWorkspace: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2">
-              <Video className="w-3 h-3 mr-2" />
+            <Button 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-3"
+              onClick={() => {
+                const meetingUrl = consultation?.doctor_meeting_link || "https://meet.diracai.com/office";
+                window.open(meetingUrl, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              <Video className="w-4 h-4 mr-2" />
               Join Meeting
             </Button>
           </CardContent>
@@ -499,7 +505,7 @@ const MobileConsultationWorkspace: React.FC = () => {
           </Card>
         )}
 
-        {/* Vital Signs */}
+        {/* Vital Signs - Read Only */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center">
@@ -510,79 +516,42 @@ const MobileConsultationWorkspace: React.FC = () => {
           <CardContent className="pt-0">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="pulse" className="text-xs">Pulse (bpm)</Label>
-                <Input
-                  id="pulse"
-                  type="number"
-                  value={vitalSigns.pulse}
-                  onChange={(e) => setVitalSigns(prev => ({ ...prev, pulse: e.target.value }))}
-                  placeholder="72"
-                  className="mt-1 text-xs h-8"
-                />
+                <Label className="text-xs">Pulse (bpm)</Label>
+                <div className="mt-1 text-xs h-8 px-3 py-2 bg-gray-50 border border-gray-200 rounded flex items-center">
+                  {vitalSigns.pulse || 'N/A'}
+                </div>
               </div>
               <div>
-                <Label htmlFor="systolic" className="text-xs">Systolic BP</Label>
-                <Input
-                  id="systolic"
-                  type="number"
-                  value={vitalSigns.blood_pressure_systolic}
-                  onChange={(e) => setVitalSigns(prev => ({ ...prev, blood_pressure_systolic: e.target.value }))}
-                  placeholder="120"
-                  className="mt-1 text-xs h-8"
-                />
+                <Label className="text-xs">Systolic BP</Label>
+                <div className="mt-1 text-xs h-8 px-3 py-2 bg-gray-50 border border-gray-200 rounded flex items-center">
+                  {vitalSigns.blood_pressure_systolic || 'N/A'}
+                </div>
               </div>
               <div>
-                <Label htmlFor="diastolic" className="text-xs">Diastolic BP</Label>
-                <Input
-                  id="diastolic"
-                  type="number"
-                  value={vitalSigns.blood_pressure_diastolic}
-                  onChange={(e) => setVitalSigns(prev => ({ ...prev, blood_pressure_diastolic: e.target.value }))}
-                  placeholder="80"
-                  className="mt-1 text-xs h-8"
-                />
+                <Label className="text-xs">Diastolic BP</Label>
+                <div className="mt-1 text-xs h-8 px-3 py-2 bg-gray-50 border border-gray-200 rounded flex items-center">
+                  {vitalSigns.blood_pressure_diastolic || 'N/A'}
+                </div>
               </div>
               <div>
-                <Label htmlFor="temperature" className="text-xs">Temperature (°F)</Label>
-                <Input
-                  id="temperature"
-                  type="number"
-                  value={vitalSigns.temperature}
-                  onChange={(e) => setVitalSigns(prev => ({ ...prev, temperature: e.target.value }))}
-                  placeholder="98.6"
-                  className="mt-1 text-xs h-8"
-                />
+                <Label className="text-xs">Temperature (°F)</Label>
+                <div className="mt-1 text-xs h-8 px-3 py-2 bg-gray-50 border border-gray-200 rounded flex items-center">
+                  {vitalSigns.temperature || 'N/A'}
+                </div>
               </div>
               <div>
-                <Label htmlFor="weight" className="text-xs">Weight (kg)</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  value={vitalSigns.weight}
-                  onChange={(e) => setVitalSigns(prev => ({ ...prev, weight: e.target.value }))}
-                  placeholder="70"
-                  className="mt-1 text-xs h-8"
-                />
+                <Label className="text-xs">Weight (kg)</Label>
+                <div className="mt-1 text-xs h-8 px-3 py-2 bg-gray-50 border border-gray-200 rounded flex items-center">
+                  {vitalSigns.weight || 'N/A'}
+                </div>
               </div>
               <div>
-                <Label htmlFor="height" className="text-xs">Height (cm)</Label>
-                <Input
-                  id="height"
-                  type="number"
-                  value={vitalSigns.height}
-                  onChange={(e) => setVitalSigns(prev => ({ ...prev, height: e.target.value }))}
-                  placeholder="170"
-                  className="mt-1 text-xs h-8"
-                />
+                <Label className="text-xs">Height (cm)</Label>
+                <div className="mt-1 text-xs h-8 px-3 py-2 bg-gray-50 border border-gray-200 rounded flex items-center">
+                  {vitalSigns.height || 'N/A'}
+                </div>
               </div>
             </div>
-            <Button 
-              onClick={handleSaveVitalSigns}
-              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs py-2"
-            >
-              <CheckCircle className="w-3 h-3 mr-2" />
-              Save Vital Signs
-            </Button>
           </CardContent>
         </Card>
 

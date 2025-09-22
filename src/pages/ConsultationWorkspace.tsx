@@ -168,6 +168,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [finalizing, setFinalizing] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(false);
+  const [loadingVitalSigns, setLoadingVitalSigns] = useState(true);
 
   // UI states
   const [isVideoMaximized, setIsVideoMaximized] = useState(false);
@@ -217,6 +218,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [medicationSearchResults, setMedicationSearchResults] = useState<MedicationSearchResult[]>([]);
   const [isSearchingMedications, setIsSearchingMedications] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchSuccess, setSearchSuccess] = useState<string | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [activeSearchIndex, setActiveSearchIndex] = useState<number>(-1);
 
@@ -266,6 +268,25 @@ const ConsultationWorkspace: React.FC = () => {
         setConsultation(consultData);
 
         if (consultData) {
+          // Immediately set vital signs from consultation data if available
+          console.log('🔍 Consultation data vital signs:', (consultData as any).vital_signs);
+          if ((consultData as any).vital_signs) {
+            console.log('🔍 Setting vital signs from consultation data immediately');
+            setFormData(prev => ({
+              ...prev,
+              vital_signs: {
+                pulse: (consultData as any).vital_signs.pulse?.toString() || prev.vital_signs.pulse,
+                blood_pressure_systolic: (consultData as any).vital_signs.blood_pressure_systolic?.toString() || prev.vital_signs.blood_pressure_systolic,
+                blood_pressure_diastolic: (consultData as any).vital_signs.blood_pressure_diastolic?.toString() || prev.vital_signs.blood_pressure_diastolic,
+                temperature: (consultData as any).vital_signs.temperature?.toString() || prev.vital_signs.temperature,
+                weight: (consultData as any).vital_signs.weight?.toString() || prev.vital_signs.weight,
+                height: (consultData as any).vital_signs.height?.toString() || prev.vital_signs.height,
+              }
+            }));
+            setLoadingVitalSigns(false); // Vital signs loaded from consultation
+          } else {
+            console.log('🔍 No vital signs found in consultation data, will try prescription data');
+          }
           const patientId = consultData.patient?.id || consultData.patient;
           
           // Load patient profile
@@ -373,25 +394,45 @@ const ConsultationWorkspace: React.FC = () => {
               setMedications(localMedications);
             }
             
+            console.log('🔍 Prescription vital signs data:', {
+              consultation_vital_signs: (consultData as any)?.vital_signs,
+              prescription_pulse: pres.pulse,
+              prescription_vital_signs: (pres as any).vital_signs,
+              prescription_temperature: pres.temperature,
+              prescription_weight: pres.weight,
+              prescription_height: pres.height
+            });
+            
             setFormData({
               primary_diagnosis: pres.primary_diagnosis || '',
-              patient_previous_history: pres.patient_previous_history || '',
+              patient_previous_history: (pres as any).patient_previous_history || '',
               general_instructions: pres.general_instructions || '',
               next_visit: pres.next_visit || '',
               vital_signs: {
-                pulse: consultData?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || pres.vital_signs?.pulse?.toString() || '',
-                blood_pressure_systolic: consultData?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || pres.vital_signs?.blood_pressure_systolic?.toString() || '',
-                blood_pressure_diastolic: consultData?.vital_signs?.blood_pressure_diastolic?.toString() || pres.blood_pressure_diastolic?.toString() || pres.vital_signs?.blood_pressure_diastolic?.toString() || '',
-                temperature: consultData?.vital_signs?.temperature?.toString() || pres.temperature?.toString() || pres.vital_signs?.temperature?.toString() || '',
-                weight: consultData?.vital_signs?.weight?.toString() || pres.weight?.toString() || pres.vital_signs?.weight?.toString() || '',
-                height: consultData?.vital_signs?.height?.toString() || pres.height?.toString() || pres.vital_signs?.height?.toString() || '',
+                pulse: (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
+                blood_pressure_systolic: (consultData as any)?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || (pres as any).vital_signs?.blood_pressure_systolic?.toString() || '',
+                blood_pressure_diastolic: (consultData as any)?.vital_signs?.blood_pressure_diastolic?.toString() || pres.blood_pressure_diastolic?.toString() || (pres as any).vital_signs?.blood_pressure_diastolic?.toString() || '',
+                temperature: (consultData as any)?.vital_signs?.temperature?.toString() || pres.temperature?.toString() || (pres as any).vital_signs?.temperature?.toString() || '',
+                weight: (consultData as any)?.vital_signs?.weight?.toString() || pres.weight?.toString() || (pres as any).vital_signs?.weight?.toString() || '',
+                height: (consultData as any)?.vital_signs?.height?.toString() || pres.height?.toString() || (pres as any).vital_signs?.height?.toString() || '',
               },
             });
+            
+            console.log('🔍 Final vital signs set:', {
+              pulse: (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
+              blood_pressure_systolic: (consultData as any)?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || (pres as any).vital_signs?.blood_pressure_systolic?.toString() || '',
+              blood_pressure_diastolic: (consultData as any)?.vital_signs?.blood_pressure_diastolic?.toString() || pres.blood_pressure_diastolic?.toString() || (pres as any).vital_signs?.blood_pressure_diastolic?.toString() || '',
+              temperature: (consultData as any)?.vital_signs?.temperature?.toString() || pres.temperature?.toString() || (pres as any).vital_signs?.temperature?.toString() || '',
+              weight: (consultData as any)?.vital_signs?.weight?.toString() || pres.weight?.toString() || (pres as any).vital_signs?.weight?.toString() || '',
+              height: (consultData as any)?.vital_signs?.height?.toString() || pres.height?.toString() || (pres as any).vital_signs?.height?.toString() || '',
+            });
+            
+            setLoadingVitalSigns(false); // Vital signs loaded from prescription
 
             // Load investigations from prescription data (already included in the response)
-            console.log('Prescription investigations from API:', pres.investigations);
-            if (pres.investigations && Array.isArray(pres.investigations)) {
-              setPrescriptionInvestigations(pres.investigations);
+            console.log('Prescription investigations from API:', (pres as any).investigations);
+            if ((pres as any).investigations && Array.isArray((pres as any).investigations)) {
+              setPrescriptionInvestigations((pres as any).investigations);
             } else {
               // Fallback: try to load investigations separately if not included in prescription
               try {
@@ -418,6 +459,7 @@ const ConsultationWorkspace: React.FC = () => {
                 console.error('Error creating prescription:', createError);
               }
             }
+            setLoadingVitalSigns(false); // No vital signs available
           }
         }
       } catch (error) {
@@ -636,12 +678,18 @@ const ConsultationWorkspace: React.FC = () => {
       is_generic: true,
       quantity: '',
     });
+    // Clear any previous messages when opening modal
+    setSearchError('');
+    setSearchSuccess('');
     setShowMedicationModal(true);
   };
 
   const handleEditMedication = (medication: Medication) => {
     setEditingMedication(medication);
     setMedicationForm(medication);
+    // Clear any previous messages when opening modal
+    setSearchError('');
+    setSearchSuccess('');
     setShowMedicationModal(true);
   };
 
@@ -741,7 +789,7 @@ const ConsultationWorkspace: React.FC = () => {
     setSearchError(null);
 
     try {
-      const response = await medicationService.searchMedications(query, 20, true);
+      const response = await medicationService.searchMedications(query, 20, false);
       
       if (response.success) {
         setMedicationSearchResults(response.data.medications);
@@ -766,6 +814,10 @@ const ConsultationWorkspace: React.FC = () => {
   const handleMedicationSearchChange = (value: string) => {
     setMedicationSearchQuery(value);
     
+    // Clear success and error messages when user starts typing
+    setSearchSuccess('');
+    setSearchError('');
+    
     // Clear previous timeout
     if ((window as any).medicationSearchTimeout) {
       clearTimeout((window as any).medicationSearchTimeout);
@@ -784,17 +836,20 @@ const ConsultationWorkspace: React.FC = () => {
     try {
       const response = await medicationService.autoCreateMedication({
         name: medicationSearchQuery,
-        dosage_form: 'Tablet'
+        dosage_form: 'tablet'
       });
+
+      console.log('🔍 ConsultationWorkspace - Auto-create response:', response);
 
       let medObj = null;
       if (response.success && response.data) {
-        if (response.data.medication) {
-          medObj = response.data.medication;
-        } else if (Array.isArray(response.data.medications) && response.data.medications.length > 0) {
+        // The service transforms the response to { data: { medications: [...] } }
+        if (response.data.medications && Array.isArray(response.data.medications) && response.data.medications.length > 0) {
           medObj = response.data.medications[0];
         }
       }
+      
+      console.log('🔍 ConsultationWorkspace - Extracted medObj:', medObj);
 
       if (medObj) {
         const newMedication = {
@@ -807,7 +862,9 @@ const ConsultationWorkspace: React.FC = () => {
         setMedicationSearchQuery('');
         setMedicationSearchResults([]);
         setShowSearchResults(false);
-        setShowMedicationModal(false);
+        // Keep modal open and show success message
+        setSearchError(''); // Clear any previous error
+        setSearchSuccess('Medication added successfully! You can add more medications or close the modal.');
         toast({
           title: 'Success',
           description: 'Medication added to inventory and prescription',
@@ -815,10 +872,12 @@ const ConsultationWorkspace: React.FC = () => {
         });
       } else {
         setSearchError('Failed to create medication. Please try again.');
+        setSearchSuccess(''); // Clear success message
       }
     } catch (error) {
       console.error('Error creating medication:', error);
       setSearchError('Failed to create medication. Please try again.');
+      setSearchSuccess(''); // Clear success message
     }
   };
 
@@ -1053,34 +1112,6 @@ const ConsultationWorkspace: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-100">
-                        <div className="p-1.5 bg-blue-100 rounded-lg">
-                          <Phone className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <span className="text-slate-700 font-medium">{patientProfile?.user_phone || patientProfile?.phone || consultation?.patient?.phone || 'No phone'}</span>
-                      </div>
-                      {(patientProfile?.user_email || patientProfile?.email || consultation?.patient?.email) && (
-                        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-100">
-                          <div className="p-1.5 bg-blue-100 rounded-lg">
-                            <Mail className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <span className="text-slate-700 font-medium truncate">{patientProfile?.user_email || patientProfile?.email || consultation?.patient?.email}</span>
-                        </div>
-                      )}
-                      {(patientProfile?.user?.street || patientProfile?.address || consultation?.patient?.street) && (
-                        <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-100">
-                          <div className="p-1.5 bg-blue-100 rounded-lg mt-0.5">
-                            <MapPin className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <span className="text-sm text-slate-700 leading-relaxed">
-                            {patientProfile?.user?.street || patientProfile?.address || consultation?.patient?.street}
-                            {patientProfile?.user?.city && `, ${patientProfile.user.city}`}
-                            {patientProfile?.user?.state && `, ${patientProfile.user.state}`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
 
                     {patientProfile?.allergies && (
                       <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
@@ -1376,64 +1407,71 @@ const ConsultationWorkspace: React.FC = () => {
                   </CardHeader>
                   {showVitalSigns && (
                     <CardContent className="bg-white">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs text-slate-700">Pulse (bpm)</Label>
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                          <span className="text-sm font-medium text-slate-800">
-                            {formData.vital_signs.pulse || 'Not recorded'}
-                          </span>
-                          {formData.vital_signs.pulse && <span className="text-xs text-slate-500">bpm</span>}
+                      {loadingVitalSigns ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mr-2" />
+                          <span className="text-sm text-slate-600">Loading vital signs...</span>
                         </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-slate-700">Temperature (°C)</Label>
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                          <span className="text-sm font-medium text-slate-800">
-                            {formData.vital_signs.temperature || 'Not recorded'}
-                          </span>
-                          {formData.vital_signs.temperature && <span className="text-xs text-slate-500">°C</span>}
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs text-slate-700">Pulse (bpm)</Label>
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-sm font-medium text-slate-800">
+                                {formData.vital_signs.pulse || 'Not recorded'}
+                              </span>
+                              {formData.vital_signs.pulse && <span className="text-xs text-slate-500">bpm</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-700">Temperature (°C)</Label>
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-sm font-medium text-slate-800">
+                                {formData.vital_signs.temperature || 'Not recorded'}
+                              </span>
+                              {formData.vital_signs.temperature && <span className="text-xs text-slate-500">°C</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-700">BP Systolic</Label>
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-sm font-medium text-slate-800">
+                                {formData.vital_signs.blood_pressure_systolic || 'Not recorded'}
+                              </span>
+                              {formData.vital_signs.blood_pressure_systolic && <span className="text-xs text-slate-500">mmHg</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-700">BP Diastolic</Label>
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-sm font-medium text-slate-800">
+                                {formData.vital_signs.blood_pressure_diastolic || 'Not recorded'}
+                              </span>
+                              {formData.vital_signs.blood_pressure_diastolic && <span className="text-xs text-slate-500">mmHg</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-700">Weight (kg)</Label>
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-sm font-medium text-slate-800">
+                                {formData.vital_signs.weight || 'Not recorded'}
+                              </span>
+                              {formData.vital_signs.weight && <span className="text-xs text-slate-500">kg</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-slate-700">Height (cm)</Label>
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-sm font-medium text-slate-800">
+                                {formData.vital_signs.height || 'Not recorded'}
+                              </span>
+                              {formData.vital_signs.height && <span className="text-xs text-slate-500">cm</span>}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-slate-700">BP Systolic</Label>
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                          <span className="text-sm font-medium text-slate-800">
-                            {formData.vital_signs.blood_pressure_systolic || 'Not recorded'}
-                          </span>
-                          {formData.vital_signs.blood_pressure_systolic && <span className="text-xs text-slate-500">mmHg</span>}
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-slate-700">BP Diastolic</Label>
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                          <span className="text-sm font-medium text-slate-800">
-                            {formData.vital_signs.blood_pressure_diastolic || 'Not recorded'}
-                          </span>
-                          {formData.vital_signs.blood_pressure_diastolic && <span className="text-xs text-slate-500">mmHg</span>}
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-slate-700">Weight (kg)</Label>
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                          <span className="text-sm font-medium text-slate-800">
-                            {formData.vital_signs.weight || 'Not recorded'}
-                          </span>
-                          {formData.vital_signs.weight && <span className="text-xs text-slate-500">kg</span>}
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-slate-700">Height (cm)</Label>
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                          <span className="text-sm font-medium text-slate-800">
-                            {formData.vital_signs.height || 'Not recorded'}
-                          </span>
-                          {formData.vital_signs.height && <span className="text-xs text-slate-500">cm</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
+                      )}
+                    </CardContent>
+                  )}
               </Card>
 
                 {/* Diagnosis */}
@@ -1724,11 +1762,17 @@ const ConsultationWorkspace: React.FC = () => {
                   )}
                 </div>
                 
-                {searchError && (
+                {/* {searchError && (
                   <div className="text-red-500 text-sm bg-red-50 p-2 rounded-lg mt-1">
                     {searchError}
                   </div>
-                )}
+                )} */}
+                
+                {/* {searchSuccess && (
+                  <div className="text-green-600 text-sm bg-green-50 p-2 rounded-lg mt-1">
+                    {searchSuccess}
+                  </div>
+                )} */}
 
                 {showSearchResults && medicationSearchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -1751,11 +1795,23 @@ const ConsultationWorkspace: React.FC = () => {
                             {medicationResult.composition && (
                               <div>Composition: {medicationResult.composition}</div>
                             )}
-                            {medicationResult.form && (
-                              <div>Form: {medicationResult.form}</div>
+                            {medicationResult.dosage_form && (
+                              <div>Form: {medicationResult.dosage_form}</div>
                             )}
                             {medicationResult.strength && (
                               <div>Strength: {medicationResult.strength}</div>
+                            )}
+                            {medicationResult.therapeutic_class && (
+                              <div className="text-purple-600">Class: {medicationResult.therapeutic_class}</div>
+                            )}
+                            {medicationResult.indication && (
+                              <div className="text-green-600">For: {medicationResult.indication}</div>
+                            )}
+                            {medicationResult.manufacturer && (
+                              <div>Manufacturer: {medicationResult.manufacturer}</div>
+                            )}
+                            {medicationResult.dosage_instructions && (
+                              <div className="text-orange-600">Instructions: {medicationResult.dosage_instructions}</div>
                             )}
                             {medicationResult.source === 'inventory' && medicationResult.stock !== undefined && (
                               <span className={`px-1 py-0.5 rounded text-xs ${
@@ -1767,7 +1823,7 @@ const ConsultationWorkspace: React.FC = () => {
                           </div>
                           <p className="text-xs text-blue-600 mt-1">
                             {medicationResult.source === 'inventory' ? 'In Inventory' : 
-                             medicationResult.source === 'fda_api' ? 'FDA Database' : 'Local Database'}
+                             medicationResult.source === 'newly_created' ? 'Newly Created' : 'Local Database'}
                           </p>
                         </div>
                         <Plus className="w-4 h-4 text-green-600" />

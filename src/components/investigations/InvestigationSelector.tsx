@@ -146,7 +146,9 @@ export default function InvestigationSelector({
       setLoading(true);
       const testsData = Array.from(selectedTests).map(testId => ({
         test_id: testId,
-        ...investigationDetails[testId]
+        priority: 'routine',
+        special_instructions: '',
+        notes: ''
       }));
 
       const request: AddInvestigationRequest = {
@@ -292,102 +294,12 @@ export default function InvestigationSelector({
                         />
                         
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2">
                             <h4 className="font-medium text-gray-900">{test.name}</h4>
-                            <Badge variant="outline" className="text-xs">
-                              {test.code}
-                            </Badge>
-                            {test.is_fasting_required && (
-                              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
-                                Fasting Required
-                              </Badge>
-                            )}
                           </div>
-                          
-                          <p className="text-sm text-gray-600 mb-2">{test.description}</p>
-                          
-                          <div className="text-xs text-gray-500">
-                            <div>
-                              <span className="font-medium">Unit:</span> {test.unit}
-                            </div>
-                          </div>
-                          
-                          {test.preparation_instructions && (
-                            <div className="mt-2 text-xs text-gray-500">
-                              <span className="font-medium">Preparation:</span> {test.preparation_instructions}
-                            </div>
-                          )}
                         </div>
                       </div>
 
-                      {/* Investigation Details Form */}
-                      {selectedTests.has(test.id) && (
-                        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <Label htmlFor={`priority-${test.id}`}>Priority</Label>
-                              <Select
-                                value={investigationDetails[test.id]?.priority || 'routine'}
-                                onValueChange={(value: 'routine' | 'urgent' | 'emergency') =>
-                                  setInvestigationDetails(prev => ({
-                                    ...prev,
-                                    [test.id]: {
-                                      ...prev[test.id],
-                                      priority: value
-                                    }
-                                  }))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="routine">Routine</SelectItem>
-                                  <SelectItem value="urgent">Urgent</SelectItem>
-                                  <SelectItem value="emergency">Emergency</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            <div className="md:col-span-2">
-                              <Label htmlFor={`special-${test.id}`}>Special Instructions</Label>
-                              <Input
-                                id={`special-${test.id}`}
-                                placeholder="Any special instructions for this test..."
-                                value={investigationDetails[test.id]?.special_instructions || ''}
-                                onChange={(e) =>
-                                  setInvestigationDetails(prev => ({
-                                    ...prev,
-                                    [test.id]: {
-                                      ...prev[test.id],
-                                      special_instructions: e.target.value
-                                    }
-                                  }))
-                                }
-                              />
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor={`notes-${test.id}`}>Notes</Label>
-                            <Textarea
-                              id={`notes-${test.id}`}
-                              placeholder="Additional notes..."
-                              rows={2}
-                              value={investigationDetails[test.id]?.notes || ''}
-                              onChange={(e) =>
-                                setInvestigationDetails(prev => ({
-                                  ...prev,
-                                  [test.id]: {
-                                    ...prev[test.id],
-                                    notes: e.target.value
-                                  }
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -409,33 +321,12 @@ export default function InvestigationSelector({
               {existingInvestigations.map(investigation => (
                 <div key={investigation.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      {getPriorityIcon(investigation.priority)}
-                      <Badge className={priorityColors[investigation.priority]}>
-                        {investigation.priority.charAt(0).toUpperCase() + investigation.priority.slice(1)}
-                      </Badge>
-                    </div>
-                    
                     <div>
-                      <h4 className="font-medium text-gray-900">{investigation.test.name}</h4>
-                      <p className="text-sm text-gray-600">{investigation.test.category.name}</p>
-                      {investigation.special_instructions && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          <span className="font-medium">Instructions:</span> {investigation.special_instructions}
-                        </p>
-                      )}
-                      {investigation.notes && (
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium">Notes:</span> {investigation.notes}
-                        </p>
-                      )}
+                      <h4 className="font-medium text-gray-900">{investigation.test.code}</h4>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {investigation.test.code}
-                    </Badge>
                     <Button
                       variant="ghost"
                       size="sm"

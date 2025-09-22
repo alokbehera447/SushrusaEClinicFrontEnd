@@ -335,7 +335,7 @@ const PrescriptionWriter: React.FC = () => {
                 onMedicationSelect={handleMedicationSelect}
                 placeholder="Search for medications (e.g., aspirin, ibuprofen, amoxicillin)..."
                 className="mt-2"
-                includeFDA={true}
+                includeFDA={false}
               />
             </div>
             

@@ -40,6 +40,8 @@ import NearbyEClinicsPage from "./pages/NearbyEClinicsPage";
 import MedicationSearchDemo from "./pages/MedicationSearchDemo";
 import PatientManagement from "./pages/PatientManagement";
 import ConsultationManagement from "./pages/ConsultationManagement";
+import OverdueConsultations from "./pages/OverdueConsultations";
+import BookingStyleReschedule from "./components/forms/BookingStyleReschedule";
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -91,24 +93,34 @@ const App = () => (
                 <ConsultationDetails />
               </ProtectedRoute>
             } />
+            <Route path="/dashboard/consultations/:consultationId/reschedule" element={
+              <ProtectedRoute requiredRole={["admin", "superadmin"]}>
+                <BookingStyleReschedule />
+              </ProtectedRoute>
+            } />
             <Route path="/dashboard/consultations/new" element={
               <ProtectedRoute requiredRole="admin">
                 <ConsultationCreationPage />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/patients/new" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole={["admin", "superadmin"]}>
                 <AddPatientPage />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/patients" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole={["admin", "superadmin"]}>
                 <PatientManagement />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/consultations" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole={["admin", "superadmin"]}>
                 <ConsultationManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/consultations/overdue" element={
+              <ProtectedRoute requiredRole={["admin", "superadmin"]}>
+                <OverdueConsultations />
               </ProtectedRoute>
             } />
             <Route path="/doctor/consultations" element={

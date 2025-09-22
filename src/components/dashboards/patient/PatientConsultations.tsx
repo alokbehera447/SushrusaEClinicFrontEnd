@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ import {
   Zap,
   CalendarRange
 } from 'lucide-react';
-import { Consultation, Prescription, formatDate, formatDateTime, patientApi } from '@/lib/api';
+import { Consultation, Prescription, formatDate, formatDateTime, patientApi, prescriptionApi } from '@/lib/api';
 
 import {
   Accordion,
@@ -97,6 +97,14 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
   const [consultationsWithPrescriptions, setConsultationsWithPrescriptions] = useState<ConsultationWithPrescriptions[]>([]);
   const [loadingPrescriptions, setLoadingPrescriptions] = useState<Record<string, boolean>>({});
   const [expandedConsultations, setExpandedConsultations] = useState<Set<string>>(new Set());
+  const [latestPdfVersions, setLatestPdfVersions] = useState<Record<string, {
+    prescriptionId: string;
+    version: number;
+    downloadUrl: string;
+    generatedBy: string;
+    generatedAt: string;
+  }>>({});
+  const [loadingPdfVersions, setLoadingPdfVersions] = useState<Record<string, boolean>>({});
 
   // Debug logging
   console.log('PatientConsultations received:', {
@@ -107,39 +115,113 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
     isArray: Array.isArray(consultations),
     currentPage,
     totalPages,
-    totalCount
+    totalCount,
+    startDate,
+    endDate,
+    filter,
+    searchTerm
   });
+  
+  // Log first few consultations to verify data
+  if (consultations && consultations.length > 0) {
+    console.log('First 3 consultations data:', consultations.slice(0, 3).map(c => ({
+      id: c.id,
+      scheduled_date: c.scheduled_date,
+      doctor_name: c.doctor_name,
+      status: c.status
+    })));
+  }
 
-  // Fetch prescriptions for consultations
-  useEffect(() => {
-    const fetchPrescriptionsForConsultations = async () => {
-      const consultationsWithPrescriptionsData = await Promise.all(
-        consultations.map(async (consultation) => {
-          try {
-            setLoadingPrescriptions(prev => ({ ...prev, [consultation.id]: true }));
-            const prescriptions = await patientApi.getConsultationPrescriptions(consultation.id);
-            return {
-              ...consultation,
-              prescriptions: prescriptions || []
-            };
-          } catch (error) {
-            console.error(`Error fetching prescriptions for consultation ${consultation.id}:`, error);
-            return {
-              ...consultation,
-              prescriptions: []
-            };
-          } finally {
-            setLoadingPrescriptions(prev => ({ ...prev, [consultation.id]: false }));
-          }
-        })
-      );
-      setConsultationsWithPrescriptions(consultationsWithPrescriptionsData);
-    };
-
-    if (consultations.length > 0) {
-      fetchPrescriptionsForConsultations();
+  // Fetch latest PDF version for a consultation
+  const fetchLatestPdfVersion = useCallback(async (consultationId: string) => {
+    // Check if PDF version is already loaded
+    if (latestPdfVersions[consultationId]) {
+      return; // Already loaded
     }
-  }, [consultations]);
+
+    try {
+      setLoadingPdfVersions(prev => ({ ...prev, [consultationId]: true }));
+      
+      // First get prescriptions for this consultation
+      const prescriptions = await patientApi.getConsultationPrescriptions(consultationId);
+      
+      if (prescriptions && prescriptions.length > 0) {
+        // Find the first finalized prescription
+        const finalizedPrescription = prescriptions.find(p => p.status !== 'draft');
+        
+        if (finalizedPrescription) {
+          try {
+            // Get PDF versions for this prescription
+            const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(finalizedPrescription.id);
+            
+            if (pdfVersions && pdfVersions.length > 0) {
+              // Get the latest version (first in array)
+              const latestVersion = pdfVersions[0];
+              setLatestPdfVersions(prev => ({
+                ...prev,
+                [consultationId]: {
+                  prescriptionId: finalizedPrescription.id,
+                  version: latestVersion.version,
+                  downloadUrl: latestVersion.file_url,
+                  generatedBy: latestVersion.generated_by?.name || 'Doctor',
+                  generatedAt: latestVersion.generated_at
+                }
+              }));
+            }
+          } catch (pdfError) {
+            console.error(`Error fetching PDF versions for prescription ${finalizedPrescription.id}:`, pdfError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching latest PDF version for consultation ${consultationId}:`, error);
+    } finally {
+      setLoadingPdfVersions(prev => ({ ...prev, [consultationId]: false }));
+    }
+  }, [latestPdfVersions]);
+
+  // Initialize consultations with prescriptions (lazy loading)
+  useEffect(() => {
+    // Only set consultations without fetching prescriptions upfront
+    // Prescriptions will be fetched when consultation is expanded
+    const consultationsWithPrescriptionsData = consultations.map(consultation => ({
+      ...consultation,
+      prescriptions: [] // Initialize empty, will be loaded on demand
+    }));
+    setConsultationsWithPrescriptions(consultationsWithPrescriptionsData);
+    
+    // Fetch latest PDF versions for all consultations
+    consultations.forEach(consultation => {
+      fetchLatestPdfVersion(consultation.id);
+    });
+  }, [consultations, fetchLatestPdfVersion]);
+
+  // Fetch prescriptions for a specific consultation when expanded
+  const fetchPrescriptionsForConsultation = async (consultationId: string) => {
+    // Check if prescriptions are already loaded
+    const existingConsultation = consultationsWithPrescriptions.find(c => c.id === consultationId);
+    if (existingConsultation && existingConsultation.prescriptions.length > 0) {
+      return; // Already loaded
+    }
+
+    try {
+      setLoadingPrescriptions(prev => ({ ...prev, [consultationId]: true }));
+      const prescriptions = await patientApi.getConsultationPrescriptions(consultationId);
+      
+      // Update the specific consultation with prescriptions
+      setConsultationsWithPrescriptions(prev => 
+        prev.map(consultation => 
+          consultation.id === consultationId 
+            ? { ...consultation, prescriptions: prescriptions || [] }
+            : consultation
+        )
+      );
+    } catch (error) {
+      console.error(`Error fetching prescriptions for consultation ${consultationId}:`, error);
+    } finally {
+      setLoadingPrescriptions(prev => ({ ...prev, [consultationId]: false }));
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -187,19 +269,53 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
 
   const handleViewPrescription = async (prescription: Prescription) => {
     try {
-      // Download the latest PDF version directly
+      // Use the downloadPrescriptionPDF method which returns { download_url: string; filename: string }
       const response = await patientApi.downloadPrescriptionPDF(prescription.id, 'latest');
       
-      if (response && response.success && response.data && response.data.download_url) {
-        window.open(response.data.download_url, '_blank');
+      if (response && response.download_url) {
+        // Open the PDF in a new tab
+        window.open(response.download_url, '_blank');
       } else {
-        // Fallback to direct API call
-        window.open(`/api/prescriptions/${prescription.id}/pdf/latest/`, '_blank');
+        console.error('No download URL received from API');
+        alert('Unable to open PDF. Please try downloading instead.');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error downloading prescription PDF:', error);
-      // Fallback to direct API call
-      window.open(`/api/prescriptions/${prescription.id}/pdf/latest/`, '_blank');
+      
+      // Handle different types of errors with specific messages
+      if (error && typeof error === 'object' && 'response' in error) {
+        const apiError = error as { response?: { status?: number } };
+        if (apiError.response?.status === 404) {
+          alert('Prescription PDF not found. The prescription may not be finalized yet or the PDF has not been generated.');
+        } else if (apiError.response?.status === 403) {
+          alert('Access denied. You do not have permission to view this prescription.');
+        } else if (apiError.response?.status && apiError.response.status >= 500) {
+          alert('Server error. Please try again later or contact support if the problem persists.');
+        } else if (apiError.response?.status && apiError.response.status >= 400 && apiError.response.status < 500) {
+          alert('Request error. Please try again or contact support.');
+        } else {
+          alert('Error opening PDF. Please try downloading instead or contact support.');
+        }
+      } else if (error && typeof error === 'object' && 'code' in error) {
+        const networkError = error as { code?: string };
+        if (networkError.code === 'NETWORK_ERROR' || !navigator.onLine) {
+          alert('Network error. Please check your internet connection and try again.');
+        } else {
+          alert('Error opening PDF. Please try downloading instead or contact support.');
+        }
+      } else {
+        alert('Error opening PDF. Please try downloading instead or contact support.');
+      }
+    }
+  };
+
+  // Handle viewing latest PDF version for a consultation
+  const handleViewLatestPdf = async (consultationId: string) => {
+    const pdfVersion = latestPdfVersions[consultationId];
+    if (pdfVersion && pdfVersion.downloadUrl) {
+      window.open(pdfVersion.downloadUrl, '_blank');
+    } else {
+      alert('PDF not available. Please try again later.');
     }
   };
 
@@ -234,6 +350,8 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
       newExpanded.delete(consultationId);
     } else {
       newExpanded.add(consultationId);
+      // Fetch prescriptions when expanding a consultation
+      fetchPrescriptionsForConsultation(consultationId);
     }
     setExpandedConsultations(newExpanded);
   };
@@ -374,25 +492,57 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
               <div className="flex items-center gap-2 flex-1">
                 <CalendarRange className="w-4 h-4 text-[#E17726]" />
                 <span className="text-sm font-medium text-gray-700">Date Range:</span>
+                {(startDate || endDate) && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs bg-[#E17726]/10 text-[#E17726] border-[#E17726]/20">
+                      Filter Applied
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        onStartDateChange('');
+                        onEndDateChange('');
+                      }}
+                      className="text-xs h-6 px-2 text-gray-500 hover:text-[#E17726]"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-4 flex-1">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => onStartDateChange(e.target.value)}
-                    className="border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => onStartDateChange(e.target.value)}
+                      className="border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+                    />
+                    {loading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E17726]" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => onEndDateChange(e.target.value)}
-                    className="border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => onEndDateChange(e.target.value)}
+                      className="border-gray-300 focus:border-[#E17726] focus:ring-[#E17726]"
+                    />
+                    {loading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E17726]" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -438,15 +588,15 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                               </Badge>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <CalendarIcon className="w-4 h-4 text-[#E17726]" />
-                                <span>{formatDate(consultation.scheduled_date)}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <Clock className="w-4 h-4 text-[#E17726]" />
-                                <span>{formatTime(consultation.scheduled_time)}</span>
-                              </div>
+                            {/* Scheduled Date Display */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <Calendar className="w-4 h-4 text-[#E17726]" />
+                              <span className="text-sm font-medium text-gray-700">
+                                Scheduled: {formatDate(consultation.scheduled_date)} at {formatTime(consultation.scheduled_time)}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                               <div className="flex items-center gap-2 text-gray-600">
                                 <Clock className="w-4 h-4 text-[#E17726]" />
                                 <span>{consultation.duration} minutes</span>
@@ -454,6 +604,10 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                               <div className="flex items-center gap-2 text-gray-600">
                                 <DollarSign className="w-4 h-4 text-[#E17726]" />
                                 <span>₹{consultation.consultation_fee}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Video className="w-4 h-4 text-[#E17726]" />
+                                <span>{consultation.consultation_type}</span>
                               </div>
                             </div>
                             
@@ -470,6 +624,38 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                                   {getConsultationTypeLabel(consultation.consultation_type)}
                                 </span>
                               </div>
+                            </div>
+                            
+                            {/* Latest PDF Version Display */}
+                            <div className="mt-3">
+                              {loadingPdfVersions[consultation.id] ? (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>Loading PDF...</span>
+                                </div>
+                              ) : latestPdfVersions[consultation.id] ? (
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-[#E17726]" />
+                                  <span className="text-sm text-gray-600">Latest PDF:</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewLatestPdf(consultation.id)}
+                                    className="h-6 px-2 text-xs border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white"
+                                  >
+                                    <Eye className="w-3 h-3 mr-1" />
+                                    View PDF
+                                  </Button>
+                                  <span className="text-xs text-gray-500">
+                                    v{latestPdfVersions[consultation.id].version}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <FileText className="w-4 h-4 text-gray-400" />
+                                  <span>No PDF available</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -561,20 +747,6 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                                 <span className="text-gray-600">Created:</span>
                                 <span className="font-medium">{formatDateTime(consultation.created_at)}</span>
                               </div>
-                              {consultation.doctor_meeting_link && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Meeting Link:</span>
-                                  <a 
-                                    href={consultation.doctor_meeting_link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#E17726] hover:underline flex items-center gap-1"
-                                  >
-                                    Join Meeting
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                </div>
-                              )}
                             </div>
                           </div>
 
@@ -608,41 +780,28 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                                         <p className="mt-1">Diagnosis: {prescription.diagnosis}</p>
                                       )}
                                     </div>
-                                    <div className="flex gap-2">
+                                    
+                                    {/* View PDF Button */}
+                                    <div className="mb-3">
                                       <Button
                                         size="sm"
                                         variant="outline"
                                         onClick={() => handleViewPrescription(prescription)}
-                                        className="flex-1"
+                                        disabled={prescription.status === 'draft'}
+                                        className="w-full"
                                       >
-                                        <Eye className="w-3 h-3 mr-1" />
-                                        View PDF
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={async () => {
-                                          try {
-                                            // Use the proper API endpoint for PDF download
-                                            const response = await patientApi.downloadPrescriptionPDF(prescription.id);
-                                            if (response && response.success && response.data && response.data.download_url) {
-                                              window.open(response.data.download_url, '_blank');
-                                            } else {
-                                              // Fallback to direct API call
-                                              window.open(`/api/prescriptions/${prescription.id}/pdf/latest/`, '_blank');
-                                            }
-                                          } catch (error) {
-                                            console.error('Error downloading PDF:', error);
-                                            // Fallback to direct API call
-                                            window.open(`/api/prescriptions/${prescription.id}/pdf/latest/`, '_blank');
-                                          }
-                                        }}
-                                      >
-                                        <FileDown className="w-3 h-3 mr-1" />
-                                        Download PDF
+                                        <Eye className="w-3 h-3 mr-2" />
+                                        {prescription.status === 'draft' ? 'PDF Not Ready' : 'View PDF'}
                                       </Button>
                                     </div>
+                                    
+                                    {prescription.status === 'draft' && (
+                                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                                        <p className="text-xs text-yellow-700">
+                                          <strong>Note:</strong> This prescription is still in draft mode. PDF will be available once the doctor finalizes the prescription.
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>

@@ -34,7 +34,7 @@ const MedicationSearch: React.FC<MedicationSearchProps> = ({
   onMedicationSelect,
   placeholder = "Search medications...",
   className = "",
-  includeFDA = true // Enable FDA by default
+  includeFDA = false // FDA database removed, use local database only
 }) => {
   const [query, setQuery] = useState('');
   const [medications, setMedications] = useState<Medication[]>([]);

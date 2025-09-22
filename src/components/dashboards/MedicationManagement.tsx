@@ -57,6 +57,14 @@ interface MedicationFormData {
   brand_name: string;
 }
 
+interface PaginationInfo {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  page_size: number;
+  total_pages: number;
+}
+
 const MedicationManagement: React.FC = () => {
   const [medications, setMedications] = useState<GlobalMedication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +72,14 @@ const MedicationManagement: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMedication, setEditingMedication] = useState<GlobalMedication | null>(null);
   const [deletingMedication, setDeletingMedication] = useState<GlobalMedication | null>(null);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    count: 0,
+    next: null,
+    previous: null,
+    page_size: 20,
+    total_pages: 0
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<MedicationFormData>({
     name: '',
     generic_name: '',
@@ -73,21 +89,27 @@ const MedicationManagement: React.FC = () => {
 
 
   useEffect(() => {
-    fetchMedications();
+    fetchMedications(1);
   }, []);
 
-  const fetchMedications = async () => {
+  const fetchMedications = async (page: number = 1) => {
     try {
       setLoading(true);
-      const response = await api.get('/api/eclinic/medications/');
-      // Handle both success format and direct results format
+      const response = await api.get(`/api/eclinic/medications/?page=${page}`);
+      
+      // Handle the new paginated response format
       if (response.data.success && response.data.data) {
         setMedications(response.data.data);
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
       } else if (response.data.results) {
+        // Fallback for old format
         setMedications(response.data.results);
       } else {
         setMedications([]);
       }
+      setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch medications:', error);
       toast.error('Failed to fetch medications');
@@ -98,21 +120,27 @@ const MedicationManagement: React.FC = () => {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      fetchMedications();
+      fetchMedications(1);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await api.get(`/api/eclinic/medications/search/?q=${encodeURIComponent(searchQuery)}`);
-      // Handle both success format and direct results format
+      const response = await api.get(`/api/eclinic/medications/?search=${encodeURIComponent(searchQuery)}`);
+      
+      // Handle the new paginated response format
       if (response.data.success && response.data.data) {
-        setMedications(response.data.data.medications);
+        setMedications(response.data.data);
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
       } else if (response.data.results) {
+        // Fallback for old format
         setMedications(response.data.results);
       } else {
         setMedications([]);
       }
+      setCurrentPage(1);
     } catch (error) {
       console.error('Failed to search medications:', error);
       toast.error('Failed to search medications');
@@ -138,7 +166,7 @@ const MedicationManagement: React.FC = () => {
       toast.success('Medication added successfully');
       setShowAddForm(false);
       resetForm();
-      fetchMedications();
+      fetchMedications(1);
       
     } catch (error: any) {
       console.error('Failed to add medication:', error);
@@ -158,7 +186,7 @@ const MedicationManagement: React.FC = () => {
       toast.success('Medication updated successfully');
       setEditingMedication(null);
       resetForm();
-      fetchMedications();
+      fetchMedications(currentPage);
       
     } catch (error: any) {
       console.error('Failed to update medication:', error);
@@ -174,7 +202,7 @@ const MedicationManagement: React.FC = () => {
       await api.delete(`/api/eclinic/medications/${deletingMedication.id}/`);
       toast.success('Medication deleted successfully');
       setDeletingMedication(null);
-      fetchMedications();
+      fetchMedications(currentPage);
     } catch (error) {
       console.error('Failed to delete medication:', error);
       toast.error('Failed to delete medication');
@@ -190,11 +218,35 @@ const MedicationManagement: React.FC = () => {
     });
   };
 
-  const filteredMedications = medications.filter(medication =>
-    medication.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    medication.generic_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    medication.brand_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    if (searchQuery.trim()) {
+      // For search, we need to implement search pagination
+      handleSearchPage(page);
+    } else {
+      fetchMedications(page);
+    }
+  };
+
+  const handleSearchPage = async (page: number) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/api/eclinic/medications/?search=${encodeURIComponent(searchQuery)}&page=${page}`);
+      
+      if (response.data.success && response.data.data) {
+        setMedications(response.data.data);
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
+      }
+      setCurrentPage(page);
+    } catch (error) {
+      console.error('Failed to search medications:', error);
+      toast.error('Failed to search medications');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -230,7 +282,7 @@ const MedicationManagement: React.FC = () => {
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Search
             </Button>
-            <Button variant="outline" onClick={() => { setSearchQuery(''); fetchMedications(); }}>
+            <Button variant="outline" onClick={() => { setSearchQuery(''); fetchMedications(1); }}>
               Clear
             </Button>
           </div>
@@ -304,95 +356,252 @@ const MedicationManagement: React.FC = () => {
       {/* Medications List */}
       <Card>
         <CardHeader>
-          <CardTitle>Medications ({filteredMedications.length})</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>
+              Medications ({pagination.count} total)
+              {searchQuery && ` - Showing search results for "${searchQuery}"`}
+            </CardTitle>
+            <div className="text-sm text-muted-foreground">
+              Page {currentPage} of {pagination.total_pages}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
-          ) : filteredMedications.length === 0 ? (
+          ) : medications.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No medications found
             </div>
           ) : (
-                         <div className="space-y-4">
-               {filteredMedications.map((medication) => (
-                 <div key={medication.id} className="border rounded-lg p-6 hover:bg-gray-50 transition-colors">
-                   <div className="flex justify-between items-start">
-                     <div className="flex-1">
-                       {/* Header with name and badges */}
-                       <div className="flex items-center gap-3 mb-4">
-                         <div className="flex items-center gap-2">
-                           <Pill className="w-5 h-5 text-blue-600" />
-                           <h3 className="font-bold text-xl text-gray-900">{medication.name}</h3>
-                         </div>
-                         <div className="flex gap-2">
-                           {medication.is_verified && (
-                             <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                               <CheckCircle className="w-3 h-3 mr-1" />
-                               Verified
-                             </Badge>
-                           )}
-                           {!medication.is_active && (
-                             <Badge variant="destructive">Inactive</Badge>
-                           )}
-                           {medication.is_prescription_required && (
-                             <Badge variant="outline" className="border-orange-200 text-orange-700">
-                               Prescription Required
-                             </Badge>
-                           )}
-                         </div>
-                       </div>
-                       
-                       {/* Main medication details */}
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                         <div className="bg-gray-50 p-3 rounded-lg">
-                           <div className="text-sm font-medium text-gray-500 mb-1">Generic Name</div>
-                           <div className="font-semibold">{medication.generic_name || 'N/A'}</div>
-                         </div>
-                         <div className="bg-gray-50 p-3 rounded-lg">
-                           <div className="text-sm font-medium text-gray-500 mb-1">Brand Name</div>
-                           <div className="font-semibold">{medication.brand_name || 'N/A'}</div>
-                         </div>
-                       </div>
+            <>
+              {/* Compact Table-like Layout */}
+              <div className="space-y-1">
+                {/* Header - Hidden on mobile */}
+                <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-600">
+                  <div className="col-span-3">Medication Name</div>
+                  <div className="col-span-2">Generic Name</div>
+                  <div className="col-span-2">Brand Name</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Created By</div>
+                  <div className="col-span-1">Actions</div>
+                </div>
+                
+                {/* Medication Rows */}
+                {medications.map((medication) => (
+                  <div key={medication.id}>
+                    {/* Desktop Layout */}
+                    <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 border rounded-lg hover:bg-gray-50 transition-colors items-center">
+                      {/* Medication Name with Icon */}
+                      <div className="col-span-3 flex items-center gap-2">
+                        <Pill className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 truncate" title={medication.name}>
+                            {medication.name}
+                          </div>
+                          {medication.strength && (
+                            <div className="text-xs text-gray-500 truncate">
+                              {medication.strength}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Generic Name */}
+                      <div className="col-span-2">
+                        <div className="text-sm text-gray-700 truncate" title={medication.generic_name || 'N/A'}>
+                          {medication.generic_name || 'N/A'}
+                        </div>
+                      </div>
+                      
+                      {/* Brand Name */}
+                      <div className="col-span-2">
+                        <div className="text-sm text-gray-700 truncate" title={medication.brand_name || 'N/A'}>
+                          {medication.brand_name || 'N/A'}
+                        </div>
+                      </div>
+                      
+                      {/* Status Badges */}
+                      <div className="col-span-2 flex gap-1 flex-wrap">
+                        {medication.is_verified && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 text-xs">
+                            <CheckCircle className="w-2 h-2 mr-1" />
+                            Verified
+                          </Badge>
+                        )}
+                        {!medication.is_active && (
+                          <Badge variant="destructive" className="text-xs">Inactive</Badge>
+                        )}
+                        {medication.is_prescription_required && (
+                          <Badge variant="outline" className="border-orange-200 text-orange-700 text-xs">
+                            Rx
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Created By */}
+                      <div className="col-span-2">
+                        <div className="text-sm text-gray-600 truncate" title={medication.created_by_name}>
+                          {medication.created_by_name}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {new Date(medication.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="col-span-1 flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEdit(medication)}
+                          className="h-8 w-8 p-0 hover:bg-blue-50"
+                          title="Edit medication"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeletingMedication(medication)}
+                          className="h-8 w-8 p-0 hover:bg-red-50 text-red-600"
+                          title="Delete medication"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
 
-                       {/* Metadata */}
-                       <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
-                         <div className="flex items-center gap-4">
-                           <span><strong>Created by:</strong> {medication.created_by_name}</span>
-                         </div>
-                         <div className="text-xs">
-                           Created: {new Date(medication.created_at).toLocaleDateString()}
-                         </div>
-                       </div>
-                     </div>
-
-                     {/* Action buttons */}
-                     <div className="flex gap-2 ml-6">
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => startEdit(medication)}
-                         className="hover:bg-blue-50 hover:border-blue-200"
-                       >
-                         <Edit className="w-4 h-4 mr-1" />
-                         Edit
-                       </Button>
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => setDeletingMedication(medication)}
-                         className="hover:bg-red-50 hover:border-red-200 text-red-600"
-                       >
-                         <Trash2 className="w-4 h-4 mr-1" />
-                         Delete
-                       </Button>
-                     </div>
-                   </div>
-                 </div>
-               ))}
-             </div>
+                    {/* Mobile Layout */}
+                    <div className="lg:hidden border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Pill className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 truncate">
+                              {medication.name}
+                            </div>
+                            {medication.strength && (
+                              <div className="text-xs text-gray-500">
+                                {medication.strength}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-1 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEdit(medication)}
+                            className="h-8 w-8 p-0 hover:bg-blue-50"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingMedication(medication)}
+                            className="h-8 w-8 p-0 hover:bg-red-50 text-red-600"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1 text-sm">
+                        {medication.generic_name && (
+                          <div><span className="text-gray-500">Generic:</span> {medication.generic_name}</div>
+                        )}
+                        {medication.brand_name && (
+                          <div><span className="text-gray-500">Brand:</span> {medication.brand_name}</div>
+                        )}
+                      </div>
+                      
+                      <div className="flex justify-between items-center mt-3">
+                        <div className="flex gap-1 flex-wrap">
+                          {medication.is_verified && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 text-xs">
+                              <CheckCircle className="w-2 h-2 mr-1" />
+                              Verified
+                            </Badge>
+                          )}
+                          {!medication.is_active && (
+                            <Badge variant="destructive" className="text-xs">Inactive</Badge>
+                          )}
+                          {medication.is_prescription_required && (
+                            <Badge variant="outline" className="border-orange-200 text-orange-700 text-xs">
+                              Rx
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {new Date(medication.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Pagination Controls */}
+              {pagination.total_pages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-6 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={!pagination.previous || loading}
+                  >
+                    Previous
+                  </Button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
+                      let pageNum;
+                      if (pagination.total_pages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= pagination.total_pages - 2) {
+                        pageNum = pagination.total_pages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          disabled={loading}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!pagination.next || loading}
+                  >
+                    Next
+                  </Button>
+                  
+                  <div className="ml-4 text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * pagination.page_size) + 1} to{' '}
+                    {Math.min(currentPage * pagination.page_size, pagination.count)} of{' '}
+                    {pagination.count} medications
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

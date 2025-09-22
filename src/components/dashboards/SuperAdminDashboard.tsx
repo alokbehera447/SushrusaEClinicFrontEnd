@@ -634,7 +634,14 @@ const DoctorsManagement = ({ isDarkMode = false }: { isDarkMode?: boolean }) => 
           <CardTitle className={`flex items-center justify-between transition-colors duration-300 ${
             isDarkMode ? 'text-white' : ''
           }`}>
-            <span>Doctors ({doctors.length})</span>
+            <div>
+              <span>Doctors ({totalDoctors} total)</span>
+              {totalDoctors > 0 && (
+                <div className="text-sm font-normal text-gray-500 mt-1">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalDoctors)} of {totalDoctors} doctors
+                </div>
+              )}
+            </div>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           </CardTitle>
         </CardHeader>

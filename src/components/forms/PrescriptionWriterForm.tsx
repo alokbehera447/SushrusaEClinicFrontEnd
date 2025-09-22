@@ -383,12 +383,12 @@ const PrescriptionWriterForm = () => {
                             <SelectValue placeholder="Select form" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Tablet">Tablet</SelectItem>
-                            <SelectItem value="Capsule">Capsule</SelectItem>
-                            <SelectItem value="Syrup">Syrup</SelectItem>
-                            <SelectItem value="Injection">Injection</SelectItem>
-                            <SelectItem value="Ointment">Ointment</SelectItem>
-                            <SelectItem value="Inhaler">Inhaler</SelectItem>
+                            <SelectItem value="tablet">Tablet</SelectItem>
+                            <SelectItem value="capsule">Capsule</SelectItem>
+                            <SelectItem value="syrup">Syrup</SelectItem>
+                            <SelectItem value="injection">Injection</SelectItem>
+                            <SelectItem value="ointment">Ointment</SelectItem>
+                            <SelectItem value="inhaler">Inhaler</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

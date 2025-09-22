@@ -71,6 +71,24 @@ interface Slot {
 
 const DoctorDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Set default tab based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      const isDesktop = window.innerWidth >= 1024; // lg breakpoint
+      if (!isDesktop && activeTab === 'overview') {
+        setActiveTab('consultations');
+      } else if (isDesktop && activeTab === 'consultations') {
+        setActiveTab('overview');
+      }
+    };
+
+    // Set initial tab
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeTab]);
   const [expandedConsultation, setExpandedConsultation] = useState<string | null>(null);
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -493,37 +511,34 @@ const DoctorDashboard = () => {
       <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 border-b border-emerald-500 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">{getDisplayName(profile)}</h1>
-                <p className="text-xs text-blue-100">{user?.phone || 'No contact available'}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg font-bold text-white truncate">{getDisplayName(profile)}</h1>
+                <p className="text-xs text-blue-100 hidden sm:block">{user?.phone || 'No contact available'}</p>
               </div>
-              <Badge className="bg-green-100 text-green-800 border-green-200">
+              <Badge className="bg-green-100 text-green-800 border-green-200 hidden sm:flex">
                 Available
               </Badge>
-              {/* WebSocket Connection Status - TEMPORARILY DISABLED */}
-              {/* <div className="flex items-center space-x-2 ml-4">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
-                <span className="text-xs text-blue-100">
-                  {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Disconnected'}
-                </span>
-                {wsError && (
-                  <span className="text-xs text-red-200">({wsError})</span>
-                )}
-              </div> */}
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1 sm:space-x-3">
               {/* Consultation Management Button */}
               <Button 
                 onClick={() => navigate('/doctor/consultations')}
                 size="sm" 
-                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 transition-colors duration-300"
+                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 transition-colors duration-300 hidden sm:flex"
               >
                 <Activity className="w-4 h-4 mr-2" />
                 Manage Consultations
+              </Button>
+              <Button 
+                onClick={() => navigate('/doctor/consultations')}
+                size="sm" 
+                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 transition-colors duration-300 sm:hidden p-2"
+              >
+                <Activity className="w-4 h-4" />
               </Button>
 
               {/* Theme Toggle */}
@@ -531,7 +546,7 @@ const DoctorDashboard = () => {
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setIsDarkMode(!isDarkMode)}
-                className="text-white hover:bg-white/20 transition-colors duration-300"
+                className="text-white hover:bg-white/20 transition-colors duration-300 p-2"
               >
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
@@ -540,7 +555,7 @@ const DoctorDashboard = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-white hover:bg-white/20 transition-colors duration-300"
+                className="text-white hover:bg-white/20 transition-colors duration-300 p-2 hidden sm:flex"
               >
                 <HelpCircle className="w-4 h-4" />
               </Button>
@@ -550,7 +565,7 @@ const DoctorDashboard = () => {
                 variant="ghost" 
                 size="sm"
                 onClick={() => setShowNotifications(true)}
-                className="relative text-white hover:bg-white/20 transition-colors duration-300"
+                className="relative text-white hover:bg-white/20 transition-colors duration-300 p-2"
               >
                 <Bell className="w-4 h-4" />
                 {notificationCount > 0 && (
@@ -563,13 +578,13 @@ const DoctorDashboard = () => {
               {/* User Profile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/20 transition-colors duration-300">
-                    <Avatar className="h-8 w-8 border-2 border-white/20">
-                      <AvatarFallback className="bg-white/20 text-white font-semibold">
+                  <Button variant="ghost" className="flex items-center space-x-1 sm:space-x-2 text-white hover:bg-white/20 transition-colors duration-300 p-2 sm:p-3">
+                    <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border-2 border-white/20">
+                      <AvatarFallback className="bg-white/20 text-white font-semibold text-xs sm:text-sm">
                         {getDisplayName(profile).charAt(0) || 'D'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden md:block text-left">
+                    <div className="hidden lg:block text-left">
                       <p className="text-sm font-medium text-white">
                         {getDisplayName(profile)}
                       </p>
@@ -610,26 +625,43 @@ const DoctorDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+          {/* Mobile: 4 tabs with icons only */}
+          <TabsList className="grid w-full grid-cols-4 lg:hidden bg-white rounded-xl p-1 shadow-sm border border-gray-200 gap-1">
+            <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs p-2">
+              <Video className="w-4 h-4" />
+            </TabsTrigger>
+            <TabsTrigger value="slot-booking" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs p-2">
+              <Clock className="w-4 h-4" />
+            </TabsTrigger>
+            <TabsTrigger value="earnings" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs p-2">
+              <DollarSign className="w-4 h-4" />
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-xs p-2">
+              <User className="w-4 h-4" />
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Desktop: 5 tabs with full labels */}
+          <TabsList className="hidden lg:flex w-full bg-white rounded-xl p-1 shadow-sm border border-gray-200 gap-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-sm px-4 py-2 flex-1">
               <Activity className="w-4 h-4 mr-2" />
-              Overview
+              <span>Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+            {/* <TabsTrigger value="consultations" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-sm px-4 py-2 flex-1">
               <Video className="w-4 h-4 mr-2" />
-              Consultations
-            </TabsTrigger>
-            <TabsTrigger value="slot-booking" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+              <span>Consultations</span>
+            </TabsTrigger> */}
+            <TabsTrigger value="slot-booking" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-sm px-4 py-2 flex-1">
               <Clock className="w-4 h-4 mr-2" />
-              Slot Booking
+              <span>Slot Booking</span>
             </TabsTrigger>
-            <TabsTrigger value="earnings" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+            <TabsTrigger value="earnings" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-sm px-4 py-2 flex-1">
               <DollarSign className="w-4 h-4 mr-2" />
-              Earnings
+              <span>Earnings</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white">
+            <TabsTrigger value="profile" className="data-[state=active]:bg-[#E17726] data-[state=active]:text-white text-sm px-4 py-2 flex-1">
               <User className="w-4 h-4 mr-2" />
-              Profile
+              <span>Profile</span>
             </TabsTrigger>
           </TabsList>
 
@@ -637,20 +669,20 @@ const DoctorDashboard = () => {
           <TabsContent value="overview">
           <div className="space-y-8">
             {/* Today's Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {todayStats.map((stat, index) => (
                 <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-2xl">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
-                        <p className="text-3xl font-bold text-midnight">{stat.value}</p>
-                        <p className={`text-sm mt-1 ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2 truncate">{stat.label}</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-midnight">{stat.value}</p>
+                        <p className={`text-xs sm:text-sm mt-1 ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
                           {stat.change} this month
                         </p>
                       </div>
-                      <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
-                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${stat.bgColor} flex items-center justify-center flex-shrink-0`}>
+                        <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.color}`} />
                       </div>
                     </div>
                   </CardContent>
@@ -659,53 +691,55 @@ const DoctorDashboard = () => {
             </div>
 
             {/* Next Consultations & Performance */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
               {/* Next Consultations */}
               <div className="lg:col-span-2">
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-xl font-bold text-gray-900">Next Consultations</CardTitle>
-                    <Badge className="bg-[#E17726]/10 text-[#E17726]">
+                  <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl font-bold text-gray-900">Next Consultations</CardTitle>
+                    <Badge className="bg-[#E17726]/10 text-[#E17726] text-xs sm:text-sm">
                       {consultations.filter(c => c.status === 'scheduled').length} Pending
                     </Badge>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
                     {consultations.map((consultation, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center space-x-4">
-                          <div className="text-center">
-                            <div className="text-sm font-semibold text-[#E17726]">{consultation.scheduled_time}</div>
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center space-x-3 sm:space-x-4 mb-3 sm:mb-0">
+                          <div className="text-center flex-shrink-0">
+                            <div className="text-xs sm:text-sm font-semibold text-[#E17726]">{consultation.scheduled_time}</div>
                             <div className="text-xs text-gray-500">{consultation.consultation_type}</div>
                           </div>
                           <img 
                             src="/patient-avatar-1.svg" 
                             alt="Patient" 
-                            className="w-12 h-12 rounded-full"
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0"
                           />
-                          <div>
-                            <h4 className="font-semibold text-midnight">{consultation.patient_name}</h4>
-                            <p className="text-sm text-gray-600">{consultation.chief_complaint}</p>
-                            <p className="text-xs text-gray-500">{consultation.symptoms || 'No symptoms listed'}</p>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-midnight text-sm sm:text-base truncate">{consultation.patient_name}</h4>
+                            <p className="text-xs sm:text-sm text-gray-600 truncate">{consultation.chief_complaint}</p>
+                            <p className="text-xs text-gray-500 truncate">{consultation.symptoms || 'No symptoms listed'}</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <Badge className={getStatusColor(consultation.status)}>
+                        <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3">
+                          <Badge className={`text-xs ${getStatusColor(consultation.status)}`}>
                             {consultation.status.replace('-', ' ')}
                           </Badge>
                           {consultation.status === 'scheduled' && (
                             <Button 
                               size="sm" 
-                              className="bg-aqua hover:bg-aqua/90 text-white"
+                              className="bg-aqua hover:bg-aqua/90 text-white text-xs sm:text-sm"
                               onClick={() => navigate(`/consultation/${consultation.id}/meeting`)}
                             >
-                              <Video className="w-4 h-4 mr-2" />
-                              Join Meeting
+                              <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Join Meeting</span>
+                              <span className="sm:hidden">Join</span>
                             </Button>
                           )}
                           {consultation.status === 'in-progress' && (
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-                              <PlayCircle className="w-4 h-4 mr-2" />
-                              Continue
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm">
+                              <PlayCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Continue</span>
+                              <span className="sm:hidden">Continue</span>
                             </Button>
                           )}
                         </div>
@@ -716,54 +750,55 @@ const DoctorDashboard = () => {
               </div>
 
               {/* Performance & Quick Stats */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-bold text-gray-900">This Week</CardTitle>
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl font-bold text-gray-900">This Week</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Consultations</span>
-                      <span className="font-semibold text-midnight">42</span>
+                      <span className="text-sm sm:text-base text-gray-600">Consultations</span>
+                      <span className="font-semibold text-midnight text-sm sm:text-base">42</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Avg. Rating</span>
+                      <span className="text-sm sm:text-base text-gray-600">Avg. Rating</span>
                       <div className="flex items-center">
                         <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="font-semibold text-midnight ml-1">4.8</span>
+                        <span className="font-semibold text-midnight ml-1 text-sm sm:text-base">4.8</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Earnings</span>
-                      <span className="font-semibold text-midnight">₹21,000</span>
+                      <span className="text-sm sm:text-base text-gray-600">Earnings</span>
+                      <span className="font-semibold text-midnight text-sm sm:text-base">₹21,000</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Completion Rate</span>
-                      <span className="font-semibold text-green-600">98%</span>
+                      <span className="text-sm sm:text-base text-gray-600">Completion Rate</span>
+                      <span className="font-semibold text-green-600 text-sm sm:text-base">98%</span>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="border-0 shadow-lg rounded-2xl bg-white/90 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-bold text-gray-900">Quick Actions</CardTitle>
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl font-bold text-gray-900">Quick Actions</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Button className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white justify-start h-12 rounded-xl">
-                      <Video className="w-5 h-5 mr-3" />
+                  <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+                    <Button className="w-full bg-[#E17726] hover:bg-[#c9651e] text-white justify-start h-10 sm:h-12 rounded-xl text-sm sm:text-base">
+                      <Video className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
                       Join Video Call
                     </Button>
-                    <Button variant="outline" className="w-full justify-start h-12 rounded-xl border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white">
-                      <Calendar className="w-5 h-5 mr-3" />
+                    <Button variant="outline" className="w-full justify-start h-10 sm:h-12 rounded-xl border-[#E17726] text-[#E17726] hover:bg-[#E17726] hover:text-white text-sm sm:text-base">
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
                       Update Schedule
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="w-full justify-start h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white"
+                      className="w-full justify-start h-10 sm:h-12 rounded-xl border-aqua text-aqua hover:bg-aqua hover:text-white text-sm sm:text-base"
                       onClick={() => navigate('/doctor/consultations')}
                     >
-                      <Activity className="w-5 h-5 mr-3" />
-                      Manage Consultations
+                      <Activity className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" />
+                      <span className="hidden sm:inline">Manage Consultations</span>
+                      <span className="sm:hidden">Manage Consults</span>
                     </Button>
                   </CardContent>
                 </Card>

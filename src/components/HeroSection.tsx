@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Calendar, Video, Shield, Star, Users, Clock, Play, Heart, ArrowRight, Sparkles, Zap, Award, MapPin } from 'lucide-react';
-import BookConsultationModal from '@/components/detail-pages/BookConsultationModal';
+import { Calendar, Video, Shield, Star, Users, Clock, Play, Heart, ArrowRight, Sparkles, Zap, Award, MapPin, UserPlus } from 'lucide-react';
 
 const HeroSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -105,14 +103,15 @@ const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4 animate-fade-in-up animation-delay-200">
-              <Button 
-                size="lg" 
-                onClick={() => setShowBookingModal(true)}
-                className="w-full sm:w-auto bg-gradient-orange text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 hover:scale-105 group"
-              >
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:rotate-12 transition-transform duration-300" />
-                Book Consultation
-              </Button>
+              <Link to="/register" className="group">
+                <Button 
+                  size="lg" 
+                  className="w-full sm:w-auto bg-gradient-orange text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg h-auto btn-modern hover-lift transition-all duration-300 hover:scale-105 group"
+                >
+                  <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:rotate-12 transition-transform duration-300" />
+                  Register Now
+                </Button>
+              </Link>
               
               <Link to="/find-doctors" className="group">
                 <Button 
@@ -212,11 +211,6 @@ const HeroSection = () => {
         </div>
       </div>
       
-      {/* Modals */}
-      <BookConsultationModal 
-        isOpen={showBookingModal} 
-        onClose={() => setShowBookingModal(false)} 
-      />
     </section>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ import {
 import { 
   adminConsultationApi, 
   prescriptionApi,
-  ConsultationDetails, 
+  type ConsultationDetails, 
   ConsultationVitalSigns, 
   ConsultationAttachment, 
   ConsultationNote, 
@@ -81,7 +81,7 @@ const ConsultationDetails: React.FC = () => {
   ]));
 
   // Fetch consultation details
-  const fetchConsultationDetails = async () => {
+  const fetchConsultationDetails = useCallback(async () => {
     if (!consultationId) return;
     
     try {
@@ -96,10 +96,10 @@ const ConsultationDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [consultationId]);
 
   // Fetch prescription data
-  const fetchPrescriptionData = async () => {
+  const fetchPrescriptionData = useCallback(async () => {
     if (!consultationId) return;
     
     try {
@@ -130,10 +130,10 @@ const ConsultationDetails: React.FC = () => {
     } finally {
       setLoadingPrescription(false);
     }
-  };
+  }, [consultationId]);
 
   // Fetch receipt data
-  const fetchReceiptData = async () => {
+  const fetchReceiptData = useCallback(async () => {
     if (!consultationId) return;
     
     try {
@@ -154,11 +154,11 @@ const ConsultationDetails: React.FC = () => {
     } finally {
       setLoadingReceipt(false);
     }
-  };
+  }, [consultationId]);
 
   useEffect(() => {
     fetchConsultationDetails();
-  }, [consultationId]);
+  }, [consultationId, fetchConsultationDetails]);
 
   // Fetch prescription and receipt data when consultation is loaded
   useEffect(() => {
@@ -166,7 +166,7 @@ const ConsultationDetails: React.FC = () => {
       fetchPrescriptionData();
       fetchReceiptData();
     }
-  }, [consultation]);
+  }, [consultation, fetchPrescriptionData, fetchReceiptData]);
 
   // Toggle section expansion
   const toggleSection = (sectionId: string) => {
@@ -577,20 +577,6 @@ const ConsultationDetails: React.FC = () => {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {consultation.doctor_phone && (
-                          <div className="flex items-center space-x-2">
-                            <Phone className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{consultation.doctor_phone}</span>
-                          </div>
-                        )}
-                        {consultation.doctor_email && (
-                          <div className="flex items-center space-x-2">
-                            <Mail className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{consultation.doctor_email}</span>
-                          </div>
-                        )}
-                      </div>
                       
                       {consultation.doctor_meeting_link && (
                         <div className="pt-2">
