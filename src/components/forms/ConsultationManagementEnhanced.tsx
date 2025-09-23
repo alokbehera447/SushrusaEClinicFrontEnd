@@ -348,7 +348,8 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
     if (!consultationToDelete) return;
     
     try {
-      // You would implement delete consultation API call here
+      // Call the delete consultation API
+      await adminConsultationApi.deleteConsultation(consultationToDelete.id);
       toast.success('Consultation deleted successfully');
       setDeleteDialogOpen(false);
       setConsultationToDelete(null);
