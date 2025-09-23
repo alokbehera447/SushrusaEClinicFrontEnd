@@ -266,11 +266,14 @@ const SuperAdminSlotManagement: React.FC<SuperAdminSlotManagementProps> = ({
     doctorEmail: doctor?.user_email,
     doctorPhone: doctor?.user_phone,
     isActive: doctor?.is_active,
-    isVerified: doctor?.is_verified
+    isVerified: doctor?.is_verified,
+    doctorIdType: typeof doctorId,
+    doctorIdValue: doctorId,
+    doctorIdStartsWithDOC: doctorId ? doctorId.startsWith('DOC') : 'N/A'
   });
   
-  // Validate doctor ID
-  if (!doctorId || !doctorId.startsWith('DOC')) {
+  // Validate doctor ID - be more flexible with validation
+  if (!doctorId) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-6">
