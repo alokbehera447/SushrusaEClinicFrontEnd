@@ -2104,6 +2104,10 @@ export const adminConsultationApi = {
     scheduled_date?: string;
     ordering?: string;
     clinic_id?: string;
+    doctor_id?: string;
+    start_date?: string;
+    end_date?: string;
+    payment_status?: string;
   }): Promise<PaginatedResponse<Consultation>> => {
     const queryParams = new URLSearchParams();
     if (params) {

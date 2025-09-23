@@ -105,6 +105,7 @@ import SuperAdminOverview from './SuperAdminOverview';
 import SuperAdminAnalytics from './SuperAdminAnalytics';
 import DoctorStatusDashboard from './DoctorStatusDashboard';
 import PatientManagement from './PatientManagement';
+import SuperAdminConsultationManagement from './SuperAdminConsultationManagement';
 
 
 // Doctors Management Component
@@ -1542,6 +1543,7 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'doctors', label: 'Doctors', icon: Stethoscope },
     // { id: 'doctor-status', label: 'Doctor Status', icon: Activity },
+    { id: 'consultations', label: 'Consultations', icon: ClipboardList },
     { id: 'patients', label: 'Patients', icon: Users },
     { id: 'admins', label: 'Admins', icon: UserCog },
     { id: 'clinics', label: 'E-Clinics', icon: Building2 },
@@ -1557,6 +1559,8 @@ const SuperAdminDashboard = ({ isDarkMode: externalIsDarkMode, setIsDarkMode: ex
         return <DoctorsManagement isDarkMode={isDarkMode} />;
       // case 'doctor-status':
       //   return <DoctorStatusDashboard isDarkMode={isDarkMode} />;
+      case 'consultations':
+        return <SuperAdminConsultationManagement />;
       case 'patients':
         return <PatientManagement isDarkMode={isDarkMode} />;
       case 'admins':
