@@ -360,7 +360,12 @@ const EClinicProfileView: React.FC<EClinicProfileViewProps> = ({
                     {Object.entries(clinic.operating_hours).map(([day, hours]) => (
                       <div key={day} className="flex justify-between text-sm">
                         <span className="font-medium text-gray-700 capitalize">{day}:</span>
-                        <span className="text-gray-600">{hours as string}</span>
+                        <span className="text-gray-600">
+                          {typeof hours === 'string' ? hours : 
+                           typeof hours === 'object' && hours !== null && 'open' in hours && 'close' in hours ? 
+                           `${hours.open} - ${hours.close}` : 
+                           'Closed'}
+                        </span>
                       </div>
                     ))}
                   </div>
