@@ -196,20 +196,27 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         // Load existing prescriptions for this patient
         try {
-          const prescriptionsResponse = await prescriptionApi.getPatientPrescriptions(consultData.patient.id);
+          console.log('🔍 Loading existing prescriptions for patient:', consultData.patient.id);
+          const prescriptionsResponse = await prescriptionApi.getPatientPrescriptions({ patient_id: consultData.patient.id });
+          console.log('🔍 Prescriptions response:', prescriptionsResponse);
           const prescriptions = prescriptionsResponse || [];
+          console.log('🔍 Prescriptions array:', prescriptions);
           
           // Load PDF versions for each prescription
           const prescriptionsWithPdfs = await Promise.all(
             prescriptions.map(async (prescription: any) => {
               if (!prescription?.id) {
+                console.log('🔍 Skipping prescription without ID:', prescription);
                 return prescription;
               }
               
               try {
+                console.log(`🔍 Loading PDF versions for prescription ${prescription.id}`);
                 const pdfResponse = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+                console.log(`🔍 PDF response for prescription ${prescription.id}:`, pdfResponse);
                 // Handle the API response structure: { data: { versions: [...] } }
                 const pdfVersions = pdfResponse?.data?.versions || pdfResponse?.versions || pdfResponse || [];
+                console.log(`🔍 PDF versions for prescription ${prescription.id}:`, pdfVersions);
                 return {
                   ...prescription,
                   pdf_versions: pdfVersions,
@@ -222,6 +229,7 @@ const MobileConsultationWorkspace: React.FC = () => {
             })
           );
           
+          console.log('🔍 Final prescriptions with PDFs:', prescriptionsWithPdfs);
           setExistingPrescriptions(prescriptionsWithPdfs);
         } catch (err) {
           console.error('Error loading existing prescriptions:', err);
@@ -696,7 +704,10 @@ const MobileConsultationWorkspace: React.FC = () => {
         </Card>
 
         {/* Existing Prescriptions */}
-        {existingPrescriptions.length > 0 && (
+        {(() => {
+          console.log('🔍 Rendering existing prescriptions:', existingPrescriptions.length, existingPrescriptions);
+          return existingPrescriptions.length > 0;
+        })() && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center justify-between">
