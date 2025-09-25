@@ -34,7 +34,7 @@ import {
   Thermometer,
   Scale
 } from 'lucide-react';
-import { adminConsultationApi, superAdminApi, patientApi } from '@/lib/api';
+import { adminConsultationApi, superAdminApi, patientApi, prescriptionApi } from '@/lib/api';
 import { formatDate, formatTime, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -338,24 +338,50 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const handleViewPrescription = async (consultationId: string) => {
     try {
       setLoadingPrescription(true);
-      const prescriptionsData = await patientApi.getConsultationPrescriptions(consultationId);
       
-      if (prescriptionsData && prescriptionsData.length > 0) {
-        // Check if prescription is finalized and has PDF
-        const hasPdf = prescriptionsData.some(p => p.pdf_file && p.is_finalized);
+      // First get the prescription to get the prescription ID
+      const prescriptionData = await patientApi.getConsultationPrescriptions(consultationId);
+      
+      if (prescriptionData && prescriptionData.length > 0) {
+        const prescription = prescriptionData[0]; // Get the first prescription
         
-        if (!hasPdf) {
+        if (!prescription.is_finalized) {
           toast.warning('Prescription exists but is not finalized yet. No PDF available.');
+          setPrescriptions([]);
+          setShowPrescriptionModal(true);
+          return;
         }
         
-        setPrescriptions(prescriptionsData);
-        setShowPrescriptionModal(true);
+        // Get PDF versions for this prescription
+        const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+        
+        if (pdfVersions && pdfVersions.length > 0) {
+          // Transform PDF versions to match the expected format
+          const transformedVersions = pdfVersions.map((pdf: any, index: number) => ({
+            id: pdf.id,
+            version: pdf.version_number,
+            pdf_file: pdf.file_url,
+            is_finalized: true,
+            is_current: pdf.is_current,
+            generated_at: pdf.generated_at,
+            file_size: pdf.file_size,
+            prescription_id: prescription.id,
+            medications: prescription.medications || [],
+            diagnosis: prescription.primary_diagnosis || '',
+            advice_instructions: prescription.general_instructions || ''
+          }));
+          
+          setPrescriptions(transformedVersions);
+          setShowPrescriptionModal(true);
+        } else {
+          toast.error('No PDF versions found for this prescription');
+        }
       } else {
         toast.error('No prescriptions found for this consultation');
       }
     } catch (error) {
-      console.error('Error loading prescriptions:', error);
-      toast.error('Failed to load prescriptions');
+      console.error('Error loading prescription PDFs:', error);
+      toast.error('Failed to load prescription PDFs');
     } finally {
       setLoadingPrescription(false);
     }
@@ -988,26 +1014,26 @@ const SuperAdminConsultationManagement: React.FC = () => {
       {/* Prescriptions Modal */}
       <Dialog open={showPrescriptionModal} onOpenChange={setShowPrescriptionModal}>
         <DialogContent className="max-w-6xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-lg">Prescription Versions</DialogTitle>
-          </DialogHeader>
+            <DialogHeader>
+              <DialogTitle className="text-lg">Prescription PDF Versions</DialogTitle>
+            </DialogHeader>
           
           {loadingPrescription ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
-              <span className="ml-2 text-sm">Loading prescriptions...</span>
+              <span className="ml-2 text-sm">Loading PDF versions...</span>
             </div>
           ) : prescriptions.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-sm">No prescriptions found</p>
+              <p className="text-gray-500 text-sm">No PDF versions found</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Prescriptions List */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm">Prescription Versions ({prescriptions.length})</h3>
+                  <h3 className="font-semibold text-sm">PDF Versions ({prescriptions.length})</h3>
                   <div className="max-h-96 overflow-y-auto space-y-2">
                     {prescriptions.map((prescription, index) => (
                       <div
@@ -1037,60 +1063,50 @@ const SuperAdminConsultationManagement: React.FC = () => {
                               <div className="flex justify-between">
                                 <span>Generated:</span>
                                 <span>
-                                  {prescription.created_at ? 
-                                    formatDateTime(prescription.created_at) : 
-                                    'N/A'
+                                  {prescription.generated_at ? 
+                                    formatDateTime(prescription.generated_at) : 'N/A'
                                   }
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span>Type:</span>
-                                <span className="capitalize">
-                                  {prescription.prescription_type || 'Standard'}
+                                <span>Version:</span>
+                                <span className="font-mono">v{prescription.version}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>File Size:</span>
+                                <span>
+                                  {prescription.file_size ? 
+                                    `${(prescription.file_size / 1024).toFixed(1)} KB` : 'N/A'
+                                  }
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Status:</span>
-                                <Badge 
-                                  className={
-                                    prescription.is_active 
-                                      ? 'bg-green-100 text-green-800 text-xs' 
-                                      : 'bg-gray-100 text-gray-800 text-xs'
-                                  }
-                                >
-                                  {prescription.is_active ? 'Active' : 'Inactive'}
+                                <Badge className="bg-green-100 text-green-800 text-xs">
+                                  Finalized
                                 </Badge>
                               </div>
-                              {prescription.medications && prescription.medications.length > 0 && (
+                              {prescription.is_current && (
                                 <div className="flex justify-between">
-                                  <span>Medications:</span>
-                                  <span>{prescription.medications.length} items</span>
+                                  <span>Current:</span>
+                                  <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                    Latest Version
+                                  </Badge>
                                 </div>
                               )}
-                              <div className="flex justify-between">
-                                <span>PDF Status:</span>
-                                <span className={prescription.is_finalized ? 'text-green-600' : 'text-yellow-600'}>
-                                  {prescription.is_finalized ? 'Available' : 'Not Generated'}
-                                </span>
-                              </div>
                             </div>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
                             className="text-xs h-8"
-                            disabled={!prescription.pdf_file || !prescription.is_finalized}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (prescription.pdf_file && prescription.is_finalized) {
-                                handleViewSpecificPrescription(prescription.pdf_file);
-                              } else {
-                                toast.warning('PDF not available - prescription is in draft mode');
-                              }
+                              handleViewSpecificPrescription(prescription.pdf_file);
                             }}
                           >
                             <Eye className="w-3 h-3 mr-1" />
-                            {prescription.is_finalized && prescription.pdf_file ? 'View PDF' : 'Draft'}
+                            View PDF
                           </Button>
                         </div>
                       </div>
@@ -1112,8 +1128,8 @@ const SuperAdminConsultationManagement: React.FC = () => {
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center">
                           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">Select a prescription to view</p>
-                          <p className="text-gray-400 text-xs mt-1">Note: Only finalized prescriptions have PDFs</p>
+                          <p className="text-gray-500 text-sm">Select a PDF version to view</p>
+                          <p className="text-gray-400 text-xs mt-1">All versions shown are finalized PDFs</p>
                         </div>
                       </div>
                     )}
@@ -1121,117 +1137,56 @@ const SuperAdminConsultationManagement: React.FC = () => {
                 </div>
               </div>
               
-              {/* Prescription Details */}
-              {(selectedPrescriptionUrl || prescriptions.length > 0) && (
+              {/* PDF Version Details */}
+              {selectedPrescriptionUrl && prescriptions.length > 0 && (
                 <div className="border-t pt-4">
-                  <h3 className="font-semibold text-sm mb-3">Prescription Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <h3 className="font-semibold text-sm mb-3">PDF Version Details</h3>
+                  <div className="grid grid-cols-1 gap-4">
                     {prescriptions
-                      .filter(p => selectedPrescriptionUrl ? p.pdf_file === selectedPrescriptionUrl : true)
-                      .slice(0, 1) // Show only the first prescription if no specific PDF is selected
+                      .filter(p => p.pdf_file === selectedPrescriptionUrl)
                       .map((prescription, index) => (
-                        <div key={prescription.id || index} className="space-y-3">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm">General Information</CardTitle>
-                                {!prescription.is_finalized && (
-                                  <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                                    Draft Mode
-                                  </Badge>
-                                )}
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                              <div className="flex justify-between text-xs">
-                                <span className="font-medium">ID:</span>
-                                <span className="font-mono">{prescription.id || 'N/A'}</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
+                        <Card key={prescription.id || index}>
+                          <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-sm">Version {prescription.version} Details</CardTitle>
+                              {prescription.is_current && (
+                                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                  Current
+                                </Badge>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div className="flex justify-between">
                                 <span className="font-medium">Version:</span>
-                                <span>{prescription.version || 'N/A'}</span>
+                                <span className="font-mono">{prescription.version}</span>
                               </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="font-medium">Type:</span>
-                                <span className="capitalize">{prescription.prescription_type || 'Standard'}</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="font-medium">Status:</span>
-                                <Badge 
-                                  className={
-                                    prescription.is_active 
-                                      ? 'bg-green-100 text-green-800 text-xs' 
-                                      : 'bg-gray-100 text-gray-800 text-xs'
+                              <div className="flex justify-between">
+                                <span className="font-medium">Generated:</span>
+                                <span>
+                                  {prescription.generated_at ? 
+                                    formatDateTime(prescription.generated_at) : 'N/A'
                                   }
-                                >
-                                  {prescription.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium">File Size:</span>
+                                <span>
+                                  {prescription.file_size ? 
+                                    `${(prescription.file_size / 1024).toFixed(1)} KB` : 'N/A'
+                                  }
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium">Status:</span>
+                                <Badge className="bg-green-100 text-green-800 text-xs">
+                                  Finalized
                                 </Badge>
                               </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="font-medium">Created:</span>
-                                <span>{prescription.created_at ? formatDateTime(prescription.created_at) : 'N/A'}</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="font-medium">Updated:</span>
-                                <span>{prescription.updated_at ? formatDateTime(prescription.updated_at) : 'N/A'}</span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          
-                          {/* Medications */}
-                          {prescription.medications && prescription.medications.length > 0 && (
-                            <Card>
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">Medications ({prescription.medications.length})</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="space-y-2">
-                                  {prescription.medications.map((med: any, medIndex: number) => (
-                                    <div key={medIndex} className="border rounded p-2 text-xs">
-                                      <div className="flex justify-between mb-1">
-                                        <span className="font-medium">{med.medicine_name || 'N/A'}</span>
-                                        <span>{med.dosage || 'N/A'}</span>
-                                      </div>
-                                      <div className="flex justify-between text-gray-600">
-                                        <span>Frequency: {med.frequency || 'N/A'}</span>
-                                        <span>Duration: {med.duration || 'N/A'}</span>
-                                      </div>
-                                      {med.instructions && (
-                                        <div className="text-gray-600 mt-1">
-                                          <span className="font-medium">Instructions:</span> {med.instructions}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                          
-                          {/* Diagnosis */}
-                          {prescription.diagnosis && (
-                            <Card>
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">Diagnosis</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p className="text-xs text-gray-700">{prescription.diagnosis}</p>
-                              </CardContent>
-                            </Card>
-                          )}
-                          
-                          {/* Advice/Instructions */}
-                          {prescription.advice_instructions && (
-                            <Card>
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">Advice & Instructions</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <p className="text-xs text-gray-700">{prescription.advice_instructions}</p>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                   </div>
                 </div>
