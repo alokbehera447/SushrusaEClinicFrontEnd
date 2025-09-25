@@ -176,8 +176,8 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const filteredDoctors = useMemo(() => {
     if (!doctorSearchQuery) return doctors;
     const filtered = doctors.filter(doctor => 
-      doctor.name.toLowerCase().includes(doctorSearchQuery.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase())
+      (doctor.name && doctor.name.toLowerCase().includes(doctorSearchQuery.toLowerCase())) ||
+      (doctor.specialty && doctor.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase()))
     );
     console.log('Filtering doctors:', doctorSearchQuery, 'Results:', filtered.length);
     return filtered;
