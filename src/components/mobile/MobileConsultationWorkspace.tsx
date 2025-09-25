@@ -204,7 +204,7 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         // Load existing prescriptions for this patient
         try {
-          const patientId = consultData.patient?.id;
+          const patientId = typeof consultData.patient === 'string' ? consultData.patient : consultData.patient?.id;
           console.log('🔍 Loading existing prescriptions for patient:', patientId);
           
           if (!patientId) {
@@ -289,7 +289,7 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         // Load patient's consultation history
         try {
-          const historyResponse = await api.get(`/api/consultations/?patient_id=${consultData.patient.id}&limit=5`);
+          const historyResponse = await api.get(`/api/consultations/?patient_id=${patientId}&limit=5`);
           setConsultationHistory(historyResponse.data.results || []);
         } catch (err) {
           console.error('Error loading consultation history:', err);
