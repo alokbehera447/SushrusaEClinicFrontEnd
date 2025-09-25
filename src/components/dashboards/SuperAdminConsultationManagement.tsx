@@ -163,8 +163,10 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   
   // Prescription states
-  const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [loadingPrescription, setLoadingPrescription] = useState(false);
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [selectedPrescriptionUrl, setSelectedPrescriptionUrl] = useState<string | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -336,24 +338,24 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const handleViewPrescription = async (consultationId: string) => {
     try {
       setLoadingPrescription(true);
-      const prescriptions = await prescriptionApi.getConsultationPrescriptions(consultationId);
+      const prescriptionsData = await prescriptionApi.getConsultationPrescriptions(consultationId);
       
-      if (prescriptions && prescriptions.length > 0) {
-        const prescription = prescriptions[0];
-        if (prescription.pdf_file) {
-          setPrescriptionUrl(prescription.pdf_file);
-        } else {
-          toast.error('No prescription PDF available');
-        }
+      if (prescriptionsData && prescriptionsData.length > 0) {
+        setPrescriptions(prescriptionsData);
+        setShowPrescriptionModal(true);
       } else {
-        toast.error('No prescription found for this consultation');
+        toast.error('No prescriptions found for this consultation');
       }
     } catch (error) {
-      console.error('Error loading prescription:', error);
-      toast.error('Failed to load prescription');
+      console.error('Error loading prescriptions:', error);
+      toast.error('Failed to load prescriptions');
     } finally {
       setLoadingPrescription(false);
     }
+  };
+
+  const handleViewSpecificPrescription = (pdfUrl: string) => {
+    setSelectedPrescriptionUrl(pdfUrl);
   };
 
   const exportToCSV = () => {
@@ -976,25 +978,255 @@ const SuperAdminConsultationManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Prescription PDF Modal */}
-      {prescriptionUrl && (
-        <Dialog open={!!prescriptionUrl} onOpenChange={() => setPrescriptionUrl(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="text-lg">Prescription PDF</DialogTitle>
-            </DialogHeader>
-            <div className="w-full h-[70vh]">
-              <iframe
-                src={prescriptionUrl}
-                className="w-full h-full border rounded"
-                title="Prescription PDF"
-              />
+      {/* Prescriptions Modal */}
+      <Dialog open={showPrescriptionModal} onOpenChange={setShowPrescriptionModal}>
+        <DialogContent className="max-w-6xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Prescription Versions</DialogTitle>
+          </DialogHeader>
+          
+          {loadingPrescription ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#E17726]"></div>
+              <span className="ml-2 text-sm">Loading prescriptions...</span>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          ) : prescriptions.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 text-sm">No prescriptions found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Prescriptions List */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">Prescription Versions ({prescriptions.length})</h3>
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {prescriptions.map((prescription, index) => (
+                      <div
+                        key={prescription.id || index}
+                        className="border rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer"
+                        onClick={() => handleViewSpecificPrescription(prescription.pdf_file)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className="w-4 h-4 text-blue-600" />
+                              <span className="font-medium text-sm">
+                                Version {prescriptions.length - index}
+                              </span>
+                              {prescription.version && (
+                                <Badge variant="outline" className="text-xs">
+                                  v{prescription.version}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              <div className="flex justify-between">
+                                <span>Generated:</span>
+                                <span>
+                                  {prescription.created_at ? 
+                                    formatDateTime(prescription.created_at) : 
+                                    'N/A'
+                                  }
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Type:</span>
+                                <span className="capitalize">
+                                  {prescription.prescription_type || 'Standard'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Status:</span>
+                                <Badge 
+                                  className={
+                                    prescription.is_active 
+                                      ? 'bg-green-100 text-green-800 text-xs' 
+                                      : 'bg-gray-100 text-gray-800 text-xs'
+                                  }
+                                >
+                                  {prescription.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              {prescription.medications && prescription.medications.length > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Medications:</span>
+                                  <span>{prescription.medications.length} items</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewSpecificPrescription(prescription.pdf_file);
+                            }}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* PDF Viewer */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">PDF Preview</h3>
+                  <div className="border rounded-lg h-96">
+                    {selectedPrescriptionUrl ? (
+                      <iframe
+                        src={selectedPrescriptionUrl}
+                        className="w-full h-full border rounded"
+                        title="Prescription PDF"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">Select a prescription to view</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Prescription Details */}
+              {selectedPrescriptionUrl && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold text-sm mb-3">Prescription Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {prescriptions
+                      .filter(p => p.pdf_file === selectedPrescriptionUrl)
+                      .map((prescription, index) => (
+                        <div key={prescription.id || index} className="space-y-3">
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">General Information</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">ID:</span>
+                                <span className="font-mono">{prescription.id || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">Version:</span>
+                                <span>{prescription.version || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">Type:</span>
+                                <span className="capitalize">{prescription.prescription_type || 'Standard'}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">Status:</span>
+                                <Badge 
+                                  className={
+                                    prescription.is_active 
+                                      ? 'bg-green-100 text-green-800 text-xs' 
+                                      : 'bg-gray-100 text-gray-800 text-xs'
+                                  }
+                                >
+                                  {prescription.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">Created:</span>
+                                <span>{prescription.created_at ? formatDateTime(prescription.created_at) : 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium">Updated:</span>
+                                <span>{prescription.updated_at ? formatDateTime(prescription.updated_at) : 'N/A'}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          
+                          {/* Medications */}
+                          {prescription.medications && prescription.medications.length > 0 && (
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Medications ({prescription.medications.length})</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-2">
+                                  {prescription.medications.map((med: any, medIndex: number) => (
+                                    <div key={medIndex} className="border rounded p-2 text-xs">
+                                      <div className="flex justify-between mb-1">
+                                        <span className="font-medium">{med.medicine_name || 'N/A'}</span>
+                                        <span>{med.dosage || 'N/A'}</span>
+                                      </div>
+                                      <div className="flex justify-between text-gray-600">
+                                        <span>Frequency: {med.frequency || 'N/A'}</span>
+                                        <span>Duration: {med.duration || 'N/A'}</span>
+                                      </div>
+                                      {med.instructions && (
+                                        <div className="text-gray-600 mt-1">
+                                          <span className="font-medium">Instructions:</span> {med.instructions}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+                          
+                          {/* Diagnosis */}
+                          {prescription.diagnosis && (
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Diagnosis</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-xs text-gray-700">{prescription.diagnosis}</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                          
+                          {/* Advice/Instructions */}
+                          {prescription.advice_instructions && (
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">Advice & Instructions</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-xs text-gray-700">{prescription.advice_instructions}</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Individual PDF Modal */}
+      <Dialog open={!!selectedPrescriptionUrl} onOpenChange={() => setSelectedPrescriptionUrl(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Prescription PDF</DialogTitle>
+          </DialogHeader>
+          <div className="w-full h-[70vh]">
+            <iframe
+              src={selectedPrescriptionUrl || ''}
+              className="w-full h-full border rounded"
+              title="Prescription PDF"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default SuperAdminConsultationManagement;
+
