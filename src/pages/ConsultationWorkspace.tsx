@@ -348,7 +348,10 @@ const ConsultationWorkspace: React.FC = () => {
                   
                   try {
                     console.log(`Loading PDF versions for prescription ${prescription.id}`);
-                    const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+                    const pdfResponse = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+                    console.log(`PDF response for prescription ${prescription.id}:`, pdfResponse);
+                    // Handle the API response structure: { data: { versions: [...] } }
+                    const pdfVersions = pdfResponse?.data?.versions || pdfResponse?.versions || pdfResponse || [];
                     console.log(`PDF versions for prescription ${prescription.id}:`, pdfVersions);
                     return {
                       ...prescription,

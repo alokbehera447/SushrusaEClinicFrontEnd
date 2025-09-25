@@ -207,7 +207,9 @@ const MobileConsultationWorkspace: React.FC = () => {
               }
               
               try {
-                const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+                const pdfResponse = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
+                // Handle the API response structure: { data: { versions: [...] } }
+                const pdfVersions = pdfResponse?.data?.versions || pdfResponse?.versions || pdfResponse || [];
                 return {
                   ...prescription,
                   pdf_versions: pdfVersions,
