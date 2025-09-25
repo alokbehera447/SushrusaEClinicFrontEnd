@@ -140,6 +140,11 @@ const MobileConsultationWorkspace: React.FC = () => {
   const [existingPrescriptions, setExistingPrescriptions] = useState<ExistingPrescription[]>([]);
   const [showExistingPrescriptions, setShowExistingPrescriptions] = useState(false);
   
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('🔍 Existing prescriptions state changed:', existingPrescriptions.length, existingPrescriptions);
+  }, [existingPrescriptions]);
+  
   // Vital signs state
   const [vitalSigns, setVitalSigns] = useState({
     pulse: '',
@@ -208,10 +213,25 @@ const MobileConsultationWorkspace: React.FC = () => {
             return;
           }
           
+          // Try to get prescriptions for this patient
           const prescriptionsResponse = await prescriptionApi.getPrescriptions({ patient: patientId });
           console.log('🔍 Prescriptions response:', prescriptionsResponse);
-          const prescriptions = prescriptionsResponse?.results || prescriptionsResponse || [];
+          let prescriptions = prescriptionsResponse?.results || prescriptionsResponse || [];
           console.log('🔍 Prescriptions array:', prescriptions);
+          
+          // If no prescriptions found, try to get the current consultation's prescription
+          if (prescriptions.length === 0) {
+            console.log('🔍 No patient prescriptions found, trying current consultation prescription...');
+            try {
+              const currentPrescription = await prescriptionApi.getConsultationPrescription(consultationId);
+              if (currentPrescription) {
+                console.log('🔍 Found current consultation prescription:', currentPrescription);
+                prescriptions = [currentPrescription];
+              }
+            } catch (currentPresError) {
+              console.error('🔍 Error loading current consultation prescription:', currentPresError);
+            }
+          }
           
           // Load PDF versions for each prescription
           const prescriptionsWithPdfs = await Promise.all(
@@ -241,7 +261,9 @@ const MobileConsultationWorkspace: React.FC = () => {
           );
           
           console.log('🔍 Final prescriptions with PDFs:', prescriptionsWithPdfs);
+          console.log('🔍 Setting existing prescriptions state...');
           setExistingPrescriptions(prescriptionsWithPdfs);
+          console.log('🔍 Existing prescriptions state should now be:', prescriptionsWithPdfs.length);
         } catch (err) {
           console.error('Error loading existing prescriptions:', err);
           setExistingPrescriptions([]);
