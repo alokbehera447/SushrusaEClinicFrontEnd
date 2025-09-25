@@ -34,7 +34,7 @@ import {
   Thermometer,
   Scale
 } from 'lucide-react';
-import { adminConsultationApi, superAdminApi, patientApi, prescriptionApi } from '@/lib/api';
+import { adminConsultationApi, superAdminApi, patientApi, prescriptionApi, api } from '@/lib/api';
 import { formatDate, formatTime, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -269,10 +269,33 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const loadDoctors = async () => {
     try {
       setLoadingDoctors(true);
-      const response = await superAdminApi.getDoctors();
-      setDoctors(response?.results || []);
+      console.log('🔍 Loading doctors...');
+      
+      // Try the superAdminApi first
+      try {
+        const response = await superAdminApi.getDoctors();
+        console.log('🔍 Doctors API response:', response);
+        const doctorsData = response?.results || [];
+        console.log('🔍 Loaded doctors:', doctorsData);
+        setDoctors(doctorsData);
+      } catch (superAdminError) {
+        console.log('🔍 SuperAdmin API failed, trying public doctors API:', superAdminError);
+        
+        // Fallback to public doctors API
+        try {
+          const publicResponse = await api.get('/api/doctors/public/');
+          console.log('🔍 Public doctors API response:', publicResponse);
+          const doctorsData = publicResponse.data?.results || publicResponse.data || [];
+          console.log('🔍 Loaded public doctors:', doctorsData);
+          setDoctors(doctorsData);
+        } catch (publicError) {
+          console.error('🔍 Both APIs failed:', publicError);
+          setDoctors([]);
+        }
+      }
     } catch (error) {
       console.error('Error loading doctors:', error);
+      setDoctors([]);
     } finally {
       setLoadingDoctors(false);
     }
