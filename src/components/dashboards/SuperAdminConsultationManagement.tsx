@@ -207,9 +207,18 @@ const SuperAdminConsultationManagement: React.FC = () => {
       
       const params: any = {
         page,
-        page_size: 1000, // Load all consultations for client-side filtering
+        page_size: pageSize,
         ordering: '-scheduled_date,-scheduled_time'
       };
+      
+      // Add filters to API call for server-side filtering
+      if (filters.search) params.search = filters.search;
+      if (filters.status) params.status = filters.status;
+      if (filters.payment_status) params.payment_status = filters.payment_status;
+      if (filters.clinic_id) params.clinic_id = filters.clinic_id;
+      if (filters.doctor_id) params.doctor_id = filters.doctor_id;
+      if (filters.start_date) params.start_date = filters.start_date;
+      if (filters.end_date) params.end_date = filters.end_date;
       
       const response = await adminConsultationApi.getAllConsultations(params);
       
@@ -217,11 +226,13 @@ const SuperAdminConsultationManagement: React.FC = () => {
         console.log('Loaded consultations:', response.results.length, 'consultations');
         console.log('Sample consultation:', response.results[0]);
         setConsultations(response.results);
+        setFilteredConsultations(response.results); // Set filtered consultations directly from API
         setTotalCount(response.count || 0);
-        setTotalPages(Math.ceil((response.count || 0) / pageSize));
+        setTotalPages(response.total_pages || Math.ceil((response.count || 0) / pageSize));
         setCurrentPage(page);
       } else {
         setConsultations([]);
+        setFilteredConsultations([]);
         setTotalCount(0);
         setTotalPages(1);
       }
@@ -258,94 +269,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
     }
   };
 
-  const applyFilters = useMemo(() => {
-    console.log('Applying filters:', filters);
-    console.log('Total consultations:', consultations.length);
-    let filtered = [...consultations];
-    
-    // Apply search filter
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(consultation => {
-        const patientName = typeof consultation.patient === 'string' 
-          ? consultation.patient 
-          : consultation.patient?.name || consultation.patient_name || '';
-        const doctorName = consultation.doctor?.name || consultation.doctor_name || '';
-        const clinicName = consultation.clinic?.name || consultation.clinic_name || '';
-        
-        return patientName.toLowerCase().includes(searchTerm) ||
-               doctorName.toLowerCase().includes(searchTerm) ||
-               clinicName.toLowerCase().includes(searchTerm) ||
-               (consultation.chief_complaint || '').toLowerCase().includes(searchTerm) ||
-               consultation.id.toLowerCase().includes(searchTerm);
-      });
-    }
-    
-    // Apply status filter
-    if (filters.status) {
-      filtered = filtered.filter(consultation => 
-        consultation.status === filters.status
-      );
-    }
-    
-    // Apply payment status filter
-    if (filters.payment_status) {
-      filtered = filtered.filter(consultation => 
-        consultation.payment_status === filters.payment_status
-      );
-    }
-    
-    // Apply clinic filter
-    if (filters.clinic_id) {
-      filtered = filtered.filter(consultation => 
-        consultation.clinic?.id === filters.clinic_id
-      );
-    }
-    
-    // Apply doctor filter
-    if (filters.doctor_id) {
-      filtered = filtered.filter(consultation => 
-        consultation.doctor?.id === filters.doctor_id
-      );
-    }
-    
-    // Apply date range filters
-    if (filters.start_date) {
-      filtered = filtered.filter(consultation => 
-        consultation.scheduled_date >= filters.start_date
-      );
-    }
-    
-    if (filters.end_date) {
-      filtered = filtered.filter(consultation => 
-        consultation.scheduled_date <= filters.end_date
-      );
-    }
-    
-    console.log('Filtered consultations:', filtered.length);
-    return filtered;
-  }, [consultations, filters]);
-
-  // Paginated consultations for display
-  const paginatedConsultations = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return applyFilters.slice(startIndex, endIndex);
-  }, [applyFilters, currentPage, pageSize]);
-
-  // Update filtered consultations when filters change
-  useEffect(() => {
-    setFilteredConsultations(applyFilters);
-    // Update pagination based on filtered results
-    const newTotalPages = Math.ceil(applyFilters.length / pageSize);
-    setTotalPages(newTotalPages);
-    setTotalCount(applyFilters.length);
-    
-    // Reset to page 1 if current page exceeds total pages
-    if (currentPage > newTotalPages && newTotalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [applyFilters, pageSize, currentPage]);
+  // No client-side filtering needed - backend handles all filtering
 
   const handleFilterChange = (key: keyof ConsultationFilters, value: string) => {
     // Convert "all" back to empty string for filtering logic
@@ -356,10 +280,9 @@ const SuperAdminConsultationManagement: React.FC = () => {
       [key]: filterValue
     }));
     
-    // Reset to first page when filters change
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    }
+    // Reset to first page and reload data when filters change
+    setCurrentPage(1);
+    loadConsultations(1);
   };
 
   const clearFilters = () => {
@@ -374,10 +297,13 @@ const SuperAdminConsultationManagement: React.FC = () => {
     });
     setClinicSearchQuery('');
     setDoctorSearchQuery('');
+    setCurrentPage(1);
+    loadConsultations(1);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    loadConsultations(page);
   };
 
   const getStatusBadge = (status: string) => {
@@ -500,7 +426,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
       'Date', 'Time', 'Status', 'Payment Status', 'Fee', 'Chief Complaint'
     ];
     
-    const csvData = applyFilters.map(consultation => [
+    const csvData = filteredConsultations.map(consultation => [
       consultation.id,
       consultation.patient_name || consultation.patient?.name || '',
       consultation.patient_phone || consultation.patient?.phone || '',
@@ -842,7 +768,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {paginatedConsultations.map((consultation) => (
+              {filteredConsultations.map((consultation) => (
                 <div
                   key={consultation.id}
                   className="border rounded-lg p-4 hover:shadow-sm transition-shadow"

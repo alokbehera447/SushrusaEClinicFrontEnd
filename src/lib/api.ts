@@ -2094,20 +2094,18 @@ export const adminConsultationApi = {
     }
   },
   
-  // Fetch all consultations (paginated)
+  // Fetch all consultations using new SuperAdmin endpoint (paginated with advanced filtering)
   getAllConsultations: async (params?: { 
     page?: number; 
     page_size?: number; 
     search?: string; 
     status?: string; 
-    consultation_type?: string;
-    scheduled_date?: string;
-    ordering?: string;
+    payment_status?: string;
     clinic_id?: string;
     doctor_id?: string;
     start_date?: string;
     end_date?: string;
-    payment_status?: string;
+    ordering?: string;
   }): Promise<PaginatedResponse<Consultation>> => {
     const queryParams = new URLSearchParams();
     if (params) {
@@ -2117,36 +2115,34 @@ export const adminConsultationApi = {
         }
       });
     }
-    const response = await api.get(`/api/consultations/?${queryParams.toString()}`);
     
-    // Handle the specific response structure from the API
-    if (response.data && response.data.results && response.data.results.data && Array.isArray(response.data.results.data)) {
-      // Structure: { count, next, previous, results: { success, data: [...], message, timestamp } }
+    const response = await api.get(`/api/consultations/superadmin/management/?${queryParams.toString()}`);
+    
+    // Handle the new SuperAdmin endpoint response structure
+    if (response.data && response.data.success && response.data.results) {
       return {
         count: response.data.count,
         next: response.data.next,
         previous: response.data.previous,
-        results: response.data.results.data
-      };
-    } else if (response.data && response.data.data && typeof response.data.data === 'object' && 'results' in response.data.data) {
-      return response.data.data;
-    } else if (response.data && 'results' in response.data) {
-      return response.data;
-    } else if (Array.isArray(response.data)) {
-      // If response is a direct array, wrap it in paginated format
-      return {
-        count: response.data.length,
-        next: null,
-        previous: null,
-        results: response.data
+        results: response.data.results,
+        page: response.data.page,
+        page_size: response.data.page_size,
+        total_pages: response.data.total_pages,
+        has_next: response.data.has_next,
+        has_previous: response.data.has_previous
       };
     } else {
-      console.warn('Unexpected response structure for getAllConsultations:', response.data);
+      console.warn('Unexpected response structure for SuperAdmin getAllConsultations:', response.data);
       return {
         count: 0,
         next: null,
         previous: null,
-        results: []
+        results: [],
+        page: 1,
+        page_size: 50,
+        total_pages: 1,
+        has_next: false,
+        has_previous: false
       };
     }
   },
