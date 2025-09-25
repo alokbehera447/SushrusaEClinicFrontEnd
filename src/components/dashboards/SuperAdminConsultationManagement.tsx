@@ -221,6 +221,8 @@ const SuperAdminConsultationManagement: React.FC = () => {
       if (filters.start_date) params.start_date = filters.start_date;
       if (filters.end_date) params.end_date = filters.end_date;
       
+      console.log('🔍 API call params:', params);
+      
       const response = await adminConsultationApi.getAllConsultations(params);
       
       if (response && response.results) {
@@ -250,7 +252,9 @@ const SuperAdminConsultationManagement: React.FC = () => {
     try {
       setLoadingClinics(true);
       const response = await superAdminApi.getEClinics();
-      setClinics(response?.results || []);
+      const clinicsData = response?.results || [];
+      console.log('🔍 Loaded clinics:', clinicsData);
+      setClinics(clinicsData);
     } catch (error) {
       console.error('Error loading clinics:', error);
     } finally {
@@ -276,10 +280,16 @@ const SuperAdminConsultationManagement: React.FC = () => {
     // Convert "all" back to empty string for filtering logic
     const filterValue = value === 'all' ? '' : value;
     
-    setFilters(prev => ({
-      ...prev,
-      [key]: filterValue
-    }));
+    console.log(`🔍 Filter change: ${key} = "${value}" -> "${filterValue}"`);
+    
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        [key]: filterValue
+      };
+      console.log('🔍 New filters:', newFilters);
+      return newFilters;
+    });
     
     // Reset to first page and reload data when filters change
     setCurrentPage(1);
