@@ -227,15 +227,21 @@ const MobileConsultationWorkspace: React.FC = () => {
               if (currentPrescription) {
                 console.log('🔍 Found current consultation prescription:', currentPrescription);
                 prescriptions = [currentPrescription];
+              } else {
+                console.log('🔍 No current consultation prescription found');
               }
             } catch (currentPresError) {
               console.error('🔍 Error loading current consultation prescription:', currentPresError);
             }
+          } else {
+            console.log('🔍 Found patient prescriptions:', prescriptions.length);
           }
           
           // Load PDF versions for each prescription
+          console.log('🔍 Starting to load PDF versions for', prescriptions.length, 'prescriptions');
           const prescriptionsWithPdfs = await Promise.all(
             prescriptions.map(async (prescription: any) => {
+              console.log('🔍 Processing prescription:', prescription.id, prescription);
               if (!prescription?.id) {
                 console.log('🔍 Skipping prescription without ID:', prescription);
                 return prescription;
@@ -248,11 +254,13 @@ const MobileConsultationWorkspace: React.FC = () => {
                 // Handle the API response structure: { data: { versions: [...] } }
                 const pdfVersions = pdfResponse?.data?.versions || pdfResponse?.versions || pdfResponse || [];
                 console.log(`🔍 PDF versions for prescription ${prescription.id}:`, pdfVersions);
-                return {
+                const result = {
                   ...prescription,
                   pdf_versions: pdfVersions,
                   current_pdf: pdfVersions.find((pdf: any) => pdf.is_current) || null
                 };
+                console.log(`🔍 Final prescription object for ${prescription.id}:`, result);
+                return result;
               } catch (error) {
                 console.error(`Error loading PDF versions for prescription ${prescription.id}:`, error);
                 return prescription;
