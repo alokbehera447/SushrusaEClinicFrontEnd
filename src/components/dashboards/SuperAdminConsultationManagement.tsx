@@ -159,6 +159,24 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingClinics, setLoadingClinics] = useState(true);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [clinicSearchQuery, setClinicSearchQuery] = useState('');
+  const [doctorSearchQuery, setDoctorSearchQuery] = useState('');
+  
+  // Filtered data for dropdowns
+  const filteredClinics = useMemo(() => {
+    if (!clinicSearchQuery) return clinics;
+    return clinics.filter(clinic => 
+      clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase())
+    );
+  }, [clinics, clinicSearchQuery]);
+  
+  const filteredDoctors = useMemo(() => {
+    if (!doctorSearchQuery) return doctors;
+    return doctors.filter(doctor => 
+      doctor.name.toLowerCase().includes(doctorSearchQuery.toLowerCase()) ||
+      doctor.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase())
+    );
+  }, [doctors, doctorSearchQuery]);
   
   // Modal states
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
@@ -177,11 +195,6 @@ const SuperAdminConsultationManagement: React.FC = () => {
     loadClinics();
     loadDoctors();
   }, []);
-
-  // Apply filters when they change
-  useEffect(() => {
-    applyFilters();
-  }, [filters, consultations]);
 
   const loadConsultations = async (page: number = 1) => {
     try {
@@ -263,8 +276,54 @@ const SuperAdminConsultationManagement: React.FC = () => {
       );
     }
     
+    // Apply status filter
+    if (filters.status) {
+      filtered = filtered.filter(consultation => 
+        consultation.status === filters.status
+      );
+    }
+    
+    // Apply payment status filter
+    if (filters.payment_status) {
+      filtered = filtered.filter(consultation => 
+        consultation.payment_status === filters.payment_status
+      );
+    }
+    
+    // Apply clinic filter
+    if (filters.clinic_id) {
+      filtered = filtered.filter(consultation => 
+        consultation.clinic?.id === filters.clinic_id || consultation.clinic_id === filters.clinic_id
+      );
+    }
+    
+    // Apply doctor filter
+    if (filters.doctor_id) {
+      filtered = filtered.filter(consultation => 
+        consultation.doctor?.id === filters.doctor_id || consultation.doctor_id === filters.doctor_id
+      );
+    }
+    
+    // Apply date range filters
+    if (filters.start_date) {
+      filtered = filtered.filter(consultation => 
+        consultation.scheduled_date >= filters.start_date
+      );
+    }
+    
+    if (filters.end_date) {
+      filtered = filtered.filter(consultation => 
+        consultation.scheduled_date <= filters.end_date
+      );
+    }
+    
     setFilteredConsultations(filtered);
   };
+
+  // Apply filters when filters or consultations change
+  useEffect(() => {
+    applyFilters();
+  }, [filters, consultations]);
 
   const handleFilterChange = (key: keyof ConsultationFilters, value: string) => {
     // Convert "all" back to empty string for filtering logic
@@ -291,6 +350,8 @@ const SuperAdminConsultationManagement: React.FC = () => {
       start_date: '',
       end_date: ''
     });
+    setClinicSearchQuery('');
+    setDoctorSearchQuery('');
   };
 
   const handlePageChange = (page: number) => {
@@ -565,12 +626,23 @@ const SuperAdminConsultationManagement: React.FC = () => {
                     <SelectValue placeholder="All Clinics" />
                   </SelectTrigger>
                   <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        placeholder="Search clinics..."
+                        value={clinicSearchQuery}
+                        onChange={(e) => setClinicSearchQuery(e.target.value)}
+                        className="text-xs h-7 mb-2"
+                      />
+                    </div>
                     <SelectItem value="all">All Clinics</SelectItem>
-                    {clinics.map((clinic) => (
+                    {filteredClinics.map((clinic) => (
                       <SelectItem key={clinic.id} value={clinic.id}>
                         {clinic.name}
                       </SelectItem>
                     ))}
+                    {filteredClinics.length === 0 && clinicSearchQuery && (
+                      <div className="px-2 py-1 text-xs text-gray-500">No clinics found</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -582,12 +654,23 @@ const SuperAdminConsultationManagement: React.FC = () => {
                     <SelectValue placeholder="All Doctors" />
                   </SelectTrigger>
                   <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        placeholder="Search doctors..."
+                        value={doctorSearchQuery}
+                        onChange={(e) => setDoctorSearchQuery(e.target.value)}
+                        className="text-xs h-7 mb-2"
+                      />
+                    </div>
                     <SelectItem value="all">All Doctors</SelectItem>
-                    {doctors.map((doctor) => (
+                    {filteredDoctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
                         {doctor.name} - {doctor.specialty}
                       </SelectItem>
                     ))}
+                    {filteredDoctors.length === 0 && doctorSearchQuery && (
+                      <div className="px-2 py-1 text-xs text-gray-500">No doctors found</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
