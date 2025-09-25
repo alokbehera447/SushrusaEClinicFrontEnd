@@ -285,7 +285,17 @@ const SuperAdminConsultationManagement: React.FC = () => {
         try {
           const publicResponse = await api.get('/api/doctors/public/');
           console.log('🔍 Public doctors API response:', publicResponse);
-          const doctorsData = publicResponse.data?.results || publicResponse.data || [];
+          
+          // Handle the nested response structure: results.data
+          let doctorsData = [];
+          if (publicResponse.data?.results?.data && Array.isArray(publicResponse.data.results.data)) {
+            doctorsData = publicResponse.data.results.data;
+          } else if (publicResponse.data?.results && Array.isArray(publicResponse.data.results)) {
+            doctorsData = publicResponse.data.results;
+          } else if (Array.isArray(publicResponse.data)) {
+            doctorsData = publicResponse.data;
+          }
+          
           console.log('🔍 Loaded public doctors:', doctorsData);
           setDoctors(doctorsData);
         } catch (publicError) {
