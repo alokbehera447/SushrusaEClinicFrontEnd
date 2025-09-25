@@ -47,7 +47,10 @@ interface Consultation {
     email?: string;
     age?: number;
     gender?: string;
+    patient_id?: string;
   };
+  patient_id?: string;
+  patientId?: string;
   patient_name?: string;
   patient_phone?: string;
   patient_email?: string;
@@ -346,8 +349,24 @@ const SuperAdminConsultationManagement: React.FC = () => {
         return;
       }
       
+      // Debug: Log consultation data to see the structure
+      console.log('Consultation data:', consultation);
+      
+      // Try to get patient ID from different possible fields
+      let patientId = consultation.patient?.id || 
+                     consultation.patient_id || 
+                     consultation.patientId ||
+                     consultation.patient?.patient_id;
+      
+      console.log('Patient ID found:', patientId);
+      
+      if (!patientId) {
+        toast.error('Patient ID not found in consultation data');
+        return;
+      }
+      
       // Get all PDFs for this patient using the patient PDFs API
-      const patientPDFsData = await prescriptionApi.getPatientPDFs(consultation.patient.id);
+      const patientPDFsData = await prescriptionApi.getPatientPDFs(patientId);
       
       if (patientPDFsData && patientPDFsData.pdfs && patientPDFsData.pdfs.length > 0) {
         // Filter PDFs for this specific consultation
