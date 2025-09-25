@@ -40,7 +40,7 @@ import { toast } from 'sonner';
 
 interface Consultation {
   id: string;
-  patient: {
+  patient: string | {
     id: string;
     name: string;
     phone: string;
@@ -353,9 +353,9 @@ const SuperAdminConsultationManagement: React.FC = () => {
       console.log('Consultation data:', consultation);
       
       // Try to get patient ID from different possible fields
-      let patientId = consultation.patient?.id || 
-                     consultation.patient_id || 
+      let patientId = consultation.patient_id || 
                      consultation.patientId ||
+                     (typeof consultation.patient === 'string' ? consultation.patient : consultation.patient?.id) ||
                      consultation.patient?.patient_id;
       
       console.log('Patient ID found:', patientId);
