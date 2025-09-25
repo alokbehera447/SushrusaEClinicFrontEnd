@@ -339,49 +339,48 @@ const SuperAdminConsultationManagement: React.FC = () => {
     try {
       setLoadingPrescription(true);
       
-      // First get the prescription to get the prescription ID
-      const prescriptionData = await patientApi.getConsultationPrescriptions(consultationId);
+      // Find the consultation to get patient ID
+      const consultation = consultations.find(c => c.id === consultationId);
+      if (!consultation) {
+        toast.error('Consultation not found');
+        return;
+      }
       
-      if (prescriptionData && prescriptionData.length > 0) {
-        const prescription = prescriptionData[0]; // Get the first prescription
+      // Get all PDFs for this patient using the patient PDFs API
+      const patientPDFsData = await prescriptionApi.getPatientPDFs(consultation.patient.id);
+      
+      if (patientPDFsData && patientPDFsData.pdfs && patientPDFsData.pdfs.length > 0) {
+        // Filter PDFs for this specific consultation
+        const consultationPDFs = patientPDFsData.pdfs.filter((pdf: any) => 
+          pdf.consultation_id === consultationId
+        );
         
-        if (!prescription.is_finalized) {
-          toast.warning('Prescription exists but is not finalized yet. No PDF available.');
-          setPrescriptions([]);
-          setShowPrescriptionModal(true);
-          return;
-        }
-        
-        // Get PDF versions for this prescription
-        const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
-        
-        if (pdfVersions && pdfVersions.length > 0) {
-          // Transform PDF versions to match the expected format
-          const transformedVersions = pdfVersions.map((pdf: any, index: number) => ({
+        if (consultationPDFs.length > 0) {
+          // Transform PDF data to match the expected format
+          const transformedVersions = consultationPDFs.map((pdf: any, index: number) => ({
             id: pdf.id,
-            version: pdf.version_number,
+            version: pdf.version,
             pdf_file: pdf.file_url,
             is_finalized: true,
-            is_current: pdf.is_current,
+            is_current: true, // All PDFs from patient API are current
             generated_at: pdf.generated_at,
             file_size: pdf.file_size,
-            prescription_id: prescription.id,
-            medications: prescription.medications || [],
-            diagnosis: prescription.primary_diagnosis || '',
-            advice_instructions: prescription.general_instructions || ''
+            prescription_id: pdf.prescription_id,
+            consultation_id: pdf.consultation_id,
+            diagnosis: pdf.diagnosis || ''
           }));
           
           setPrescriptions(transformedVersions);
           setShowPrescriptionModal(true);
         } else {
-          toast.error('No PDF versions found for this prescription');
+          toast.error('No PDFs found for this consultation');
         }
       } else {
-        toast.error('No prescriptions found for this consultation');
+        toast.error('No PDFs found for this patient');
       }
     } catch (error) {
-      console.error('Error loading prescription PDFs:', error);
-      toast.error('Failed to load prescription PDFs');
+      console.error('Error loading patient PDFs:', error);
+      toast.error('Failed to load patient PDFs');
     } finally {
       setLoadingPrescription(false);
     }
