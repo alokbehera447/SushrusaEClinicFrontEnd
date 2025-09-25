@@ -201,10 +201,13 @@ const SuperAdminConsultationManagement: React.FC = () => {
     loadDoctors();
   }, []);
 
-  const loadConsultations = async (page: number = 1) => {
+  const loadConsultations = async (page: number = 1, filtersToUse?: ConsultationFilters) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Use provided filters or current state filters
+      const activeFilters = filtersToUse || filters;
       
       const params: any = {
         page,
@@ -213,15 +216,16 @@ const SuperAdminConsultationManagement: React.FC = () => {
       };
       
       // Add filters to API call for server-side filtering
-      if (filters.search) params.search = filters.search;
-      if (filters.status) params.status = filters.status;
-      if (filters.payment_status) params.payment_status = filters.payment_status;
-      if (filters.clinic_id) params.clinic_id = filters.clinic_id;
-      if (filters.doctor_id) params.doctor_id = filters.doctor_id;
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
+      if (activeFilters.search) params.search = activeFilters.search;
+      if (activeFilters.status) params.status = activeFilters.status;
+      if (activeFilters.payment_status) params.payment_status = activeFilters.payment_status;
+      if (activeFilters.clinic_id) params.clinic_id = activeFilters.clinic_id;
+      if (activeFilters.doctor_id) params.doctor_id = activeFilters.doctor_id;
+      if (activeFilters.start_date) params.start_date = activeFilters.start_date;
+      if (activeFilters.end_date) params.end_date = activeFilters.end_date;
       
       console.log('🔍 API call params:', params);
+      console.log('🔍 Active filters:', activeFilters);
       
       const response = await adminConsultationApi.getAllConsultations(params);
       
@@ -288,16 +292,17 @@ const SuperAdminConsultationManagement: React.FC = () => {
         [key]: filterValue
       };
       console.log('🔍 New filters:', newFilters);
+      
+      // Reset to first page and reload data when filters change
+      setCurrentPage(1);
+      loadConsultations(1, newFilters); // Pass the new filters directly
+      
       return newFilters;
     });
-    
-    // Reset to first page and reload data when filters change
-    setCurrentPage(1);
-    loadConsultations(1);
   };
 
   const clearFilters = () => {
-    setFilters({
+    const clearedFilters = {
       search: '',
       status: '',
       payment_status: '',
@@ -305,11 +310,12 @@ const SuperAdminConsultationManagement: React.FC = () => {
       doctor_id: '',
       start_date: '',
       end_date: ''
-    });
+    };
+    setFilters(clearedFilters);
     setClinicSearchQuery('');
     setDoctorSearchQuery('');
     setCurrentPage(1);
-    loadConsultations(1);
+    loadConsultations(1, clearedFilters);
   };
 
   const handlePageChange = (page: number) => {
