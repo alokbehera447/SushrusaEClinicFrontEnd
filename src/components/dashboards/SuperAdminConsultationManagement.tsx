@@ -165,17 +165,21 @@ const SuperAdminConsultationManagement: React.FC = () => {
   // Filtered data for dropdowns
   const filteredClinics = useMemo(() => {
     if (!clinicSearchQuery) return clinics;
-    return clinics.filter(clinic => 
+    const filtered = clinics.filter(clinic => 
       clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase())
     );
+    console.log('Filtering clinics:', clinicSearchQuery, 'Results:', filtered.length);
+    return filtered;
   }, [clinics, clinicSearchQuery]);
   
   const filteredDoctors = useMemo(() => {
     if (!doctorSearchQuery) return doctors;
-    return doctors.filter(doctor => 
+    const filtered = doctors.filter(doctor => 
       doctor.name.toLowerCase().includes(doctorSearchQuery.toLowerCase()) ||
       doctor.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase())
     );
+    console.log('Filtering doctors:', doctorSearchQuery, 'Results:', filtered.length);
+    return filtered;
   }, [doctors, doctorSearchQuery]);
   
   // Modal states
@@ -644,12 +648,27 @@ const SuperAdminConsultationManagement: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <div className="p-2">
-                      <Input
-                        placeholder="Search clinics..."
-                        value={clinicSearchQuery}
-                        onChange={(e) => setClinicSearchQuery(e.target.value)}
-                        className="text-xs h-7 mb-2"
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="Search clinics..."
+                          value={clinicSearchQuery}
+                          onChange={(e) => setClinicSearchQuery(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="text-xs h-7 mb-2 pr-8"
+                        />
+                        {clinicSearchQuery && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setClinicSearchQuery('');
+                            }}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <SelectItem value="all">All Clinics</SelectItem>
                     {filteredClinics.map((clinic) => (
@@ -672,12 +691,27 @@ const SuperAdminConsultationManagement: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <div className="p-2">
-                      <Input
-                        placeholder="Search doctors..."
-                        value={doctorSearchQuery}
-                        onChange={(e) => setDoctorSearchQuery(e.target.value)}
-                        className="text-xs h-7 mb-2"
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="Search doctors..."
+                          value={doctorSearchQuery}
+                          onChange={(e) => setDoctorSearchQuery(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="text-xs h-7 mb-2 pr-8"
+                        />
+                        {doctorSearchQuery && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDoctorSearchQuery('');
+                            }}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <SelectItem value="all">All Doctors</SelectItem>
                     {filteredDoctors.map((doctor) => (
