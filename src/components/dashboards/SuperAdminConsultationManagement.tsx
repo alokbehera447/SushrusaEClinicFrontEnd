@@ -34,7 +34,7 @@ import {
   Thermometer,
   Scale
 } from 'lucide-react';
-import { adminConsultationApi, superAdminApi, prescriptionApi } from '@/lib/api';
+import { adminConsultationApi, superAdminApi, patientApi } from '@/lib/api';
 import { formatDate, formatTime, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -224,8 +224,8 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const loadClinics = async () => {
     try {
       setLoadingClinics(true);
-      const response = await superAdminApi.getAllEClinics();
-      setClinics(response || []);
+      const response = await superAdminApi.getEClinics();
+      setClinics(response?.results || []);
     } catch (error) {
       console.error('Error loading clinics:', error);
     } finally {
@@ -236,8 +236,8 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const loadDoctors = async () => {
     try {
       setLoadingDoctors(true);
-      const response = await superAdminApi.getAllDoctors();
-      setDoctors(response || []);
+      const response = await superAdminApi.getDoctors();
+      setDoctors(response?.results || []);
     } catch (error) {
       console.error('Error loading doctors:', error);
     } finally {
@@ -338,7 +338,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
   const handleViewPrescription = async (consultationId: string) => {
     try {
       setLoadingPrescription(true);
-      const prescriptionsData = await prescriptionApi.getConsultationPrescriptions(consultationId);
+      const prescriptionsData = await patientApi.getConsultationPrescriptions(consultationId);
       
       if (prescriptionsData && prescriptionsData.length > 0) {
         setPrescriptions(prescriptionsData);
