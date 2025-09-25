@@ -341,6 +341,13 @@ const SuperAdminConsultationManagement: React.FC = () => {
       const prescriptionsData = await patientApi.getConsultationPrescriptions(consultationId);
       
       if (prescriptionsData && prescriptionsData.length > 0) {
+        // Check if prescription is finalized and has PDF
+        const hasPdf = prescriptionsData.some(p => p.pdf_file && p.is_finalized);
+        
+        if (!hasPdf) {
+          toast.warning('Prescription exists but is not finalized yet. No PDF available.');
+        }
+        
         setPrescriptions(prescriptionsData);
         setShowPrescriptionModal(true);
       } else {
@@ -1011,13 +1018,18 @@ const SuperAdminConsultationManagement: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <FileText className="w-4 h-4 text-blue-600" />
+                              <FileText className={`w-4 h-4 ${prescription.is_finalized ? 'text-blue-600' : 'text-yellow-600'}`} />
                               <span className="font-medium text-sm">
                                 Version {prescriptions.length - index}
                               </span>
                               {prescription.version && (
                                 <Badge variant="outline" className="text-xs">
                                   v{prescription.version}
+                                </Badge>
+                              )}
+                              {!prescription.is_finalized && (
+                                <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
+                                  Draft
                                 </Badge>
                               )}
                             </div>
@@ -1055,19 +1067,30 @@ const SuperAdminConsultationManagement: React.FC = () => {
                                   <span>{prescription.medications.length} items</span>
                                 </div>
                               )}
+                              <div className="flex justify-between">
+                                <span>PDF Status:</span>
+                                <span className={prescription.is_finalized ? 'text-green-600' : 'text-yellow-600'}>
+                                  {prescription.is_finalized ? 'Available' : 'Not Generated'}
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
                             className="text-xs h-8"
+                            disabled={!prescription.pdf_file || !prescription.is_finalized}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleViewSpecificPrescription(prescription.pdf_file);
+                              if (prescription.pdf_file && prescription.is_finalized) {
+                                handleViewSpecificPrescription(prescription.pdf_file);
+                              } else {
+                                toast.warning('PDF not available - prescription is in draft mode');
+                              }
                             }}
                           >
                             <Eye className="w-3 h-3 mr-1" />
-                            View
+                            {prescription.is_finalized && prescription.pdf_file ? 'View PDF' : 'Draft'}
                           </Button>
                         </div>
                       </div>
@@ -1090,6 +1113,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
                         <div className="text-center">
                           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                           <p className="text-gray-500 text-sm">Select a prescription to view</p>
+                          <p className="text-gray-400 text-xs mt-1">Note: Only finalized prescriptions have PDFs</p>
                         </div>
                       </div>
                     )}
@@ -1098,17 +1122,25 @@ const SuperAdminConsultationManagement: React.FC = () => {
               </div>
               
               {/* Prescription Details */}
-              {selectedPrescriptionUrl && (
+              {(selectedPrescriptionUrl || prescriptions.length > 0) && (
                 <div className="border-t pt-4">
                   <h3 className="font-semibold text-sm mb-3">Prescription Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {prescriptions
-                      .filter(p => p.pdf_file === selectedPrescriptionUrl)
+                      .filter(p => selectedPrescriptionUrl ? p.pdf_file === selectedPrescriptionUrl : true)
+                      .slice(0, 1) // Show only the first prescription if no specific PDF is selected
                       .map((prescription, index) => (
                         <div key={prescription.id || index} className="space-y-3">
                           <Card>
                             <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">General Information</CardTitle>
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm">General Information</CardTitle>
+                                {!prescription.is_finalized && (
+                                  <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                                    Draft Mode
+                                  </Badge>
+                                )}
+                              </div>
                             </CardHeader>
                             <CardContent className="space-y-2">
                               <div className="flex justify-between text-xs">
