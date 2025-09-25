@@ -289,7 +289,8 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         // Load patient's consultation history
         try {
-          const historyResponse = await api.get(`/api/consultations/?patient_id=${patientId}&limit=5`);
+          const historyPatientId = typeof consultData.patient === 'string' ? consultData.patient : consultData.patient?.id;
+          const historyResponse = await api.get(`/api/consultations/?patient_id=${historyPatientId}&limit=5`);
           setConsultationHistory(historyResponse.data.results || []);
         } catch (err) {
           console.error('Error loading consultation history:', err);
@@ -477,6 +478,92 @@ const MobileConsultationWorkspace: React.FC = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Existing Prescriptions - Moved to top */}
+        {(() => {
+          console.log('🔍 Rendering existing prescriptions:', existingPrescriptions.length, existingPrescriptions);
+          return existingPrescriptions.length > 0;
+        })() && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-blue-600" />
+                  Previous Prescriptions
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowExistingPrescriptions(!showExistingPrescriptions)}
+                  className="text-xs p-1"
+                >
+                  {showExistingPrescriptions ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            
+            {showExistingPrescriptions && (
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {existingPrescriptions.map((prescription) => (
+                    <div
+                      key={prescription.id}
+                      className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {prescription.primary_diagnosis || 'No diagnosis'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(prescription.issued_date), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {prescription.is_finalized ? (
+                            <Badge variant="default" className="text-xs">Finalized</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Draft</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3 h-3 text-blue-600" />
+                          <span className="text-xs text-gray-600">
+                            {prescription.pdf_versions?.length || 0} PDF version{(prescription.pdf_versions?.length || 0) !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {prescription.pdf_versions && prescription.pdf_versions.length > 0 ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPrescription(prescription);
+                              setSelectedPdfVersion(prescription.current_pdf || prescription.pdf_versions[0]);
+                              setShowPdfModal(true);
+                            }}
+                            className="text-xs h-7 px-2"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View PDFs
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-gray-500">No PDFs</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Patient Profile */}
         <Card>
@@ -754,110 +841,6 @@ const MobileConsultationWorkspace: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Debug: Show prescription count */}
-        <Card className="bg-yellow-100 border-yellow-300">
-          <CardContent className="pt-4">
-            <p className="text-sm text-yellow-800">
-              🔍 DEBUG: Found {existingPrescriptions.length} prescriptions
-            </p>
-            {existingPrescriptions.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs text-yellow-700">
-                  First prescription: {existingPrescriptions[0].primary_diagnosis || 'No diagnosis'}
-                </p>
-                <p className="text-xs text-yellow-700">
-                  PDF versions: {existingPrescriptions[0].pdf_versions?.length || 0}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Existing Prescriptions */}
-        {(() => {
-          console.log('🔍 Rendering existing prescriptions:', existingPrescriptions.length, existingPrescriptions);
-          return existingPrescriptions.length > 0;
-        })() && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-blue-600" />
-                  Previous Prescriptions
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowExistingPrescriptions(!showExistingPrescriptions)}
-                  className="text-xs p-1"
-                >
-                  {showExistingPrescriptions ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            
-            {showExistingPrescriptions && (
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  {existingPrescriptions.map((prescription) => (
-                    <div
-                      key={prescription.id}
-                      className="border border-gray-200 rounded-lg p-3 bg-gray-50"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {prescription.primary_diagnosis || 'No diagnosis'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {format(new Date(prescription.issued_date), 'MMM dd, yyyy')}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {prescription.is_finalized ? (
-                            <Badge variant="default" className="text-xs">Finalized</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">Draft</Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-3 h-3 text-blue-600" />
-                          <span className="text-xs text-gray-600">
-                            {prescription.pdf_versions?.length || 0} PDF version{(prescription.pdf_versions?.length || 0) !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        {prescription.pdf_versions && prescription.pdf_versions.length > 0 ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPrescription(prescription);
-                              setSelectedPdfVersion(prescription.current_pdf || prescription.pdf_versions[0]);
-                              setShowPdfModal(true);
-                            }}
-                            className="text-xs h-7 px-2"
-                          >
-                            <Eye className="w-3 h-3 mr-1" />
-                            View PDFs
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-gray-500">No PDFs</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        )}
       </div>
 
       {/* PDF Viewer Modal */}
