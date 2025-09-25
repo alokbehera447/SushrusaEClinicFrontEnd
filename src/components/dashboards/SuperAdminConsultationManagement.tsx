@@ -67,12 +67,13 @@ interface Consultation {
   doctor_phone?: string;
   doctor_email?: string;
   doctor_specialty?: string;
-  clinic: {
+  clinic: string | {
     id: string;
     name: string;
     phone: string;
     email?: string;
   };
+  clinic_id?: string;
   clinic_name?: string;
   clinic_phone?: string;
   clinic_email?: string;
