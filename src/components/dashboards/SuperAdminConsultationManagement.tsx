@@ -267,9 +267,12 @@ const SuperAdminConsultationManagement: React.FC = () => {
   };
 
   const handleFilterChange = (key: keyof ConsultationFilters, value: string) => {
+    // Convert "all" back to empty string for filtering logic
+    const filterValue = value === 'all' ? '' : value;
+    
     setFilters(prev => ({
       ...prev,
-      [key]: value
+      [key]: filterValue
     }));
     
     // Reset to first page when filters change
@@ -523,12 +526,12 @@ const SuperAdminConsultationManagement: React.FC = () => {
               
               <div>
                 <Label htmlFor="status" className="text-xs">Status</Label>
-                <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+                <Select value={filters.status || 'all'} onValueChange={(value) => handleFilterChange('status', value)}>
                   <SelectTrigger className="text-xs h-8">
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
@@ -541,12 +544,12 @@ const SuperAdminConsultationManagement: React.FC = () => {
               
               <div>
                 <Label htmlFor="payment_status" className="text-xs">Payment Status</Label>
-                <Select value={filters.payment_status} onValueChange={(value) => handleFilterChange('payment_status', value)}>
+                <Select value={filters.payment_status || 'all'} onValueChange={(value) => handleFilterChange('payment_status', value)}>
                   <SelectTrigger className="text-xs h-8">
                     <SelectValue placeholder="All Payment Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Payment Status</SelectItem>
+                    <SelectItem value="all">All Payment Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
@@ -557,12 +560,12 @@ const SuperAdminConsultationManagement: React.FC = () => {
               
               <div>
                 <Label htmlFor="clinic_id" className="text-xs">Clinic</Label>
-                <Select value={filters.clinic_id} onValueChange={(value) => handleFilterChange('clinic_id', value)}>
+                <Select value={filters.clinic_id || 'all'} onValueChange={(value) => handleFilterChange('clinic_id', value)}>
                   <SelectTrigger className="text-xs h-8">
                     <SelectValue placeholder="All Clinics" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Clinics</SelectItem>
+                    <SelectItem value="all">All Clinics</SelectItem>
                     {clinics.map((clinic) => (
                       <SelectItem key={clinic.id} value={clinic.id}>
                         {clinic.name}
@@ -574,12 +577,12 @@ const SuperAdminConsultationManagement: React.FC = () => {
               
               <div>
                 <Label htmlFor="doctor_id" className="text-xs">Doctor</Label>
-                <Select value={filters.doctor_id} onValueChange={(value) => handleFilterChange('doctor_id', value)}>
+                <Select value={filters.doctor_id || 'all'} onValueChange={(value) => handleFilterChange('doctor_id', value)}>
                   <SelectTrigger className="text-xs h-8">
                     <SelectValue placeholder="All Doctors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Doctors</SelectItem>
+                    <SelectItem value="all">All Doctors</SelectItem>
                     {doctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
                         {doctor.name} - {doctor.specialty}
