@@ -281,25 +281,34 @@ const SuperAdminConsultationManagement: React.FC = () => {
       } catch (superAdminError) {
         console.log('🔍 SuperAdmin API failed, trying public doctors API:', superAdminError);
         
-        // Fallback to public doctors API
+        // Fallback to getting doctors from consultation system
         try {
-          const publicResponse = await api.get('/api/doctors/public/');
-          console.log('🔍 Public doctors API response:', publicResponse);
+          console.log('🔍 Trying to get doctors from consultation system...');
           
-          // Handle the nested response structure: results.data
-          let doctorsData = [];
-          if (publicResponse.data?.results?.data && Array.isArray(publicResponse.data.results.data)) {
-            doctorsData = publicResponse.data.results.data;
-          } else if (publicResponse.data?.results && Array.isArray(publicResponse.data.results)) {
-            doctorsData = publicResponse.data.results;
-          } else if (Array.isArray(publicResponse.data)) {
-            doctorsData = publicResponse.data;
-          }
+          // Get unique doctors from consultations
+          const consultationResponse = await adminConsultationApi.getAllConsultations({ page_size: 1000 });
+          const consultations = consultationResponse.results || [];
           
-          console.log('🔍 Loaded public doctors:', doctorsData);
+          // Extract unique doctors from consultations
+          const doctorsMap = new Map();
+          consultations.forEach(consultation => {
+            if (consultation.doctor && consultation.doctor_name) {
+              const doctorId = typeof consultation.doctor === 'string' ? consultation.doctor : consultation.doctor.id;
+              if (!doctorsMap.has(doctorId)) {
+                doctorsMap.set(doctorId, {
+                  id: doctorId,
+                  name: consultation.doctor_name,
+                  specialty: 'General Medicine' // Default specialty
+                });
+              }
+            }
+          });
+          
+          const doctorsData = Array.from(doctorsMap.values());
+          console.log('🔍 Loaded doctors from consultations:', doctorsData);
           setDoctors(doctorsData);
-        } catch (publicError) {
-          console.error('🔍 Both APIs failed:', publicError);
+        } catch (consultationError) {
+          console.error('🔍 Failed to get doctors from consultations:', consultationError);
           setDoctors([]);
         }
       }
