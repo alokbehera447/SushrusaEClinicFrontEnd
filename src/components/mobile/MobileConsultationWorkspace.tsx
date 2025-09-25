@@ -213,29 +213,39 @@ const MobileConsultationWorkspace: React.FC = () => {
             return;
           }
           
-          // Try to get prescriptions for this patient
-          const prescriptionsResponse = await prescriptionApi.getPrescriptions({ patient: patientId });
-          console.log('🔍 Prescriptions response:', prescriptionsResponse);
-          let prescriptions = prescriptionsResponse?.results || prescriptionsResponse || [];
-          console.log('🔍 Prescriptions array:', prescriptions);
-          
-          // If no prescriptions found, try to get the current consultation's prescription
-          if (prescriptions.length === 0) {
-            console.log('🔍 No patient prescriptions found, trying current consultation prescription...');
-            try {
-              const currentPrescription = await prescriptionApi.getConsultationPrescription(consultationId);
-              if (currentPrescription) {
-                console.log('🔍 Found current consultation prescription:', currentPrescription);
-                prescriptions = [currentPrescription];
-              } else {
-                console.log('🔍 No current consultation prescription found');
-              }
-            } catch (currentPresError) {
-              console.error('🔍 Error loading current consultation prescription:', currentPresError);
+          // Always try to get the current consultation's prescription first
+          let prescriptions = [];
+          try {
+            const currentPrescription = await prescriptionApi.getConsultationPrescription(consultationId);
+            if (currentPrescription) {
+              console.log('🔍 Found current consultation prescription:', currentPrescription);
+              prescriptions = [currentPrescription];
+            } else {
+              console.log('🔍 No current consultation prescription found');
             }
-          } else {
-            console.log('🔍 Found patient prescriptions:', prescriptions.length);
+          } catch (currentPresError) {
+            console.error('🔍 Error loading current consultation prescription:', currentPresError);
           }
+          
+          // Also try to get prescriptions for this patient to add more prescriptions
+          try {
+            const prescriptionsResponse = await prescriptionApi.getPrescriptions({ patient: patientId });
+            console.log('🔍 Patient prescriptions response:', prescriptionsResponse);
+            const patientPrescriptions = prescriptionsResponse?.results || prescriptionsResponse || [];
+            console.log('🔍 Patient prescriptions array:', patientPrescriptions);
+            
+            // Add patient prescriptions that are not already in the array
+            patientPrescriptions.forEach(patientPres => {
+              if (!prescriptions.find(p => p.id === patientPres.id)) {
+                console.log('🔍 Adding patient prescription:', patientPres.id);
+                prescriptions.push(patientPres);
+              }
+            });
+          } catch (patientPresError) {
+            console.error('🔍 Error loading patient prescriptions:', patientPresError);
+          }
+          
+          console.log('🔍 Final prescriptions array before PDF loading:', prescriptions.length, prescriptions);
           
           // Load PDF versions for each prescription
           console.log('🔍 Starting to load PDF versions for', prescriptions.length, 'prescriptions');
