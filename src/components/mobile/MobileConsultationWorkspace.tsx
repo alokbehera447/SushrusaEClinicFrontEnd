@@ -167,6 +167,9 @@ const MobileConsultationWorkspace: React.FC = () => {
       try {
         // Load consultation details
         const consultData = await doctorConsultationApi.getConsultationDetails(consultationId);
+        console.log('🔍 Consultation data:', consultData);
+        console.log('🔍 Patient data:', consultData.patient);
+        console.log('🔍 Patient ID:', consultData.patient?.id);
         setConsultation(consultData);
         setPatientProfile(consultData.patient);
 
@@ -196,10 +199,18 @@ const MobileConsultationWorkspace: React.FC = () => {
 
         // Load existing prescriptions for this patient
         try {
-          console.log('🔍 Loading existing prescriptions for patient:', consultData.patient.id);
-          const prescriptionsResponse = await prescriptionApi.getPatientPrescriptions({ patient_id: consultData.patient.id });
+          const patientId = consultData.patient?.id;
+          console.log('🔍 Loading existing prescriptions for patient:', patientId);
+          
+          if (!patientId) {
+            console.error('🔍 No patient ID found in consultation data');
+            setExistingPrescriptions([]);
+            return;
+          }
+          
+          const prescriptionsResponse = await prescriptionApi.getPrescriptions({ patient: patientId });
           console.log('🔍 Prescriptions response:', prescriptionsResponse);
-          const prescriptions = prescriptionsResponse || [];
+          const prescriptions = prescriptionsResponse?.results || prescriptionsResponse || [];
           console.log('🔍 Prescriptions array:', prescriptions);
           
           // Load PDF versions for each prescription
