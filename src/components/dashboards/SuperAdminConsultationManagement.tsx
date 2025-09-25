@@ -191,7 +191,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
 
   // Load initial data
   useEffect(() => {
-    loadConsultations();
+    loadConsultations(1);
     loadClinics();
     loadDoctors();
   }, []);
@@ -203,22 +203,15 @@ const SuperAdminConsultationManagement: React.FC = () => {
       
       const params: any = {
         page,
-        page_size: pageSize,
+        page_size: 1000, // Load all consultations for client-side filtering
         ordering: '-scheduled_date,-scheduled_time'
       };
-      
-      // Add filters to params
-      if (filters.status) params.status = filters.status;
-      if (filters.payment_status) params.payment_status = filters.payment_status;
-      if (filters.clinic_id) params.clinic_id = filters.clinic_id;
-      if (filters.doctor_id) params.doctor_id = filters.doctor_id;
-      if (filters.start_date) params.start_date = filters.start_date;
-      if (filters.end_date) params.end_date = filters.end_date;
-      if (filters.search) params.search = filters.search;
       
       const response = await adminConsultationApi.getAllConsultations(params);
       
       if (response && response.results) {
+        console.log('Loaded consultations:', response.results.length, 'consultations');
+        console.log('Sample consultation:', response.results[0]);
         setConsultations(response.results);
         setTotalCount(response.count || 0);
         setTotalPages(Math.ceil((response.count || 0) / pageSize));
@@ -261,19 +254,27 @@ const SuperAdminConsultationManagement: React.FC = () => {
     }
   };
 
-  const applyFilters = () => {
+  const applyFilters = useMemo(() => {
+    console.log('Applying filters:', filters);
+    console.log('Total consultations:', consultations.length);
     let filtered = [...consultations];
     
     // Apply search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(consultation => 
-        (consultation.patient_name || consultation.patient?.name || '').toLowerCase().includes(searchTerm) ||
-        (consultation.doctor_name || consultation.doctor?.name || '').toLowerCase().includes(searchTerm) ||
-        (consultation.clinic_name || consultation.clinic?.name || '').toLowerCase().includes(searchTerm) ||
-        (consultation.chief_complaint || '').toLowerCase().includes(searchTerm) ||
-        consultation.id.toLowerCase().includes(searchTerm)
-      );
+      filtered = filtered.filter(consultation => {
+        const patientName = typeof consultation.patient === 'string' 
+          ? consultation.patient 
+          : consultation.patient?.name || consultation.patient_name || '';
+        const doctorName = consultation.doctor?.name || consultation.doctor_name || '';
+        const clinicName = consultation.clinic?.name || consultation.clinic_name || '';
+        
+        return patientName.toLowerCase().includes(searchTerm) ||
+               doctorName.toLowerCase().includes(searchTerm) ||
+               clinicName.toLowerCase().includes(searchTerm) ||
+               (consultation.chief_complaint || '').toLowerCase().includes(searchTerm) ||
+               consultation.id.toLowerCase().includes(searchTerm);
+      });
     }
     
     // Apply status filter
@@ -293,14 +294,14 @@ const SuperAdminConsultationManagement: React.FC = () => {
     // Apply clinic filter
     if (filters.clinic_id) {
       filtered = filtered.filter(consultation => 
-        consultation.clinic?.id === filters.clinic_id || consultation.clinic_id === filters.clinic_id
+        consultation.clinic?.id === filters.clinic_id
       );
     }
     
     // Apply doctor filter
     if (filters.doctor_id) {
       filtered = filtered.filter(consultation => 
-        consultation.doctor?.id === filters.doctor_id || consultation.doctor_id === filters.doctor_id
+        consultation.doctor?.id === filters.doctor_id
       );
     }
     
@@ -317,13 +318,30 @@ const SuperAdminConsultationManagement: React.FC = () => {
       );
     }
     
-    setFilteredConsultations(filtered);
-  };
+    console.log('Filtered consultations:', filtered.length);
+    return filtered;
+  }, [consultations, filters]);
 
-  // Apply filters when filters or consultations change
+  // Paginated consultations for display
+  const paginatedConsultations = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return applyFilters.slice(startIndex, endIndex);
+  }, [applyFilters, currentPage, pageSize]);
+
+  // Update filtered consultations when filters change
   useEffect(() => {
-    applyFilters();
-  }, [filters, consultations]);
+    setFilteredConsultations(applyFilters);
+    // Update pagination based on filtered results
+    const newTotalPages = Math.ceil(applyFilters.length / pageSize);
+    setTotalPages(newTotalPages);
+    setTotalCount(applyFilters.length);
+    
+    // Reset to page 1 if current page exceeds total pages
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [applyFilters, pageSize, currentPage]);
 
   const handleFilterChange = (key: keyof ConsultationFilters, value: string) => {
     // Convert "all" back to empty string for filtering logic
@@ -356,7 +374,6 @@ const SuperAdminConsultationManagement: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    loadConsultations(page);
   };
 
   const getStatusBadge = (status: string) => {
@@ -479,7 +496,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
       'Date', 'Time', 'Status', 'Payment Status', 'Fee', 'Chief Complaint'
     ];
     
-    const csvData = filteredConsultations.map(consultation => [
+    const csvData = applyFilters.map(consultation => [
       consultation.id,
       consultation.patient_name || consultation.patient?.name || '',
       consultation.patient_phone || consultation.patient?.phone || '',
@@ -791,7 +808,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredConsultations.map((consultation) => (
+              {paginatedConsultations.map((consultation) => (
                 <div
                   key={consultation.id}
                   className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
