@@ -703,6 +703,25 @@ const MobileConsultationWorkspace: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Debug: Show prescription count */}
+        <Card className="bg-yellow-100 border-yellow-300">
+          <CardContent className="pt-4">
+            <p className="text-sm text-yellow-800">
+              🔍 DEBUG: Found {existingPrescriptions.length} prescriptions
+            </p>
+            {existingPrescriptions.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs text-yellow-700">
+                  First prescription: {existingPrescriptions[0].primary_diagnosis || 'No diagnosis'}
+                </p>
+                <p className="text-xs text-yellow-700">
+                  PDF versions: {existingPrescriptions[0].pdf_versions?.length || 0}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Existing Prescriptions */}
         {(() => {
           console.log('🔍 Rendering existing prescriptions:', existingPrescriptions.length, existingPrescriptions);
@@ -756,14 +775,14 @@ const MobileConsultationWorkspace: React.FC = () => {
                         </div>
                       </div>
                       
-                      {prescription.pdf_versions && prescription.pdf_versions.length > 0 && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-3 h-3 text-blue-600" />
-                            <span className="text-xs text-gray-600">
-                              {prescription.pdf_versions.length} PDF version{prescription.pdf_versions.length !== 1 ? 's' : ''}
-                            </span>
-                          </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3 h-3 text-blue-600" />
+                          <span className="text-xs text-gray-600">
+                            {prescription.pdf_versions?.length || 0} PDF version{(prescription.pdf_versions?.length || 0) !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {prescription.pdf_versions && prescription.pdf_versions.length > 0 ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -777,8 +796,10 @@ const MobileConsultationWorkspace: React.FC = () => {
                             <Eye className="w-3 h-3 mr-1" />
                             View PDFs
                           </Button>
-                        </div>
-                      )}
+                        ) : (
+                          <span className="text-xs text-gray-500">No PDFs</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
