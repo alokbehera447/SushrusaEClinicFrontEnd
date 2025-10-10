@@ -74,6 +74,7 @@ interface Consultation {
   duration_minutes?: number;
   notes?: string;
   vital_signs?: any;
+  doctor_meeting_link?: string;
 }
 
 interface PrescriptionPDF {
@@ -160,6 +161,10 @@ const MobileConsultationWorkspace: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  
+  // Complete consultation states
+  const [completing, setCompleting] = useState(false);
+  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -410,6 +415,28 @@ const MobileConsultationWorkspace: React.FC = () => {
     }
   };
 
+  // Complete consultation
+  const handleCompleteConsultation = async () => {
+    if (!consultationId) return;
+    
+    setCompleting(true);
+    try {
+      await doctorConsultationApi.completeConsultation(consultationId);
+      toast.success('Consultation completed successfully!');
+      setShowCompleteConfirmation(false);
+      
+      // Navigate to consultations list after a delay
+      setTimeout(() => {
+        navigate('/dashboard/consultations');
+      }, 1500);
+    } catch (error: any) {
+      console.error('Error completing consultation:', error);
+      toast.error(error?.response?.data?.error || 'Failed to complete consultation');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -448,9 +475,23 @@ const MobileConsultationWorkspace: React.FC = () => {
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div className="text-center">
+          <div className="text-center flex-1">
             <h1 className="text-sm font-semibold text-gray-900">Mobile Consultation</h1>
-            <p className="text-xs text-gray-500">{consultationId}</p>
+            <div className="flex items-center justify-center gap-2 mt-0.5">
+              <p className="text-xs text-gray-500">{consultationId}</p>
+              <Badge 
+                variant={consultation?.status === 'completed' ? 'default' : 'outline'}
+                className={`text-[10px] px-1.5 py-0 h-4 ${
+                  consultation?.status === 'completed' 
+                    ? 'bg-green-100 text-green-800 border-green-200' 
+                    : consultation?.status === 'ongoing' || consultation?.status === 'in progress' || consultation?.status === 'in_progress'
+                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                    : 'bg-gray-100 text-gray-800 border-gray-200'
+                }`}
+              >
+                {consultation?.status?.replace('_', ' ')}
+              </Badge>
+            </div>
           </div>
           <div className="w-8" /> {/* Spacer */}
         </div>
@@ -841,6 +882,34 @@ const MobileConsultationWorkspace: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Complete Consultation Button */}
+        {(consultation?.status === 'ongoing' || 
+          consultation?.status === 'in progress' || 
+          consultation?.status === 'in_progress' || 
+          consultation?.status === 'scheduled') && (
+          <Card>
+            <CardContent className="pt-4">
+              <Button
+                onClick={() => setShowCompleteConfirmation(true)}
+                disabled={completing}
+                className="w-full bg-green-600 hover:bg-green-700 text-white h-11 text-sm font-semibold"
+              >
+                {completing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Complete Consultation
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
       </div>
 
       {/* PDF Viewer Modal */}
@@ -891,7 +960,6 @@ const MobileConsultationWorkspace: React.FC = () => {
                     src={`${selectedPdfVersion.file_url}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
                     className="w-full h-full min-h-[400px]"
                     title={`Prescription PDF Version ${selectedPdfVersion.version}`}
-                    type="application/pdf"
                   />
                 </div>
               ) : (
@@ -902,6 +970,66 @@ const MobileConsultationWorkspace: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Consultation Confirmation Dialog */}
+      <Dialog open={showCompleteConfirmation} onOpenChange={setShowCompleteConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Complete Consultation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to complete this consultation? This will mark the consultation as completed and finalize the session.
+            </p>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <div className="flex gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-800">
+                  <p className="font-medium mb-1">Before completing:</p>
+                  <ul className="list-disc list-inside space-y-0.5 ml-1">
+                    <li>Ensure all vital signs are recorded</li>
+                    <li>Prescription has been generated and shared</li>
+                    <li>All notes and observations are documented</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCompleteConfirmation(false)}
+                disabled={completing}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCompleteConsultation}
+                disabled={completing}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {completing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Complete Consultation
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>
