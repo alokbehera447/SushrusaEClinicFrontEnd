@@ -142,7 +142,7 @@ interface Medication {
   evening_dose?: number;
   frequency: 'once_daily' | 'twice_daily' | 'thrice_daily' | 'four_times_daily' | 'sos' | 'custom';
   custom_frequency?: string;
-  timing: 'before_breakfast' | 'after_breakfast' | 'before_lunch' | 'after_lunch' | 'before_dinner' | 'after_dinner' | 'bedtime' | 'empty_stomach' | 'with_food' | 'custom';
+  timing: 'with_food' | 'before_breakfast' | 'empty_stomach' | 'bedtime' | 'after_breakfast' | 'before_lunch' | 'after_lunch' | 'before_dinner' | 'after_dinner' | 'custom';
   custom_timing?: string;
   timing_display_text?: string;
   duration_days?: number;
@@ -465,7 +465,7 @@ const ConsultationWorkspace: React.FC = () => {
                 evening_dose: med.evening_dose || 0,
                 frequency: med.frequency || 'once_daily',
                 custom_frequency: med.custom_frequency || '',
-                timing: med.timing || 'after_breakfast',
+                timing: med.timing || 'with_food',
                 custom_timing: med.custom_timing || '',
                 timing_display_text: med.timing_display_text || '',
                 duration_days: med.duration_days || 7,
@@ -607,7 +607,7 @@ const ConsultationWorkspace: React.FC = () => {
             afternoon_dose: med.afternoon_dose || 0,
             evening_dose: med.evening_dose || 0,
             frequency: med.frequency || 'once_daily',
-            timing: med.timing || 'after_breakfast',
+            timing: med.timing || 'with_food',
             custom_timing: med.custom_timing || '',
             timing_display_text: med.timing_display_text || '',
             duration_days: med.duration_days || 7,
@@ -654,7 +654,7 @@ const ConsultationWorkspace: React.FC = () => {
           afternoon_dose: med.afternoon_dose || 0,
           evening_dose: med.evening_dose || 0,
           frequency: med.frequency || 'once_daily',
-          timing: med.timing || 'after_breakfast',
+          timing: med.timing || 'with_food',
           custom_timing: med.custom_timing || '',
           timing_display_text: med.timing_display_text || '',
           duration_days: med.duration_days || 7,
@@ -699,7 +699,7 @@ const ConsultationWorkspace: React.FC = () => {
           afternoon_dose: med.afternoon_dose || 0,
           evening_dose: med.evening_dose || 0,
           frequency: med.frequency || 'once_daily',
-          timing: med.timing || 'after_breakfast',
+          timing: med.timing || 'with_food',
           custom_timing: med.custom_timing || '',
           duration_days: med.duration_days || 7,
           duration_weeks: med.duration_weeks || 0,
@@ -825,16 +825,17 @@ const ConsultationWorkspace: React.FC = () => {
 
   const getTimingDisplay = (timing: string, custom?: string) => {
     switch (timing) {
-      case 'before_breakfast': return 'Before breakfast';
-      case 'after_breakfast': return 'After breakfast';
-      case 'before_lunch': return 'Before lunch';
-      case 'after_lunch': return 'After lunch';
-      case 'before_dinner': return 'Before dinner';
-      case 'after_dinner': return 'After dinner';
+      case 'with_food': return 'After Food';
+      case 'before_breakfast': return 'Before Food';
+      case 'empty_stomach': return 'Empty Stomach';
       case 'bedtime': return 'Bedtime';
-      case 'empty_stomach': return 'Empty stomach';
-      case 'with_food': return 'With food';
       case 'custom': return custom || 'Custom timing';
+      // Legacy backwards compatibility
+      case 'after_breakfast':
+      case 'after_lunch':
+      case 'after_dinner': return 'After Food';
+      case 'before_lunch':
+      case 'before_dinner': return 'Before Food';
       default: return timing;
     }
   };

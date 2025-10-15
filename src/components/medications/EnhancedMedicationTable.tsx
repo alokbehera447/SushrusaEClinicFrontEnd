@@ -66,7 +66,7 @@ interface Medication {
   evening_dose?: number;
   frequency: 'once_daily' | 'twice_daily' | 'thrice_daily' | 'four_times_daily' | 'sos' | 'custom';
   custom_frequency?: string;
-  timing: 'before_breakfast' | 'after_breakfast' | 'before_lunch' | 'after_lunch' | 'before_dinner' | 'after_dinner' | 'bedtime' | 'empty_stomach' | 'with_food' | 'custom';
+  timing: 'with_food' | 'before_breakfast' | 'empty_stomach' | 'bedtime' | 'after_breakfast' | 'before_lunch' | 'after_lunch' | 'before_dinner' | 'after_dinner' | 'custom';
   custom_timing?: string;
   timing_display_text?: string;
   duration_days?: number;
@@ -112,7 +112,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
     const newMedication: Medication = {
       medicine_name: '',
       frequency: 'once_daily',
-      timing: 'after_breakfast',
+      timing: 'with_food',
       duration_days: 7,
       morning_dose: 0,
       afternoon_dose: 0,
@@ -139,7 +139,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
           afternoon_dose: 0,
           evening_dose: 0,
           frequency: 'once_daily' as const,
-          timing: 'after_breakfast' as const,
+          timing: 'with_food' as const,
           duration_days: 7,
           duration_weeks: 0,
           duration_months: 0,
@@ -155,7 +155,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
           afternoon_dose: 0,
           evening_dose: 0,
           frequency: 'once_daily' as const,
-          timing: 'after_breakfast' as const,
+          timing: 'with_food' as const,
           duration_days: 7,
           duration_weeks: 0,
           duration_months: 0,
@@ -177,27 +177,37 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
 
   // Sync medications when existingMedications change (e.g., after API load)
   useEffect(() => {
-    if (isOpen && existingMedications.length > 0) {
-      // Only update if we have existing medications and dialog is open
-      // This handles the case where medications are loaded after dialog opens
-      const currentExistingCount = medications.filter(med => med.id && med.id > 0).length;
-      const newExistingCount = existingMedications.length;
-      
-      if (currentExistingCount !== newExistingCount) {
-        console.log('🔄 Syncing medications in EnhancedMedicationTable:', {
-          currentExistingCount,
-          newExistingCount,
-          existingMedications: existingMedications.map(med => ({
-            id: med.id,
-            name: med.medicine_name,
-            timing: med.timing,
-            duration_days: med.duration_days,
-            special_instructions: med.special_instructions
-          }))
-        });
-        
-        // Update with existing medications plus one empty row
-        setMedications([...existingMedications, {
+    if (!isOpen) return;
+    if (existingMedications.length === 0) return;
+
+    const newExistingCount = existingMedications.length;
+    const previousCount = initialMedicationCountRef.current;
+
+    // Avoid overriding user input: if user has started typing in any new row, skip sync
+    const hasUserInput = medications.some(m => !m.id && (
+      (m.medicine_name && m.medicine_name.trim().length > 0) ||
+      (m.morning_dose && m.morning_dose > 0) ||
+      (m.afternoon_dose && m.afternoon_dose > 0) ||
+      (m.evening_dose && m.evening_dose > 0) ||
+      (m.special_instructions && m.special_instructions.trim().length > 0)
+    ));
+
+    if (newExistingCount !== previousCount && !hasUserInput) {
+      console.log('🔄 Syncing medications in EnhancedMedicationTable (post-load):', {
+        previousCount,
+        newExistingCount,
+        existingMedications: existingMedications.map(med => ({
+          id: med.id,
+          name: med.medicine_name,
+          timing: med.timing,
+          duration_days: med.duration_days,
+          special_instructions: med.special_instructions
+        }))
+      });
+
+      setMedications([
+        ...existingMedications,
+        {
           medicine_name: '',
           composition: '',
           dosage_form: 'tablet',
@@ -205,16 +215,18 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
           afternoon_dose: 0,
           evening_dose: 0,
           frequency: 'once_daily' as const,
-          timing: 'after_breakfast' as const,
+          timing: 'with_food' as const,
           duration_days: 7,
           duration_weeks: 0,
           duration_months: 0,
           is_continuous: false,
           special_instructions: ''
-        }]);
-      }
+        }
+      ]);
+      // Update the baseline so we don't re-sync repeatedly
+      initialMedicationCountRef.current = newExistingCount;
     }
-  }, [existingMedications, isOpen, medications]);
+  }, [existingMedications, isOpen]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -251,12 +263,37 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
 
   const removeRow = useCallback((index: number) => {
     setMedications(prev => {
+      // Close any open search dropdown to avoid overlay issues
+      setActiveSearchRow(null);
+      
       if (prev.length > 1) {
         return prev.filter((_, i) => i !== index);
       }
-      return prev;
+      
+      // If this is the only row, reset it to a blank medication row
+      const blankMedication: Medication = {
+        medicine_name: '',
+        frequency: 'once_daily',
+        timing: 'with_food',
+        duration_days: 7,
+        morning_dose: 0,
+        afternoon_dose: 0,
+        evening_dose: 0,
+        special_instructions: ''
+      };
+      return [blankMedication];
     });
   }, []);
+
+  // Ensure the medication input stays focusable when opening the search dropdown
+  useEffect(() => {
+    if (activeSearchRow !== null) {
+      setTimeout(() => {
+        const inputElement = inputRefs.current[activeSearchRow];
+        if (inputElement) inputElement.focus();
+      }, 0);
+    }
+  }, [activeSearchRow]);
 
   const updateMedication = useCallback((index: number, field: keyof Medication, value: string | number | boolean) => {
     setMedications(prev => {
@@ -413,83 +450,12 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
   };
 
   const getTimingOptions = (medication: Medication) => {
-    const morning = medication.morning_dose || 0;
-    const afternoon = medication.afternoon_dose || 0;
-    const evening = medication.evening_dose || 0;
-    const total = morning + afternoon + evening;
-
-    if (total === 0) {
-      return [
-        { value: 'before_breakfast', label: 'Before Breakfast' },
-        { value: 'after_breakfast', label: 'After Breakfast' },
-        { value: 'before_lunch', label: 'Before Lunch' },
-        { value: 'after_lunch', label: 'After Lunch' },
-        { value: 'before_dinner', label: 'Before Dinner' },
-        { value: 'after_dinner', label: 'After Dinner' },
-        { value: 'bedtime', label: 'Bedtime' },
-        { value: 'empty_stomach', label: 'Empty Stomach' },
-        { value: 'with_food', label: 'With Food' }
-      ];
-    }
-
-    // Smart timing suggestions based on dosage pattern
-    if (total === 1) {
-      return [
-        { value: 'after_breakfast', label: 'After Breakfast' },
-        { value: 'after_lunch', label: 'After Lunch' },
-        { value: 'after_dinner', label: 'After Dinner' },
-        { value: 'before_breakfast', label: 'Before Breakfast' },
-        { value: 'before_lunch', label: 'Before Lunch' },
-        { value: 'before_dinner', label: 'Before Dinner' },
-        { value: 'bedtime', label: 'Bedtime' },
-        { value: 'empty_stomach', label: 'Empty Stomach' },
-        { value: 'with_food', label: 'With Food' }
-      ];
-    }
-
-    if (total === 2) {
-      if (morning > 0 && afternoon > 0) {
-        return [
-          { value: 'after_breakfast', label: 'After Breakfast & Lunch' },
-          { value: 'before_breakfast', label: 'Before Breakfast & Lunch' },
-          { value: 'with_food', label: 'With Food (2x daily)' }
-        ];
-      }
-      if (morning > 0 && evening > 0) {
-        return [
-          { value: 'after_breakfast', label: 'After Breakfast & Dinner' },
-          { value: 'before_breakfast', label: 'Before Breakfast & Dinner' },
-          { value: 'with_food', label: 'With Food (2x daily)' }
-        ];
-      }
-      if (afternoon > 0 && evening > 0) {
-        return [
-          { value: 'after_lunch', label: 'After Lunch & Dinner' },
-          { value: 'before_lunch', label: 'Before Lunch & Dinner' },
-          { value: 'with_food', label: 'With Food (2x daily)' }
-        ];
-      }
-    }
-
-    if (total === 3) {
-      return [
-        { value: 'after_breakfast', label: 'After Breakfast, Lunch & Dinner' },
-        { value: 'before_breakfast', label: 'Before Breakfast, Lunch & Dinner' },
-        { value: 'with_food', label: 'With Food (3x daily)' }
-      ];
-    }
-
-    // Default options for custom dosing
+    // Simplified timing options - just After Food and Before Food
     return [
-      { value: 'after_breakfast', label: 'After Breakfast' },
-      { value: 'after_lunch', label: 'After Lunch' },
-      { value: 'after_dinner', label: 'After Dinner' },
-      { value: 'before_breakfast', label: 'Before Breakfast' },
-      { value: 'before_lunch', label: 'Before Lunch' },
-      { value: 'before_dinner', label: 'Before Dinner' },
-      { value: 'bedtime', label: 'Bedtime' },
+      { value: 'with_food', label: 'After Food' },
+      { value: 'before_breakfast', label: 'Before Food' },
       { value: 'empty_stomach', label: 'Empty Stomach' },
-      { value: 'with_food', label: 'With Food' }
+      { value: 'bedtime', label: 'Bedtime' }
     ];
   };
 
