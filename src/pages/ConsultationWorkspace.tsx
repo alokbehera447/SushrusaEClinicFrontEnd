@@ -783,22 +783,70 @@ const ConsultationWorkspace: React.FC = () => {
 
   const handleBulkSaveMedications = async (newMedications: Medication[]) => {
     try {
-      // Update medications state with new medications
-      setMedications([...medications, ...newMedications]);
-      
-      // If prescription exists, update it with new medications
-      if (prescription?.id) {
-        const updatedPrescription = {
-          ...prescription,
-          medications: [...medications, ...newMedications]
-        };
-        setPrescription(updatedPrescription);
-      }
-      
+      console.log('💾 Saving new medications:', newMedications.map(m => ({ name: m.medicine_name, dosage: `${m.morning_dose}-${m.afternoon_dose}-${m.evening_dose}` })));
+      if (!prescription?.id) throw new Error('Missing prescription id');
+
+      // Merge existing and new meds into payload and persist via auto-save
+      const merged = [...medications, ...newMedications].map((med, index) => ({
+        medicine_name: med.medicine_name,
+        composition: med.composition || '',
+        dosage_form: med.dosage_form || 'tablet',
+        morning_dose: med.morning_dose || 0,
+        afternoon_dose: med.afternoon_dose || 0,
+        evening_dose: med.evening_dose || 0,
+        frequency: med.frequency || 'once_daily',
+        timing: med.timing || 'with_food',
+        custom_timing: med.custom_timing || '',
+        timing_display_text: med.timing_display_text || '',
+        duration_days: med.duration_days || 7,
+        duration_weeks: med.duration_weeks || 0,
+        duration_months: med.duration_months || 0,
+        is_continuous: med.is_continuous || false,
+        special_instructions: med.special_instructions || '',
+        notes: med.notes || '',
+        order: index + 1,
+      }));
+
+      await prescriptionApi.autoSave(prescription.id, { medications: merged });
+
+      // Close dialog and reload from API to reflect persisted state
       setShowEnhancedMedicationTable(false);
+      if (consultationId) {
+        const updatedPrescription = await prescriptionApi.getConsultationPrescription(consultationId);
+        setPrescription(updatedPrescription);
+        if (updatedPrescription.medications && Array.isArray(updatedPrescription.medications)) {
+          const localMedications = updatedPrescription.medications.map((med: any) => ({
+            id: med.id,
+            medicine_name: med.medicine_name || '',
+            composition: med.composition || '',
+            dosage_form: med.dosage_form || 'tablet',
+            dosage: med.dosage_display || `${med.morning_dose || 0}-${med.afternoon_dose || 0}-${med.evening_dose || 0}`,
+            morning_dose: med.morning_dose || 0,
+            afternoon_dose: med.afternoon_dose || 0,
+            evening_dose: med.evening_dose || 0,
+            frequency: med.frequency || 'once_daily',
+            custom_frequency: med.custom_frequency || '',
+            timing: med.timing || 'with_food',
+            custom_timing: med.custom_timing || '',
+            timing_display_text: med.timing_display_text || '',
+            duration_days: med.duration_days || 7,
+            duration_weeks: med.duration_weeks || 0,
+            duration_months: med.duration_months || 0,
+            is_continuous: med.is_continuous || false,
+            special_instructions: med.special_instructions || '',
+            notes: med.notes || '',
+            before_meal: med.before_meal || false,
+            is_generic: med.is_generic || false,
+            quantity: med.quantity || '',
+            order: med.order || 0,
+          }));
+          console.log('🔄 Medications reloaded from API:', localMedications.length);
+          setMedications(localMedications);
+        }
+      }
     } catch (error) {
       console.error('Error saving medications:', error);
-      throw error; // Re-throw to let the component handle the error
+      throw error;
     }
   };
 

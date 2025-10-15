@@ -127,7 +127,13 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
     // Only initialize when dialog transitions from closed to open
     if (isOpen && !previousIsOpenRef.current) {
       // Track how many medications existed when we opened the dialog
-      initialMedicationCountRef.current = existingMedications.length;
+      const initialCount = existingMedications.length;
+      initialMedicationCountRef.current = initialCount;
+      
+      console.log('🎬 Dialog opening - initializing medications:', {
+        existingCount: initialCount,
+        existingMedications: existingMedications.map(m => ({ id: m.id, name: m.medicine_name }))
+      });
       
       if (existingMedications.length > 0) {
         // Add existing medications plus one empty row for new entries
@@ -223,8 +229,8 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
           special_instructions: ''
         }
       ]);
-      // Update the baseline so we don't re-sync repeatedly
-      initialMedicationCountRef.current = newExistingCount;
+      // DON'T update initialMedicationCountRef here - it should only be set when dialog opens
+      // initialMedicationCountRef.current = newExistingCount; // REMOVED
     }
   }, [existingMedications, isOpen]);
 
@@ -393,15 +399,28 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
   }, []);
 
   const handleSave = async () => {
-    // Only get medications that were added AFTER the initial count
-    // This ensures we don't re-save medications from previous sessions
-    const newMedications = medications.slice(initialMedicationCountRef.current);
-    
+    // Consider as NEW any medication without a persisted id
+    // This avoids relying on initialMedicationCountRef which can get out of sync
+    const newMedications = medications.filter(m => !(m.id && m.id > 0));
+
     // Validate the new medications
     const validMedications = newMedications.filter(med => 
-      med.medicine_name.trim() && 
+      med.medicine_name && med.medicine_name.trim() && 
       (med.morning_dose > 0 || med.afternoon_dose > 0 || med.evening_dose > 0)
     );
+
+    console.log('🔍 Save validation:', {
+      totalMedications: medications.length,
+      existingCount: medications.filter(m => (m.id && m.id > 0)).length,
+      newMedications: newMedications.length,
+      validMedications: validMedications.length,
+      newMedicationsData: newMedications.map(m => ({
+        name: m.medicine_name,
+        morning: m.morning_dose,
+        afternoon: m.afternoon_dose,
+        evening: m.evening_dose
+      }))
+    });
 
     if (validMedications.length === 0) {
       toast.error('Please add at least one new medication with dosage');
@@ -796,7 +815,18 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
             disabled={isSaving || medications.every(med => !med.medicine_name.trim())}
             className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm h-10"
           >
-            {isSaving ? 'Saving...' : `Save New Medications (${medications.slice(initialMedicationCountRef.current).filter(med => med.medicine_name.trim()).length})`}
+            {(() => {
+              if (isSaving) return 'Saving...';
+              // Count existing medications by presence of a persisted id
+              const existingCount = medications.filter(m => (m.id && m.id > 0)).length;
+              // Count only valid new rows (with name and any non-zero dose)
+              const newCount = medications
+                .slice(existingCount)
+                .filter(med => (med.medicine_name && med.medicine_name.trim()) && ((med.morning_dose || 0) > 0 || (med.afternoon_dose || 0) > 0 || (med.evening_dose || 0) > 0))
+                .length;
+              const total = existingCount + newCount;
+              return `Save New Medications (${total})`;
+            })()}
           </Button>
         </DialogFooter>
       </DialogContent>

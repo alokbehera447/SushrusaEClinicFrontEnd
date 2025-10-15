@@ -51,6 +51,22 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+/* Custom focus styles for inputs and textareas */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override default focus ring for consultation workspace inputs */
+.consultation-workspace input:focus,
+.consultation-workspace textarea:focus,
+.consultation-workspace select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Smooth transitions for all interactive elements */
 button, a, .hover-lift, .hover-scale {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

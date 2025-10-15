@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Search, Plus, X, Stethoscope, Clock, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import investigationService, { 
@@ -20,6 +21,8 @@ interface InvestigationSelectorProps {
   prescriptionId: number;
   onInvestigationsUpdated: (investigations: PrescriptionInvestigation[]) => void;
   existingInvestigations?: PrescriptionInvestigation[];
+  showAddForm?: boolean;
+  onShowAddFormChange?: (show: boolean) => void;
 }
 
 const priorityColors = {
@@ -37,7 +40,9 @@ const priorityIcons = {
 export default function InvestigationSelector({ 
   prescriptionId, 
   onInvestigationsUpdated,
-  existingInvestigations = []
+  existingInvestigations = [],
+  showAddForm = false,
+  onShowAddFormChange
 }: InvestigationSelectorProps) {
   const [categories, setCategories] = useState<InvestigationCategory[]>([]);
   const [tests, setTests] = useState<InvestigationTest[]>([]);
@@ -46,7 +51,6 @@ export default function InvestigationSelector({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [investigationDetails, setInvestigationDetails] = useState<{
     [testId: number]: {
       priority: 'routine' | 'urgent' | 'emergency';
@@ -163,10 +167,12 @@ export default function InvestigationSelector({
       const allInvestigations = await investigationService.getPrescriptionInvestigations(prescriptionId);
       console.log('All investigations after adding:', allInvestigations);
       
-      // Reset form
+      // Reset form and close modal
       setSelectedTests(new Set());
       setInvestigationDetails({});
-      setShowAddForm(false);
+      setSearchTerm('');
+      setSelectedCategory('all');
+      onShowAddFormChange?.(false);
       
       // Notify parent component with all investigations
       console.log('Calling onInvestigationsUpdated with:', allInvestigations);
@@ -208,32 +214,25 @@ export default function InvestigationSelector({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Stethoscope className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Investigation Tests</h3>
-        </div>
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          variant={showAddForm ? "outline" : "default"}
-          size="sm"
-        >
-          {showAddForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-          {showAddForm ? 'Cancel' : 'Add Tests'}
-        </Button>
-      </div>
 
-      {showAddForm && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="text-blue-900">Select Investigation Tests</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Investigation Tests Modal */}
+      <Dialog open={showAddForm} onOpenChange={(open) => onShowAddFormChange?.(open)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Stethoscope className="w-4 h-4 text-blue-600" />
+              Add Investigation Tests
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Search and select multiple investigation tests to add to the prescription.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
             {/* Search and Filter */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="search">Search Tests</Label>
+                <Label htmlFor="search" className="text-sm">Search Tests</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
@@ -241,15 +240,15 @@ export default function InvestigationSelector({
                     placeholder="Search by name, code, or description..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-9 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
               </div>
               
               <div>
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className="text-sm">Category</Label>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -262,87 +261,114 @@ export default function InvestigationSelector({
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="flex items-end">
-                <Button
-                  onClick={handleAddInvestigations}
-                  disabled={loading || selectedTests.size === 0}
-                  className="w-full"
-                >
-                  {loading ? 'Adding...' : `Add ${selectedTests.size} Test(s)`}
-                </Button>
-              </div>
             </div>
 
+            {/* Selected Tests Preview */}
+            {selectedTests.size > 0 && (
+              <div className="border rounded-lg p-3 bg-blue-50">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">Selected Tests ({selectedTests.size})</h4>
+                <div className="flex flex-wrap gap-1">
+                  {Array.from(selectedTests).map(testId => {
+                    const test = tests.find(t => t.id === testId);
+                    return test ? (
+                      <Badge key={testId} variant="secondary" className="text-xs px-2 py-1 bg-blue-100 text-blue-800">
+                        {test.name}
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Test List */}
-            <div className="max-h-96 overflow-y-auto border rounded-lg p-4 bg-white">
+            <div className="max-h-80 overflow-y-auto border rounded-lg p-3 bg-white">
               {filteredTests.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-6 text-gray-500 text-sm">
                   {loading ? 'Loading tests...' : 'No tests found matching your criteria'}
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {filteredTests.map(test => (
-                    <div key={test.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                      <div className="flex items-start gap-3">
+                    <div key={test.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start gap-2">
                         <Checkbox
                           id={`test-${test.id}`}
                           checked={selectedTests.has(test.id)}
                           onCheckedChange={(checked) => 
                             handleTestSelection(test.id, checked as boolean)
                           }
+                          className="mt-0.5"
                         />
                         
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-gray-900">{test.name}</h4>
-                          </div>
+                          <h4 className="font-medium text-gray-900 text-sm">{test.name}</h4>
                         </div>
                       </div>
-
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+
+          <DialogFooter className="flex items-center justify-between">
+            <div className="text-xs text-gray-600">
+              {selectedTests.size} test(s) selected
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onShowAddFormChange?.(false);
+                  setSelectedTests(new Set());
+                  setSearchTerm('');
+                  setSelectedCategory('all');
+                }}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAddInvestigations}
+                disabled={loading || selectedTests.size === 0}
+                className="bg-blue-600 hover:bg-blue-700 h-8 text-xs"
+              >
+                {loading ? 'Adding...' : `Add ${selectedTests.size} Test(s)`}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Existing Investigations */}
-      {console.log('InvestigationSelector - existingInvestigations:', existingInvestigations)}
       {existingInvestigations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-gray-900">Current Investigations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {existingInvestigations.map(investigation => (
-                <div key={investigation.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{investigation.test.code}</h4>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveInvestigation(investigation.id)}
-                      disabled={loading}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      title="Remove investigation"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+        <div className="space-y-2">
+          {existingInvestigations.map(investigation => (
+            <div key={investigation.id} className="flex items-center justify-between p-2 border border-slate-200 rounded bg-blue-50">
+              <div className="flex items-center gap-2">
+                <div className="p-0.5 bg-blue-100 rounded">
+                  <Stethoscope className="w-3 h-3 text-blue-600" />
                 </div>
-              ))}
+                <div>
+                  <h4 className="font-medium text-gray-900 text-xs">{investigation.test.name}</h4>
+                </div>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemoveInvestigation(investigation.id)}
+                disabled={loading}
+                className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                title="Remove investigation"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       )}
     </div>
   );

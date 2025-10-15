@@ -234,8 +234,10 @@ const ConsultationManagementFlow = () => {
     temperature: '',
     weight: '',
     height: '',
-    oxygen_saturation: ''
+    oxygen_saturation: '',
+    notes: ''
   });
+  const [savingVitalSigns, setSavingVitalSigns] = useState(false);
   
   // Filter states
   const [filterUpcoming, setFilterUpcoming] = useState(false);
@@ -318,30 +320,102 @@ const ConsultationManagementFlow = () => {
   };
 
   const saveVitalSigns = async (consultationId: string, vitalSigns: any) => {
+    setSavingVitalSigns(true);
     try {
-      // API Call: POST /api/consultations/{consultation_id}/vital-signs/
-      console.log(`Saving vital signs for consultation ${consultationId}:`, vitalSigns);
+      // Validate and format the data before sending
+      const formattedData: any = {};
       
-      // For now, we'll just log the data. In production, this would make an API call
+      // Convert string values to appropriate types and validate ranges
+      if (vitalSigns.pulse && !isNaN(Number(vitalSigns.pulse))) {
+        const pulse = parseInt(vitalSigns.pulse);
+        if (pulse >= 30 && pulse <= 300) {
+          formattedData.heart_rate = pulse;
+        }
+      }
+      
+      if (vitalSigns.blood_pressure_systolic && !isNaN(Number(vitalSigns.blood_pressure_systolic))) {
+        const systolic = parseInt(vitalSigns.blood_pressure_systolic);
+        if (systolic >= 50 && systolic <= 300) {
+          formattedData.blood_pressure_systolic = systolic;
+        }
+      }
+      
+      if (vitalSigns.blood_pressure_diastolic && !isNaN(Number(vitalSigns.blood_pressure_diastolic))) {
+        const diastolic = parseInt(vitalSigns.blood_pressure_diastolic);
+        if (diastolic >= 30 && diastolic <= 200) {
+          formattedData.blood_pressure_diastolic = diastolic;
+        }
+      }
+      
+      if (vitalSigns.temperature && !isNaN(Number(vitalSigns.temperature))) {
+        const temp = parseFloat(vitalSigns.temperature);
+        if (temp >= 30.0 && temp <= 45.0) {
+          formattedData.temperature = Math.round(temp * 10) / 10; // Round to 1 decimal place
+        }
+      }
+      
+      if (vitalSigns.weight && !isNaN(Number(vitalSigns.weight))) {
+        const weight = parseFloat(vitalSigns.weight);
+        if (weight >= 1.0 && weight <= 500.0) {
+          formattedData.weight = Math.round(weight * 100) / 100; // Round to 2 decimal places
+        }
+      }
+      
+      if (vitalSigns.height && !isNaN(Number(vitalSigns.height))) {
+        const height = parseFloat(vitalSigns.height);
+        if (height >= 30.0 && height <= 250.0) {
+          formattedData.height = Math.round(height * 100) / 100; // Round to 2 decimal places
+        }
+      }
+      
+      if (vitalSigns.oxygen_saturation && !isNaN(Number(vitalSigns.oxygen_saturation))) {
+        const oxygen = parseInt(vitalSigns.oxygen_saturation);
+        if (oxygen >= 70 && oxygen <= 100) {
+          formattedData.oxygen_saturation = oxygen;
+        }
+      }
+      
+      // Calculate BMI if both height and weight are provided
+      if (formattedData.weight && formattedData.height) {
+        const heightInMeters = formattedData.height / 100;
+        const bmi = formattedData.weight / (heightInMeters * heightInMeters);
+        if (bmi >= 10.0 && bmi <= 100.0) {
+          formattedData.bmi = Math.round(bmi * 100) / 100; // Round to 2 decimal places
+        }
+      }
+      
+      // Add notes if provided
+      if (vitalSigns.notes && vitalSigns.notes.trim()) {
+        formattedData.notes = vitalSigns.notes.trim();
+      }
+      
+      console.log(`Saving vital signs for consultation ${consultationId}:`, formattedData);
+      
       const response = await fetch(`/api/consultations/${consultationId}/vital-signs/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`
         },
-        body: JSON.stringify(vitalSigns)
+        body: JSON.stringify(formattedData)
       });
 
       if (response.ok) {
         console.log('Vital signs saved successfully');
+        toast.success('Vital signs saved successfully');
         return { success: true };
       } else {
-        console.error('Failed to save vital signs');
-        return { success: false, error: 'Failed to save vital signs' };
+        const errorData = await response.json();
+        console.error('Failed to save vital signs:', errorData);
+        toast.error(`Failed to save vital signs: ${errorData.detail || 'Unknown error'}`);
+        return { success: false, error: errorData.detail || 'Failed to save vital signs' };
       }
     } catch (error) {
       console.error('Error saving vital signs:', error);
+      toast.error('Error saving vital signs');
       return { success: false, error };
+    } finally {
+      setSavingVitalSigns(false);
     }
   };
 
@@ -610,7 +684,8 @@ const ConsultationManagementFlow = () => {
                         temperature: '',
                         weight: '',
                         height: '',
-                        oxygen_saturation: ''
+                        oxygen_saturation: '',
+                        notes: ''
                       });
                       setShowVitalSignsModal(true);
                     }}
@@ -634,7 +709,8 @@ const ConsultationManagementFlow = () => {
                       temperature: '',
                       weight: '',
                       height: '',
-                      oxygen_saturation: ''
+                      oxygen_saturation: '',
+                      notes: ''
                     });
                     setShowVitalSignsModal(true);
                   }}
@@ -957,74 +1033,106 @@ const ConsultationManagementFlow = () => {
                 <Label className="text-sm font-medium">Pulse Rate (bpm)</Label>
                 <Input
                   type="number"
+                  min="30"
+                  max="300"
                   placeholder="e.g., 72"
                   value={vitalSignsData.pulse}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, pulse: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 30-300 bpm</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">Temperature (°C)</Label>
                 <Input
                   type="number"
                   step="0.1"
+                  min="30.0"
+                  max="45.0"
                   placeholder="e.g., 36.8"
                   value={vitalSignsData.temperature}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, temperature: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 30.0-45.0°C</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">BP Systolic (mmHg)</Label>
                 <Input
                   type="number"
+                  min="50"
+                  max="300"
                   placeholder="e.g., 120"
                   value={vitalSignsData.blood_pressure_systolic}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, blood_pressure_systolic: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 50-300 mmHg</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">BP Diastolic (mmHg)</Label>
                 <Input
                   type="number"
+                  min="30"
+                  max="200"
                   placeholder="e.g., 80"
                   value={vitalSignsData.blood_pressure_diastolic}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, blood_pressure_diastolic: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 30-200 mmHg</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">Weight (kg)</Label>
                 <Input
                   type="number"
                   step="0.1"
+                  min="1.0"
+                  max="500.0"
                   placeholder="e.g., 70"
                   value={vitalSignsData.weight}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, weight: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 1.0-500.0 kg</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">Height (cm)</Label>
                 <Input
                   type="number"
+                  min="30"
+                  max="250"
                   placeholder="e.g., 170"
                   value={vitalSignsData.height}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, height: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 30-250 cm</p>
               </div>
               <div>
                 <Label className="text-sm font-medium">Oxygen Saturation (%)</Label>
                 <Input
                   type="number"
+                  min="70"
+                  max="100"
                   placeholder="e.g., 98"
                   value={vitalSignsData.oxygen_saturation}
                   onChange={(e) => setVitalSignsData(prev => ({ ...prev, oxygen_saturation: e.target.value }))}
-                  className="mt-1"
+                  className="mt-1 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
+                <p className="text-xs text-gray-500 mt-1">Range: 70-100%</p>
               </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">Notes</Label>
+              <textarea
+                placeholder="Additional notes about vital signs..."
+                value={vitalSignsData.notes || ''}
+                onChange={(e) => setVitalSignsData(prev => ({ ...prev, notes: e.target.value }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
+                rows={3}
+              />
             </div>
 
             <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -1036,22 +1144,38 @@ const ConsultationManagementFlow = () => {
               </Button>
               <Button 
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={savingVitalSigns}
                 onClick={async () => {
                   if (selectedConsultationForVitalSigns) {
                     const result = await saveVitalSigns(selectedConsultationForVitalSigns.id, vitalSignsData);
                     if (result.success) {
                       setShowVitalSignsModal(false);
                       setSelectedConsultationForVitalSigns(null);
-                      // You can add a success toast here
-                      console.log('Vital signs saved successfully');
-                    } else {
-                      console.error('Failed to save vital signs:', result.error);
+                      setVitalSignsData({
+                        pulse: '',
+                        blood_pressure_systolic: '',
+                        blood_pressure_diastolic: '',
+                        temperature: '',
+                        weight: '',
+                        height: '',
+                        oxygen_saturation: '',
+                        notes: ''
+                      });
                     }
                   }
                 }}
               >
-                <Save className="w-4 h-4 mr-2" />
-                Save Vital Signs
+                {savingVitalSigns ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Vital Signs
+                  </>
+                )}
               </Button>
             </div>
           </div>
