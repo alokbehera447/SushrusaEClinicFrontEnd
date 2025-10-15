@@ -42,13 +42,15 @@ import {
   Edit,
   ChevronLeft,
   X,
-  Search
+  Search,
+  RefreshCw
 } from 'lucide-react';
 import { medicationService, type MedicationSearchResult } from '@/services/medicationService';
 import { prescriptionApi, doctorConsultationApi, api } from '@/lib/api';
 import InvestigationSelector from '@/components/investigations/InvestigationSelector';
 import { PrescriptionInvestigation } from '@/services/investigationService';
 import investigationService from '@/services/investigationService';
+import EnhancedMedicationTable from '@/components/medications/EnhancedMedicationTable';
 import {
   Dialog,
   DialogContent,
@@ -142,6 +144,7 @@ interface Medication {
   custom_frequency?: string;
   timing: 'before_breakfast' | 'after_breakfast' | 'before_lunch' | 'after_lunch' | 'before_dinner' | 'after_dinner' | 'bedtime' | 'empty_stomach' | 'with_food' | 'custom';
   custom_timing?: string;
+  timing_display_text?: string;
   duration_days?: number;
   duration_weeks?: number;
   duration_months?: number;
@@ -173,18 +176,18 @@ const ConsultationWorkspace: React.FC = () => {
   // UI states
   const [isVideoMaximized, setIsVideoMaximized] = useState(false);
   const [showPatientDetails, setShowPatientDetails] = useState(true);
-  const [showMedicalHistory, setShowMedicalHistory] = useState(false);
-  const [showExistingPrescriptions, setShowExistingPrescriptions] = useState(false);
+  const [showMedicalHistory, setShowMedicalHistory] = useState(true);
+  const [showExistingPrescriptions, setShowExistingPrescriptions] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showMedicationModal, setShowMedicationModal] = useState(false);
-  const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
+  const [showEnhancedMedicationTable, setShowEnhancedMedicationTable] = useState(false);
   
   // Section visibility states
   const [showVitalSigns, setShowVitalSigns] = useState(true);
   const [showDiagnosis, setShowDiagnosis] = useState(true);
-  const [showInstructions, setShowInstructions] = useState(true);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [showMedications, setShowMedications] = useState(true);
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
+  const [showAddTestsForm, setShowAddTestsForm] = useState(false);
   
   // PDF Modal states
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -200,27 +203,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [prescriptionInvestigations, setPrescriptionInvestigations] = useState<PrescriptionInvestigation[]>([]);
 
-  // Medication form state
-  const [medicationForm, setMedicationForm] = useState<Medication>({
-    medicine_name: '',
-    dosage: '',
-    frequency: 'once_daily',
-    timing: 'after_breakfast',
-    duration_days: 7,
-    special_instructions: '',
-    before_meal: false,
-    is_generic: true,
-    quantity: '',
-  });
 
-  // Medication search state
-  const [medicationSearchQuery, setMedicationSearchQuery] = useState('');
-  const [medicationSearchResults, setMedicationSearchResults] = useState<MedicationSearchResult[]>([]);
-  const [isSearchingMedications, setIsSearchingMedications] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchSuccess, setSearchSuccess] = useState<string | null>(null);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [activeSearchIndex, setActiveSearchIndex] = useState<number>(-1);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -257,6 +240,94 @@ const ConsultationWorkspace: React.FC = () => {
     }
   }, [consultation]);
 
+  // Auto-refresh vital signs when page comes into focus
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshConsultationData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [consultationId]);
+
+  // Function to fetch vital signs specifically
+  const fetchVitalSigns = async (consultationId: string) => {
+    try {
+      console.log('🔍 Fetching vital signs for consultation:', consultationId);
+      
+      // Try the specific vital signs endpoint first
+      const response = await api.get(`/api/consultations/${consultationId}/vital-signs/`);
+      console.log('🔍 Vital signs API response:', response.data);
+      
+      if (response.data && response.data.data) {
+        const vitalSigns = response.data.data;
+        console.log('🔍 Parsed vital signs data:', vitalSigns);
+        
+        setFormData(prev => ({
+          ...prev,
+          vital_signs: {
+            pulse: vitalSigns.heart_rate?.toString() || vitalSigns.pulse?.toString() || prev.vital_signs.pulse,
+            blood_pressure_systolic: vitalSigns.blood_pressure_systolic?.toString() || prev.vital_signs.blood_pressure_systolic,
+            blood_pressure_diastolic: vitalSigns.blood_pressure_diastolic?.toString() || prev.vital_signs.blood_pressure_diastolic,
+            temperature: vitalSigns.temperature?.toString() || prev.vital_signs.temperature,
+            weight: vitalSigns.weight?.toString() || prev.vital_signs.weight,
+            height: vitalSigns.height?.toString() || prev.vital_signs.height,
+          }
+        }));
+        
+        setLoadingVitalSigns(false);
+        return vitalSigns;
+      }
+    } catch (error: any) {
+      console.log('🔍 Vital signs API error (this is normal if no vital signs exist):', error.response?.status, error.response?.data);
+      
+      // If 404, it means no vital signs exist yet - this is normal
+      if (error.response?.status === 404) {
+        console.log('🔍 No vital signs found for this consultation yet');
+        setLoadingVitalSigns(false);
+        return null;
+      }
+      
+      // For other errors, log them but don't fail
+      console.error('Error fetching vital signs:', error);
+      setLoadingVitalSigns(false);
+    }
+    
+    return null;
+  };
+
+  // Function to refresh consultation data
+  const refreshConsultationData = async () => {
+    if (!consultationId) return;
+    
+    try {
+      // Reload consultation details
+      const consultData = await doctorConsultationApi.getConsultationDetails(consultationId);
+      setConsultation(consultData);
+
+      // Also fetch vital signs specifically
+      await fetchVitalSigns(consultationId);
+
+      // Fallback: check if vital signs are in consultation data
+      if (consultData && (consultData as any).vital_signs) {
+        console.log('🔄 Refreshed vital signs from consultation data:', (consultData as any).vital_signs);
+        setFormData(prev => ({
+          ...prev,
+          vital_signs: {
+            pulse: (consultData as any).vital_signs.heart_rate?.toString() || (consultData as any).vital_signs.pulse?.toString() || prev.vital_signs.pulse,
+            blood_pressure_systolic: (consultData as any).vital_signs.blood_pressure_systolic?.toString() || prev.vital_signs.blood_pressure_systolic,
+            blood_pressure_diastolic: (consultData as any).vital_signs.blood_pressure_diastolic?.toString() || prev.vital_signs.blood_pressure_diastolic,
+            temperature: (consultData as any).vital_signs.temperature?.toString() || prev.vital_signs.temperature,
+            weight: (consultData as any).vital_signs.weight?.toString() || prev.vital_signs.weight,
+            height: (consultData as any).vital_signs.height?.toString() || prev.vital_signs.height,
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error refreshing consultation data:', error);
+    }
+  };
+
   useEffect(() => {
     const loadWorkspaceData = async () => {
       if (!consultationId) return;
@@ -267,15 +338,19 @@ const ConsultationWorkspace: React.FC = () => {
         const consultData = await doctorConsultationApi.getConsultationDetails(consultationId);
         setConsultation(consultData);
 
+        // Fetch vital signs specifically
+        console.log('🔍 Fetching vital signs for consultation:', consultationId);
+        await fetchVitalSigns(consultationId);
+
         if (consultData) {
-          // Immediately set vital signs from consultation data if available
+          // Check if vital signs are also in consultation data (fallback)
           console.log('🔍 Consultation data vital signs:', (consultData as any).vital_signs);
           if ((consultData as any).vital_signs) {
-            console.log('🔍 Setting vital signs from consultation data immediately');
+            console.log('🔍 Setting vital signs from consultation data as fallback');
             setFormData(prev => ({
               ...prev,
               vital_signs: {
-                pulse: (consultData as any).vital_signs.pulse?.toString() || prev.vital_signs.pulse,
+                pulse: (consultData as any).vital_signs.heart_rate?.toString() || (consultData as any).vital_signs.pulse?.toString() || prev.vital_signs.pulse,
                 blood_pressure_systolic: (consultData as any).vital_signs.blood_pressure_systolic?.toString() || prev.vital_signs.blood_pressure_systolic,
                 blood_pressure_diastolic: (consultData as any).vital_signs.blood_pressure_diastolic?.toString() || prev.vital_signs.blood_pressure_diastolic,
                 temperature: (consultData as any).vital_signs.temperature?.toString() || prev.vital_signs.temperature,
@@ -283,7 +358,6 @@ const ConsultationWorkspace: React.FC = () => {
                 height: (consultData as any).vital_signs.height?.toString() || prev.vital_signs.height,
               }
             }));
-            setLoadingVitalSigns(false); // Vital signs loaded from consultation
           } else {
             console.log('🔍 No vital signs found in consultation data, will try prescription data');
           }
@@ -383,17 +457,50 @@ const ConsultationWorkspace: React.FC = () => {
               const localMedications = pres.medications.map((med: any) => ({
                 id: med.id,
                 medicine_name: med.medicine_name || '',
-                dosage: med.dosage_display || '',
+                composition: med.composition || '',
+                dosage_form: med.dosage_form || 'tablet',
+                dosage: med.dosage_display || `${med.morning_dose || 0}-${med.afternoon_dose || 0}-${med.evening_dose || 0}`,
+                morning_dose: med.morning_dose || 0,
+                afternoon_dose: med.afternoon_dose || 0,
+                evening_dose: med.evening_dose || 0,
                 frequency: med.frequency || 'once_daily',
                 custom_frequency: med.custom_frequency || '',
                 timing: med.timing || 'after_breakfast',
                 custom_timing: med.custom_timing || '',
+                timing_display_text: med.timing_display_text || '',
                 duration_days: med.duration_days || 7,
+                duration_weeks: med.duration_weeks || 0,
+                duration_months: med.duration_months || 0,
+                is_continuous: med.is_continuous || false,
                 special_instructions: med.special_instructions || '',
+                notes: med.notes || '',
                 before_meal: med.before_meal || false,
                 is_generic: med.is_generic || false,
                 quantity: med.quantity || '',
+                order: med.order || 0,
               }));
+              console.log('🔍 Loaded medications with dosage values:', localMedications.map(med => ({
+                name: med.medicine_name,
+                dosage: med.dosage,
+                morning_dose: med.morning_dose,
+                afternoon_dose: med.afternoon_dose,
+                evening_dose: med.evening_dose,
+                timing: med.timing,
+                custom_timing: med.custom_timing,
+                duration_days: med.duration_days,
+                special_instructions: med.special_instructions,
+                notes: med.notes
+              })));
+              
+              console.log('🔍 Raw API medication data:', pres.medications.map((med: any) => ({
+                id: med.id,
+                medicine_name: med.medicine_name,
+                timing: med.timing,
+                custom_timing: med.custom_timing,
+                duration_days: med.duration_days,
+                special_instructions: med.special_instructions,
+                notes: med.notes
+              })));
               setMedications(localMedications);
             }
             
@@ -412,7 +519,7 @@ const ConsultationWorkspace: React.FC = () => {
               general_instructions: pres.general_instructions || '',
               next_visit: pres.next_visit || '',
               vital_signs: {
-                pulse: (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
+                pulse: (consultData as any)?.vital_signs?.heart_rate?.toString() || (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
                 blood_pressure_systolic: (consultData as any)?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || (pres as any).vital_signs?.blood_pressure_systolic?.toString() || '',
                 blood_pressure_diastolic: (consultData as any)?.vital_signs?.blood_pressure_diastolic?.toString() || pres.blood_pressure_diastolic?.toString() || (pres as any).vital_signs?.blood_pressure_diastolic?.toString() || '',
                 temperature: (consultData as any)?.vital_signs?.temperature?.toString() || pres.temperature?.toString() || (pres as any).vital_signs?.temperature?.toString() || '',
@@ -422,7 +529,7 @@ const ConsultationWorkspace: React.FC = () => {
             });
             
             console.log('🔍 Final vital signs set:', {
-              pulse: (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
+              pulse: (consultData as any)?.vital_signs?.heart_rate?.toString() || (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
               blood_pressure_systolic: (consultData as any)?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || (pres as any).vital_signs?.blood_pressure_systolic?.toString() || '',
               blood_pressure_diastolic: (consultData as any)?.vital_signs?.blood_pressure_diastolic?.toString() || pres.blood_pressure_diastolic?.toString() || (pres as any).vital_signs?.blood_pressure_diastolic?.toString() || '',
               temperature: (consultData as any)?.vital_signs?.temperature?.toString() || pres.temperature?.toString() || (pres as any).vital_signs?.temperature?.toString() || '',
@@ -502,6 +609,7 @@ const ConsultationWorkspace: React.FC = () => {
             frequency: med.frequency || 'once_daily',
             timing: med.timing || 'after_breakfast',
             custom_timing: med.custom_timing || '',
+            timing_display_text: med.timing_display_text || '',
             duration_days: med.duration_days || 7,
             duration_weeks: med.duration_weeks || 0,
             duration_months: med.duration_months || 0,
@@ -527,7 +635,7 @@ const ConsultationWorkspace: React.FC = () => {
     if (!prescription?.id) return;
     setSaving(true);
     try {
-      const updated = await prescriptionApi.saveDraft(prescription.id, {
+        const updated = await prescriptionApi.saveDraft(prescription.id, {
         primary_diagnosis: formData.primary_diagnosis,
         patient_previous_history: formData.patient_previous_history,
         general_instructions: formData.general_instructions,
@@ -548,6 +656,7 @@ const ConsultationWorkspace: React.FC = () => {
           frequency: med.frequency || 'once_daily',
           timing: med.timing || 'after_breakfast',
           custom_timing: med.custom_timing || '',
+          timing_display_text: med.timing_display_text || '',
           duration_days: med.duration_days || 7,
           duration_weeks: med.duration_weeks || 0,
           duration_months: med.duration_months || 0,
@@ -669,65 +778,32 @@ const ConsultationWorkspace: React.FC = () => {
 
   // Medication handlers
   const handleAddMedication = () => {
-    setEditingMedication(null);
-    setMedicationForm({
-      medicine_name: '',
-      dosage: '',
-      frequency: 'once_daily',
-      timing: 'after_breakfast',
-      duration_days: 7,
-      special_instructions: '',
-      before_meal: false,
-      is_generic: true,
-      quantity: '',
-    });
-    // Clear any previous messages when opening modal
-    setSearchError('');
-    setSearchSuccess('');
-    setShowMedicationModal(true);
+    setShowEnhancedMedicationTable(true);
   };
 
-  const handleEditMedication = (medication: Medication) => {
-    setEditingMedication(medication);
-    setMedicationForm(medication);
-    // Clear any previous messages when opening modal
-    setSearchError('');
-    setSearchSuccess('');
-    setShowMedicationModal(true);
-  };
-
-  const handleSaveMedication = async () => {
-    if (!medicationForm.medicine_name || !medicationForm.dosage) {
-      alert('Please fill in medicine name and dosage');
-      return;
-    }
-
+  const handleBulkSaveMedications = async (newMedications: Medication[]) => {
     try {
-      if (editingMedication?.id) {
-        // Update existing medication
-        const updatedMedications = medications.map(med => 
-          med.id === editingMedication.id ? { ...medicationForm, id: med.id } : med
-        );
-        setMedications(updatedMedications);
-      } else {
-        // Add new medication
-        const newMedication = {
-          ...medicationForm,
-          id: Date.now(), // Temporary ID for frontend
+      // Update medications state with new medications
+      setMedications([...medications, ...newMedications]);
+      
+      // If prescription exists, update it with new medications
+      if (prescription?.id) {
+        const updatedPrescription = {
+          ...prescription,
+          medications: [...medications, ...newMedications]
         };
-        setMedications([...medications, newMedication]);
+        setPrescription(updatedPrescription);
       }
       
-      setShowMedicationModal(false);
-      setEditingMedication(null);
+      setShowEnhancedMedicationTable(false);
     } catch (error) {
-      console.error('Error saving medication:', error);
-      alert('Error saving medication');
+      console.error('Error saving medications:', error);
+      throw error; // Re-throw to let the component handle the error
     }
   };
 
-  const handleDeleteMedication = (medicationId: number) => {
-    setMedications(medications.filter(med => med.id !== medicationId));
+  const handleDeleteMedication = (index: number) => {
+    setMedications(medications.filter((_, i) => i !== index));
   };
 
   const handleInvestigationsUpdated = (investigations: PrescriptionInvestigation[]) => {
@@ -779,155 +855,6 @@ const ConsultationWorkspace: React.FC = () => {
     // return doctorClinics.data[0]?.clinic_id || 'CLI011';
   };
 
-  // Search medications when user types
-  const searchMedications = async (query: string) => {
-    if (!query.trim() || query.length < 2) {
-      setMedicationSearchResults([]);
-      setSearchError(null);
-      setShowSearchResults(false);
-      return;
-    }
-
-    setIsSearchingMedications(true);
-    setSearchError(null);
-
-    try {
-      const response = await medicationService.searchMedications(query, 20, false);
-      
-      if (response.success) {
-        setMedicationSearchResults(response.data.medications);
-        setShowSearchResults(true);
-        setActiveSearchIndex(-1);
-      } else {
-        setSearchError(response.message || 'Search failed');
-        setMedicationSearchResults([]);
-        setShowSearchResults(false);
-      }
-    } catch (error) {
-      console.error('Error searching medications:', error);
-      setSearchError('Failed to search medications. Please try again.');
-      setMedicationSearchResults([]);
-      setShowSearchResults(false);
-    } finally {
-      setIsSearchingMedications(false);
-    }
-  };
-
-  // Handle medication search input change with debouncing
-  const handleMedicationSearchChange = (value: string) => {
-    setMedicationSearchQuery(value);
-    
-    // Clear success and error messages when user starts typing
-    setSearchSuccess('');
-    setSearchError('');
-    
-    // Clear previous timeout
-    if ((window as any).medicationSearchTimeout) {
-      clearTimeout((window as any).medicationSearchTimeout);
-    }
-    
-    // Set new timeout for debounced search
-    (window as any).medicationSearchTimeout = setTimeout(() => {
-      searchMedications(value);
-    }, 300);
-  };
-
-  // Auto-create medication if not found
-  const handleAddNewMedication = async () => {
-    if (!medicationSearchQuery.trim()) return;
-
-    try {
-      const response = await medicationService.autoCreateMedication({
-        name: medicationSearchQuery,
-        dosage_form: 'tablet'
-      });
-
-      console.log('🔍 ConsultationWorkspace - Auto-create response:', response);
-
-      let medObj = null;
-      if (response.success && response.data) {
-        // The service transforms the response to { data: { medications: [...] } }
-        if (response.data.medications && Array.isArray(response.data.medications) && response.data.medications.length > 0) {
-          medObj = response.data.medications[0];
-        }
-      }
-      
-      console.log('🔍 ConsultationWorkspace - Extracted medObj:', medObj);
-
-      if (medObj) {
-        const newMedication = {
-          ...medicationForm,
-          medicine_name: medObj.name,
-          dosage: medObj.strength,
-          id: Date.now(), // Temporary ID for frontend
-        };
-        setMedications([...medications, newMedication]);
-        setMedicationSearchQuery('');
-        setMedicationSearchResults([]);
-        setShowSearchResults(false);
-        // Keep modal open and show success message
-        setSearchError(''); // Clear any previous error
-        setSearchSuccess('Medication added successfully! You can add more medications or close the modal.');
-        toast({
-          title: 'Success',
-          description: 'Medication added to inventory and prescription',
-          variant: 'default'
-        });
-      } else {
-        setSearchError('Failed to create medication. Please try again.');
-        setSearchSuccess(''); // Clear success message
-      }
-    } catch (error) {
-      console.error('Error creating medication:', error);
-      setSearchError('Failed to create medication. Please try again.');
-      setSearchSuccess(''); // Clear success message
-    }
-  };
-
-  // Select medication from search results
-  const selectMedication = (medication: MedicationSearchResult) => {
-    setMedicationForm({
-      ...medicationForm,
-      medicine_name: medication.name,
-      dosage: medication.strength,
-    });
-    
-    setMedicationSearchQuery('');
-    setMedicationSearchResults([]);
-    setShowSearchResults(false);
-  };
-
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSearchResults || medicationSearchResults.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setActiveSearchIndex(prev => 
-          prev < medicationSearchResults.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setActiveSearchIndex(prev => 
-          prev > 0 ? prev - 1 : medicationSearchResults.length - 1
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (activeSearchIndex >= 0 && activeSearchIndex < medicationSearchResults.length) {
-          selectMedication(medicationSearchResults[activeSearchIndex]);
-        } else if (medicationSearchResults.length === 0) {
-          handleAddNewMedication();
-        }
-        break;
-      case 'Escape':
-        setShowSearchResults(false);
-        setActiveSearchIndex(-1);
-        break;
-    }
-  };
 
   if (loading) {
     return (
@@ -942,28 +869,28 @@ const ConsultationWorkspace: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col consultation-workspace">
       {/* Header */}
-      <div className="bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm" onClick={() => navigate('/doctor/dashboard')}>
-            <ArrowLeft className="w-4 h-4" />
+      <div className="bg-white border-b px-3 py-2 flex items-center justify-between shadow-sm">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={() => navigate('/doctor/dashboard')} className="h-7 w-7 p-0">
+            <ArrowLeft className="w-3.5 h-3.5" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Consultation Workspace</h1>
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <h1 className="text-sm font-semibold text-gray-900">Consultation Workspace</h1>
+            <div className="flex items-center space-x-2 text-xs text-gray-600">
               <span>ID: {consultationId}</span>
               {consultation && (
                 <>
-                  <Separator orientation="vertical" className="h-4" />
+                  <Separator orientation="vertical" className="h-3" />
                   <span>{consultation.scheduled_date} at {consultation.scheduled_time}</span>
-                  <Separator orientation="vertical" className="h-4" />
+                  <Separator orientation="vertical" className="h-3" />
                   <Badge variant={
                     consultation.status === 'scheduled' ? 'default' : 
                     consultation.status === 'completed' ? 'secondary' : 
                     consultation.status === 'ongoing' || consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'destructive' :
                     'default'
-                  }>
+                  } className="text-xs px-1.5 py-0">
                     {consultation.status === 'completed' ? 'Completed' : 
                      consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'In Progress' :
                      consultation.status?.replace('_', ' ')}
@@ -974,7 +901,7 @@ const ConsultationWorkspace: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* Complete Consultation Button - Show for multiple statuses */}
           
           {(consultation?.status === 'ongoing' || 
@@ -985,26 +912,26 @@ const ConsultationWorkspace: React.FC = () => {
               onClick={() => setShowCompleteConfirmation(true)} 
               disabled={completing} 
               size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs px-2"
             >
-              {completing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              Complete Consultation
+              {completing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+              <span className="ml-1">Complete</span>
             </Button>
           )}
           
-          <Button variant="outline" onClick={handleSaveDraft} disabled={saving || finalizing} size="sm">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Draft
+          <Button variant="outline" onClick={handleSaveDraft} disabled={saving || finalizing} size="sm" className="h-7 text-xs px-2">
+            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            <span className="ml-1">Save</span>
           </Button>
-          <Button onClick={handleFinalize} disabled={finalizing || saving} size="sm">
-            {finalizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-            Finalize & PDF
+          <Button onClick={handleFinalize} disabled={finalizing || saving} size="sm" className="h-7 text-xs px-2">
+            {finalizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Printer className="w-3 h-3" />}
+            <span className="ml-1">Finalize</span>
           </Button>
           {latestPdfUrl && (
             <a href={latestPdfUrl} target="_blank" rel="noreferrer">
-              <Button variant="secondary" size="sm">
-                <Download className="w-4 h-4" />
-                PDF
+              <Button variant="secondary" size="sm" className="h-7 text-xs px-2">
+                <Download className="w-3 h-3" />
+                <span className="ml-1">PDF</span>
               </Button>
             </a>
           )}
@@ -1014,52 +941,52 @@ const ConsultationWorkspace: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden bg-slate-50">
         {/* Left Sidebar - Patient Info */}
-        <div className={`${isSidebarCollapsed ? 'w-12' : 'w-72 lg:w-80'} bg-white border-r border-slate-200 overflow-y-auto transition-all duration-300 shadow-sm scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100`}>
+        <div className={`${isSidebarCollapsed ? 'w-10' : 'w-56 lg:w-64'} bg-white border-r border-slate-200 overflow-y-auto transition-all duration-300 shadow-sm scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100`}>
           {isSidebarCollapsed ? (
             // Collapsed sidebar - just icons
-            <div className="p-2 space-y-3">
+            <div className="p-1 space-y-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full h-10 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                className="w-full h-7 hover:bg-blue-50 hover:text-blue-600 transition-colors p-0"
                 onClick={() => setIsSidebarCollapsed(false)}
                 title="Expand sidebar"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </Button>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-10 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  className="w-full h-7 hover:bg-blue-50 hover:text-blue-600 transition-colors p-0"
                   onClick={() => setShowPatientDetails(!showPatientDetails)}
                   title="Patient Profile"
                 >
-                  <User className="w-4 h-4" />
+                  <User className="w-3.5 h-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-10 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                  className="w-full h-7 hover:bg-emerald-50 hover:text-emerald-600 transition-colors p-0"
                   onClick={() => setShowMedicalHistory(!showMedicalHistory)}
                   title="Medical History"
                 >
-                  <History className="w-4 h-4" />
+                  <History className="w-3.5 h-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-10 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  className="w-full h-7 hover:bg-indigo-50 hover:text-indigo-600 transition-colors p-0"
                   onClick={() => setShowExistingPrescriptions(!showExistingPrescriptions)}
                   title="Previous Prescriptions"
                 >
-                  <Stethoscope className="w-4 h-4" />
+                  <Stethoscope className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
           ) : (
             // Expanded sidebar - full content
-            <div className="p-4 space-y-6">
+            <div className="p-2 space-y-3">
               {/* Collapse button */}
               <div className="flex justify-end">
                 <Button
@@ -1067,19 +994,19 @@ const ConsultationWorkspace: React.FC = () => {
                   size="sm"
                   onClick={() => setIsSidebarCollapsed(true)}
                   title="Collapse sidebar"
-                  className="hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  className="hover:bg-blue-50 hover:text-blue-600 transition-colors h-6 p-0 w-6"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3 h-3" />
                 </Button>
               </div>
 
               {/* Patient Profile */}
-              <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50 border-b border-slate-200">
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50 border-b border-slate-200">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base lg:text-lg flex items-center gap-2 text-slate-800 font-semibold">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <User className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
+                    <CardTitle className="text-xs flex items-center gap-1.5 text-slate-800 font-semibold">
+                      <div className="p-1 bg-blue-100 rounded">
+                        <User className="w-3 h-3 text-blue-600" />
                       </div>
                       Patient Profile
                     </CardTitle>
@@ -1087,26 +1014,26 @@ const ConsultationWorkspace: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowPatientDetails(!showPatientDetails)}
-                      className="hover:bg-blue-100 transition-colors"
+                      className="h-5 w-5 p-0 hover:bg-blue-100 transition-colors"
                     >
-                      {showPatientDetails ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      {showPatientDetails ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </Button>
                   </div>
                 </CardHeader>
                 {showPatientDetails && (
-                  <CardContent className="space-y-4 bg-white p-4">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-14 w-14 ring-2 ring-blue-100 shadow-sm">
+                  <CardContent className="space-y-2 bg-white p-2">
+                    <div className="flex items-center space-x-2">
+                      <Avatar className="h-9 w-9 ring-1 ring-blue-100">
                         <AvatarImage src={patientProfile?.profile_picture || consultation?.patient?.profile_picture} />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 font-semibold text-lg">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 font-semibold text-xs">
                           {(patientProfile?.name || consultation?.patient?.name || 'P').charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg text-slate-800 truncate">
+                        <h3 className="font-semibold text-xs text-slate-800 truncate">
                           {patientProfile?.user_name || patientProfile?.name || consultation?.patient_name || consultation?.patient?.name || 'Unknown Patient'}
                         </h3>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-[10px] text-slate-600">
                           {patientProfile?.date_of_birth || consultation?.patient?.date_of_birth
                             ? `${calculateAge(patientProfile?.date_of_birth || consultation?.patient?.date_of_birth)} years`
                             : 'Age not available'
@@ -1117,28 +1044,28 @@ const ConsultationWorkspace: React.FC = () => {
                     
 
                     {patientProfile?.allergies && (
-                      <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <div className="p-1.5 bg-red-100 rounded-lg mt-0.5">
-                            <AlertCircle className="w-4 h-4 text-red-600" />
+                      <div className="p-2 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded">
+                        <div className="flex items-start gap-1.5">
+                          <div className="p-0.5 bg-red-100 rounded mt-0.5">
+                            <AlertCircle className="w-3 h-3 text-red-600" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-red-800 mb-1">Allergies</p>
-                            <p className="text-sm text-red-700 leading-relaxed">{patientProfile.allergies}</p>
+                            <p className="text-[10px] font-semibold text-red-800 mb-0.5">Allergies</p>
+                            <p className="text-[10px] text-red-700 leading-tight">{patientProfile.allergies}</p>
                           </div>
                         </div>
                       </div>
                     )}
 
                     {patientProfile?.current_medications && (
-                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <div className="p-1.5 bg-blue-100 rounded-lg mt-0.5">
-                            <Pill className="w-4 h-4 text-blue-600" />
+                      <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded">
+                        <div className="flex items-start gap-1.5">
+                          <div className="p-0.5 bg-blue-100 rounded mt-0.5">
+                            <Pill className="w-3 h-3 text-blue-600" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-blue-800 mb-1">Current Medications</p>
-                            <p className="text-sm text-blue-700 leading-relaxed">{patientProfile.current_medications}</p>
+                            <p className="text-[10px] font-semibold text-blue-800 mb-0.5">Current Medications</p>
+                            <p className="text-[10px] text-blue-700 leading-tight">{patientProfile.current_medications}</p>
                           </div>
                         </div>
                       </div>
@@ -1148,12 +1075,12 @@ const ConsultationWorkspace: React.FC = () => {
               </Card>
 
               {/* Medical History */}
-              <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <CardHeader className="pb-3 bg-gradient-to-r from-emerald-50 via-emerald-50 to-teal-50 border-b border-slate-200">
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-emerald-50 via-emerald-50 to-teal-50 border-b border-slate-200">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base lg:text-lg flex items-center gap-2 text-slate-800 font-semibold">
-                      <div className="p-1.5 bg-emerald-100 rounded-lg">
-                        <History className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-600" />
+                    <CardTitle className="text-xs flex items-center gap-1.5 text-slate-800 font-semibold">
+                      <div className="p-1 bg-emerald-100 rounded">
+                        <History className="w-3 h-3 text-emerald-600" />
                       </div>
                       Medical History
                     </CardTitle>
@@ -1161,65 +1088,65 @@ const ConsultationWorkspace: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowMedicalHistory(!showMedicalHistory)}
-                      className="hover:bg-emerald-100 transition-colors"
+                      className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors"
                     >
-                      {showMedicalHistory ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      {showMedicalHistory ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </Button>
                   </div>
                 </CardHeader>
                 {showMedicalHistory && (
-                  <CardContent className="bg-white p-4 space-y-4">
-                    {(patientProfile?.user?.medical_history || patientProfile?.medical_history || consultation?.patient?.medical_history) ? (
-                      <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg">
-                        <p className="text-sm text-slate-700 leading-relaxed">
+                  <CardContent className="bg-white p-2 space-y-2">
+                    {/* {(patientProfile?.user?.medical_history || patientProfile?.medical_history || consultation?.patient?.medical_history) ? (
+                      <div className="p-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded">
+                        <p className="text-[10px] text-slate-700 leading-tight">
                           {patientProfile?.user?.medical_history || patientProfile?.medical_history || consultation?.patient?.medical_history}
                         </p>
                       </div>
                     ) : (
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                        <p className="text-sm text-slate-500 italic text-center">No medical history recorded</p>
+                      <div className="p-2 bg-slate-50 border border-slate-200 rounded">
+                        <p className="text-[10px] text-slate-500 italic text-center">No medical history recorded</p>
                       </div>
-                    )}
+                    )} */}
                     
                     {loadingRecords ? (
-                      <div className="flex items-center justify-center py-6">
-                        <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                      <div className="flex items-center justify-center py-3">
+                        <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
                       </div>
                     ) : medicalRecords.length > 0 ? (
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-emerald-600" />
+                      <div className="space-y-1.5">
+                        <h4 className="text-[10px] font-semibold text-slate-700 flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-emerald-600" />
                           Medical Records
                         </h4>
                         {medicalRecords.slice(0, 3).map((record) => (
-                          <div key={record.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg hover:shadow-sm transition-shadow">
-                            <div className="flex items-center gap-3">
-                              <div className="p-1.5 bg-emerald-100 rounded-lg">
-                                <FileText className="w-4 h-4 text-emerald-600" />
+                          <div key={record.id} className="flex items-center justify-between p-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded">
+                            <div className="flex items-center gap-1.5">
+                              <div className="p-0.5 bg-emerald-100 rounded">
+                                <FileText className="w-2.5 h-2.5 text-emerald-600" />
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-slate-800">{record.title}</p>
-                                <p className="text-xs text-slate-600">{new Date(record.uploaded_date).toLocaleDateString()}</p>
+                                <p className="text-[10px] font-medium text-slate-800 truncate max-w-[120px]">{record.title}</p>
+                                <p className="text-[9px] text-slate-600">{new Date(record.uploaded_date).toLocaleDateString()}</p>
                               </div>
                             </div>
                             <a href={record.file_url} target="_blank" rel="noreferrer">
-                              <Button variant="ghost" size="sm" className="hover:bg-emerald-100 transition-colors">
-                                <Eye className="w-4 h-4" />
+                              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors">
+                                <Eye className="w-2.5 h-2.5" />
                               </Button>
                             </a>
                           </div>
                         ))}
                         {medicalRecords.length > 3 && (
-                          <div className="text-center py-2">
-                            <p className="text-xs text-slate-500 bg-slate-100 rounded-full px-3 py-1 inline-block">
+                          <div className="text-center py-1">
+                            <p className="text-[9px] text-slate-500 bg-slate-100 rounded-full px-2 py-0.5 inline-block">
                               +{medicalRecords.length - 3} more records
                             </p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                        <p className="text-sm text-slate-500 italic text-center">No medical records uploaded</p>
+                      <div className="p-2 bg-slate-50 border border-slate-200 rounded">
+                        <p className="text-[10px] text-slate-500 italic text-center">No medical records uploaded</p>
                       </div>
                     )}
                   </CardContent>
@@ -1227,12 +1154,12 @@ const ConsultationWorkspace: React.FC = () => {
               </Card>
 
               {/* Previous Prescriptions */}
-              <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <CardHeader className="pb-3 bg-gradient-to-r from-indigo-50 via-indigo-50 to-purple-50 border-b border-slate-200">
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-indigo-50 via-indigo-50 to-purple-50 border-b border-slate-200">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base lg:text-lg flex items-center gap-2 text-slate-800 font-semibold">
-                      <div className="p-1.5 bg-indigo-100 rounded-lg">
-                        <Stethoscope className="w-4 h-4 lg:w-5 lg:h-5 text-indigo-600" />
+                    <CardTitle className="text-xs flex items-center gap-1.5 text-slate-800 font-semibold">
+                      <div className="p-1 bg-indigo-100 rounded">
+                        <Stethoscope className="w-3 h-3 text-indigo-600" />
                       </div>
                       Previous Prescriptions
                     </CardTitle>
@@ -1240,44 +1167,44 @@ const ConsultationWorkspace: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowExistingPrescriptions(!showExistingPrescriptions)}
-                      className="hover:bg-indigo-100 transition-colors"
+                      className="h-5 w-5 p-0 hover:bg-indigo-100 transition-colors"
                     >
-                      {showExistingPrescriptions ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      {showExistingPrescriptions ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </Button>
                   </div>
                 </CardHeader>
                 {showExistingPrescriptions && (
-                  <CardContent className="bg-white p-4 space-y-4">
+                  <CardContent className="bg-white p-2 space-y-2">
                     {existingPrescriptions.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-1.5">
                         {existingPrescriptions.slice(0, 5).map((pres, index) => (
-                          <div key={pres.id?.toString() || `prescription-${index}`} className="border border-slate-200 rounded-lg p-4 bg-gradient-to-r from-indigo-50 to-purple-50 hover:shadow-sm transition-shadow">
+                          <div key={pres.id?.toString() || `prescription-${index}`} className="border border-slate-200 rounded p-2 bg-gradient-to-r from-indigo-50 to-purple-50">
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-slate-800 truncate mb-1">
+                                <p className="text-[10px] font-semibold text-slate-800 truncate mb-0.5">
                                   {pres.primary_diagnosis || 'No diagnosis'}
                                 </p>
-                                <p className="text-xs text-slate-600 mb-2">
-                                  {new Date(pres.issued_date).toLocaleDateString()} • {pres.medications?.length || 0} medications
+                                <p className="text-[9px] text-slate-600 mb-1">
+                                  {new Date(pres.issued_date).toLocaleDateString()} • {pres.medications?.length || 0} meds
                                 </p>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   {pres.is_finalized ? (
-                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 border-green-200 px-2 py-1">
-                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                    <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-800 border-green-200 px-1 py-0 h-4">
+                                      <CheckCircle className="w-2 h-2 mr-0.5" />
                                       Finalized
                                     </Badge>
                                   ) : (
-                                    <Badge variant="outline" className="text-xs border-slate-300 text-slate-600 px-2 py-1">
+                                    <Badge variant="outline" className="text-[9px] border-slate-300 text-slate-600 px-1 py-0 h-4">
                                       Draft
                                     </Badge>
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 ml-2">
+                              <div className="flex items-center gap-0.5 ml-1">
                                 {pres.current_pdf && (
                                   <a href={pres.current_pdf.file_url} target="_blank" rel="noreferrer">
-                                    <Button variant="ghost" size="sm" className="hover:bg-indigo-100 transition-colors">
-                                      <Download className="w-4 h-4" />
+                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 hover:bg-indigo-100 transition-colors">
+                                      <Download className="w-2.5 h-2.5" />
                                     </Button>
                                   </a>
                                 )}
@@ -1285,13 +1212,13 @@ const ConsultationWorkspace: React.FC = () => {
                                   <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="hover:bg-indigo-100 transition-colors"
+                                    className="h-5 w-5 p-0 hover:bg-indigo-100 transition-colors"
                                     onClick={() => {
                                       setSelectedPrescription(pres);
                                       setShowPdfModal(true);
                                     }}
                                   >
-                                    <Eye className="w-4 h-4" />
+                                    <Eye className="w-2.5 h-2.5" />
                                   </Button>
                                 )}
                               </div>
@@ -1299,16 +1226,16 @@ const ConsultationWorkspace: React.FC = () => {
                           </div>
                         ))}
                         {existingPrescriptions.length > 5 && (
-                          <div className="text-center py-2">
-                            <p className="text-xs text-slate-500 bg-slate-100 rounded-full px-3 py-1 inline-block">
+                          <div className="text-center py-1">
+                            <p className="text-[9px] text-slate-500 bg-slate-100 rounded-full px-2 py-0.5 inline-block">
                               +{existingPrescriptions.length - 5} more prescriptions
                             </p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                        <p className="text-sm text-slate-500 italic text-center">No previous prescriptions</p>
+                      <div className="p-2 bg-slate-50 border border-slate-200 rounded">
+                        <p className="text-[10px] text-slate-500 italic text-center">No previous prescriptions</p>
                       </div>
                     )}
                   </CardContent>
@@ -1321,47 +1248,66 @@ const ConsultationWorkspace: React.FC = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex">
           {/* Video Meeting Section */}
-          <div className={`${isVideoMaximized ? 'w-full' : 'w-2/3'} bg-white border-r border-slate-200 transition-all duration-300 shadow-sm`}>
+          <div className={`${isVideoMaximized ? 'w-full' : 'flex-1'} bg-white border-r border-slate-200 transition-all duration-300 shadow-sm`}>
             <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
-                    <Video className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold flex items-center gap-1.5 text-slate-800">
+                    <Video className="w-4 h-4 text-blue-600" />
                     Jitsi Meet - Dirac AI
                   </h2>
-                  <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                    <AlertCircle className="w-3 h-3" />
-                    <span>Video conferencing application</span>
+                  <div className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                    <AlertCircle className="w-2.5 h-2.5" />
+                    <span>Video conferencing</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsVideoMaximized(!isVideoMaximized)}
-                    className="border-slate-300 hover:bg-blue-50 hover:border-blue-300"
+                    className="border-slate-300 hover:bg-blue-50 hover:border-blue-300 h-6 w-6 p-0"
                   >
-                    {isVideoMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    {isVideoMaximized ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
                   </Button>
                 </div>
               </div>
               
-              <div className="flex-1 p-4 bg-slate-50">
+              <div className="flex-1 p-2 bg-slate-50">
                 <div className="w-full h-full relative">
                   {/* Doctor's individual Jitsi Meet iframe */}
                   <iframe
                     src={consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
                     className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
-                    allow="camera; microphone; fullscreen; speaker; display-capture"
+                    allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
                     allowFullScreen
                     title="Jitsi Meet - Dirac AI"
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-camera allow-microphone"
                     onLoad={() => {
-                      console.log('Jitsi Meet iframe loaded successfully');
+                      console.log('🎥 Jitsi Meet iframe loaded successfully');
+                      console.log('🔗 Current iframe src:', consultation?.doctor_meeting_link || "https://meet.diracai.com/office");
                     }}
                     onError={(e) => {
-                      console.error('Jitsi Meet iframe failed to load:', e);
+                      console.error('❌ Jitsi Meet iframe failed to load:', e);
                     }}
                   />
+                  
+                  {/* Fallback message if iframe doesn't load */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-lg hidden" id="iframe-fallback">
+                    <div className="text-center p-4">
+                      <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Meeting</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Meeting Link: {consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
+                      </p>
+                      <Button 
+                        onClick={() => window.open(consultation?.doctor_meeting_link || "https://meet.diracai.com/office", '_blank')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Open Meeting in New Tab
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1369,16 +1315,16 @@ const ConsultationWorkspace: React.FC = () => {
 
           {/* Prescription Writer Section */}
           {!isVideoMaximized && (
-            <div className="w-1/3 bg-slate-50 overflow-y-auto">
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <h2 className="text-lg font-semibold flex items-center gap-2 text-slate-800">
-                    <Edit className="w-5 h-5 text-emerald-600" />
+            <div className="w-[500px] bg-slate-50 overflow-y-auto">
+              <div className="p-2 space-y-1">
+                <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
+                  <h2 className="text-sm font-semibold flex items-center gap-1.5 text-slate-800">
+                    <Edit className="w-3.5 h-3.5 text-emerald-600" />
                     Prescription Writer
                   </h2>
                   {prescription?.is_finalized && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                      <CheckCircle className="w-3 h-3 mr-1" />
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 text-[10px] px-1.5 py-0 h-4">
+                      <CheckCircle className="w-2 h-2 mr-0.5" />
                       Finalized
                     </Badge>
                   )}
@@ -1386,89 +1332,103 @@ const ConsultationWorkspace: React.FC = () => {
 
                 {/* Vital Signs */}
                 <Card className="border-slate-200 shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-200">
+                  <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-200">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                          <Heart className="w-4 h-4 text-emerald-600" />
+                      <div className="flex items-center gap-1.5">
+                        <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                          <Heart className="w-3 h-3 text-emerald-600" />
                           Vital Signs
                         </CardTitle>
-                        <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
-                          <Eye className="w-3 h-3" />
-                          <span>Read-only (Admin measured)</span>
+                        <div className="flex items-center gap-0.5 text-[9px] text-emerald-600 bg-emerald-100 px-1 py-0.5 rounded-full">
+                          <Eye className="w-2 h-2" />
+                          <span>Read-only</span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowVitalSigns(!showVitalSigns)}
-                        className="hover:bg-emerald-100"
-                      >
-                        {showVitalSigns ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            setLoadingVitalSigns(true);
+                            await fetchVitalSigns(consultationId || '');
+                          }}
+                          className="h-5 w-5 p-0 hover:bg-blue-100"
+                          title="Fetch vital signs"
+                        >
+                          <RefreshCw className="w-3 h-3 text-blue-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowVitalSigns(!showVitalSigns)}
+                          className="h-5 w-5 p-0 hover:bg-emerald-100"
+                        >
+                          {showVitalSigns ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   {showVitalSigns && (
-                    <CardContent className="bg-white">
+                    <CardContent className="bg-white p-2">
                       {loadingVitalSigns ? (
-                        <div className="flex items-center justify-center py-6">
-                          <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mr-2" />
-                          <span className="text-sm text-slate-600">Loading vital signs...</span>
+                        <div className="flex items-center justify-center py-3">
+                          <Loader2 className="w-3 h-3 animate-spin text-emerald-600 mr-1" />
+                          <span className="text-[10px] text-slate-600">Loading...</span>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs text-slate-700">Pulse (bpm)</Label>
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-sm font-medium text-slate-800">
-                                {formData.vital_signs.pulse || 'Not recorded'}
+                        <div className="grid grid-cols-6 gap-1">
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-600 mb-1">Pulse</div>
+                            <div className="flex items-center justify-center gap-0.5 p-1 bg-slate-50 border border-slate-200 rounded text-center">
+                              <span className="text-[10px] font-medium text-slate-800">
+                                {formData.vital_signs.pulse || '-'}
                               </span>
-                              {formData.vital_signs.pulse && <span className="text-xs text-slate-500">bpm</span>}
+                              <span className="text-[9px] text-slate-500">bpm</span>
                             </div>
                           </div>
-                          <div>
-                            <Label className="text-xs text-slate-700">Temperature (°C)</Label>
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-sm font-medium text-slate-800">
-                                {formData.vital_signs.temperature || 'Not recorded'}
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-600 mb-1">Temp</div>
+                            <div className="flex items-center justify-center gap-0.5 p-1 bg-slate-50 border border-slate-200 rounded text-center">
+                              <span className="text-[10px] font-medium text-slate-800">
+                                {formData.vital_signs.temperature || '-'}
                               </span>
-                              {formData.vital_signs.temperature && <span className="text-xs text-slate-500">°C</span>}
+                              <span className="text-[9px] text-slate-500">°C</span>
                             </div>
                           </div>
-                          <div>
-                            <Label className="text-xs text-slate-700">BP Systolic</Label>
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-sm font-medium text-slate-800">
-                                {formData.vital_signs.blood_pressure_systolic || 'Not recorded'}
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-600 mb-1">BP Sys</div>
+                            <div className="flex items-center justify-center gap-0.5 p-1 bg-slate-50 border border-slate-200 rounded text-center">
+                              <span className="text-[10px] font-medium text-slate-800">
+                                {formData.vital_signs.blood_pressure_systolic || '-'}
                               </span>
-                              {formData.vital_signs.blood_pressure_systolic && <span className="text-xs text-slate-500">mmHg</span>}
+                              <span className="text-[9px] text-slate-500">mmHg</span>
                             </div>
                           </div>
-                          <div>
-                            <Label className="text-xs text-slate-700">BP Diastolic</Label>
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-sm font-medium text-slate-800">
-                                {formData.vital_signs.blood_pressure_diastolic || 'Not recorded'}
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-600 mb-1">BP Dia</div>
+                            <div className="flex items-center justify-center gap-0.5 p-1 bg-slate-50 border border-slate-200 rounded text-center">
+                              <span className="text-[10px] font-medium text-slate-800">
+                                {formData.vital_signs.blood_pressure_diastolic || '-'}
                               </span>
-                              {formData.vital_signs.blood_pressure_diastolic && <span className="text-xs text-slate-500">mmHg</span>}
+                              <span className="text-[9px] text-slate-500">mmHg</span>
                             </div>
                           </div>
-                          <div>
-                            <Label className="text-xs text-slate-700">Weight (kg)</Label>
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-sm font-medium text-slate-800">
-                                {formData.vital_signs.weight || 'Not recorded'}
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-600 mb-1">Weight</div>
+                            <div className="flex items-center justify-center gap-0.5 p-1 bg-slate-50 border border-slate-200 rounded text-center">
+                              <span className="text-[10px] font-medium text-slate-800">
+                                {formData.vital_signs.weight || '-'}
                               </span>
-                              {formData.vital_signs.weight && <span className="text-xs text-slate-500">kg</span>}
+                              <span className="text-[9px] text-slate-500">kg</span>
                             </div>
                           </div>
-                          <div>
-                            <Label className="text-xs text-slate-700">Height (cm)</Label>
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-sm font-medium text-slate-800">
-                                {formData.vital_signs.height || 'Not recorded'}
+                          <div className="text-center">
+                            <div className="text-[10px] text-slate-600 mb-1">Height</div>
+                            <div className="flex items-center justify-center gap-0.5 p-1 bg-slate-50 border border-slate-200 rounded text-center">
+                              <span className="text-[10px] font-medium text-slate-800">
+                                {formData.vital_signs.height || '-'}
                               </span>
-                              {formData.vital_signs.height && <span className="text-xs text-slate-500">cm</span>}
+                              <span className="text-[9px] text-slate-500">cm</span>
                             </div>
                           </div>
                         </div>
@@ -1479,183 +1439,135 @@ const ConsultationWorkspace: React.FC = () => {
 
                 {/* Diagnosis */}
                 <Card className="border-slate-200 shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                  <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                        <Stethoscope className="w-4 h-4 text-blue-600" />
+                      <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                        <Stethoscope className="w-3 h-3 text-blue-600" />
                         Diagnosis
                       </CardTitle>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowDiagnosis(!showDiagnosis)}
-                        className="hover:bg-blue-100"
+                        className="h-5 w-5 p-0 hover:bg-blue-100"
                       >
-                        {showDiagnosis ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        {showDiagnosis ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                       </Button>
                     </div>
                   </CardHeader>
                   {showDiagnosis && (
-                    <CardContent className="space-y-3 bg-white">
+                    <CardContent className="space-y-1 bg-white p-2">
                     <div>
-                      <Label className="text-xs text-slate-700">Primary Diagnosis</Label>
+                      <Label className="text-[10px] text-slate-700">Primary Diagnosis</Label>
                       <Textarea
                         rows={2}
                         value={formData.primary_diagnosis}
                         onChange={(e) => setFormData({ ...formData, primary_diagnosis: e.target.value })}
                         placeholder="Enter primary diagnosis..."
-                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 focus:outline-none text-xs p-1.5 min-h-[50px]"
                       />
                     </div>
-                    <div>
-                      <Label className="text-xs text-slate-700">Patient Previous History</Label>
+                    {/* <div>
+                      <Label className="text-[10px] text-slate-700">Patient Previous History</Label>
                       <Textarea
                         rows={2}
                         value={formData.patient_previous_history}
                         onChange={(e) => setFormData({ ...formData, patient_previous_history: e.target.value })}
                         placeholder="Enter patient's previous medical history..."
-                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-xs p-1.5 min-h-[50px]"
                       />
-                    </div>
+                    </div> */}
                   </CardContent>
                 )}
               </Card>
 
-                {/* Instructions */}
-                <Card className="border-slate-200 shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                        <FileText className="w-4 h-4 text-teal-600" />
-                        Patient Instructions
-                      </CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowInstructions(!showInstructions)}
-                        className="hover:bg-teal-100"
-                      >
-                        {showInstructions ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  {showInstructions && (
-                    <CardContent className="space-y-3 bg-white">
-                      <div>
-                        <Label className="text-xs text-slate-700">Special Instructions</Label>
-                        <Textarea
-                          rows={3}
-                          value={formData.general_instructions}
-                          onChange={(e) => setFormData({ ...formData, general_instructions: e.target.value })}
-                          placeholder="Enter special instructions for the patient..."
-                          className="border-slate-300 focus:border-teal-500 focus:ring-teal-500"
-                        />
-                      </div>
-
-                      <div>
-                        <Label className="text-xs text-slate-700">Next Visit</Label>
-                        <Select
-                          value={formData.next_visit}
-                          onValueChange={(value) => setFormData({ ...formData, next_visit: value })}
-                        >
-                          <SelectTrigger className="border-slate-300 focus:border-teal-500 focus:ring-teal-500">
-                            <SelectValue placeholder="Select next visit timing" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1 week">1 week</SelectItem>
-                            <SelectItem value="2 weeks">2 weeks</SelectItem>
-                            <SelectItem value="3 weeks">3 weeks</SelectItem>
-                            <SelectItem value="4 weeks">4 weeks</SelectItem>
-                            <SelectItem value="6 weeks">6 weeks</SelectItem>
-                            <SelectItem value="8 weeks">8 weeks</SelectItem>
-                            <SelectItem value="10 weeks">10 weeks</SelectItem>
-                            <SelectItem value="12 weeks">12 weeks</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  )}
-              </Card>
-
               {/* Investigation Tests */}
               <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
-                  <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                    <Stethoscope className="w-4 h-4 text-blue-600" />
-                    Investigation Tests
-                  </CardTitle>
+                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                  <div className="flex items-center justify-between w-full">
+                    <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                      <Stethoscope className="w-3 h-3 text-blue-600" />
+                      Investigation Tests
+                    </CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        onClick={() => setShowAddTestsForm(true)}
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-8 px-4 text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-300 border border-blue-400 hover:border-blue-300"
+                      >
+                        <Plus className="w-4 h-4 mr-1.5" />
+                        Add Tests
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="bg-white">
+                <CardContent className="bg-white p-2">
                   <InvestigationSelector
                     prescriptionId={prescription?.id || 0}
                     onInvestigationsUpdated={handleInvestigationsUpdated}
                     existingInvestigations={prescriptionInvestigations}
+                    showAddForm={showAddTestsForm}
+                    onShowAddFormChange={setShowAddTestsForm}
                   />
                 </CardContent>
               </Card>
 
               {/* Medications Summary */}
                 <Card className="border-slate-200 shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
+                  <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2 text-slate-800">
-                        <Pill className="w-4 h-4 text-purple-600" />
+                      <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                        <Pill className="w-3 h-3 text-purple-600" />
                         Medications ({medications.length})
                       </CardTitle>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowMedications(!showMedications)}
-                          className="hover:bg-purple-100"
+                          className="h-5 w-5 p-0 hover:bg-purple-100"
                         >
-                          {showMedications ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          {showMedications ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                         </Button>
                         <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="border-purple-300 hover:bg-purple-50 hover:border-purple-400"
                           onClick={handleAddMedication}
+                          className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-8 px-4 text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-300 border border-purple-400 hover:border-purple-300 w-full"
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add
+                          <Plus className="w-4 h-4 mr-1.5" />
+                          Add Medications
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
                   {showMedications && (
-                    <CardContent className="bg-white">
+                    <CardContent className="bg-white p-2">
                       {medications.length > 0 ? (
-                        <div className="space-y-2">
-                          {medications.map((med) => (
-                            <div key={med.id} className="p-3 border border-slate-200 rounded-lg bg-purple-50">
+                        <div className="space-y-1.5">
+                          {medications.map((med, index) => (
+                            <div key={med.id || `med-${index}`} className="p-2 border border-slate-200 rounded bg-purple-50">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-800">{med.medicine_name}</p>
-                                  <p className="text-xs text-slate-600">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <div className="p-0.5 bg-purple-100 rounded">
+                                      <Pill className="w-3 h-3 text-purple-600" />
+                                    </div>
+                                    <p className="text-xs font-medium text-slate-800">{med.medicine_name}</p>
+                                  </div>
+                                  <p className="text-[10px] text-slate-600">
                                     {med.dosage} • {getFrequencyDisplay(med.frequency, med.custom_frequency)}
                                   </p>
-                                  <p className="text-xs text-slate-600">
-                                    {getTimingDisplay(med.timing, med.custom_timing)} • Duration: {med.duration_days} days
+                                  <p className="text-[10px] text-slate-600">
+                                    {(med.timing_display_text || getTimingDisplay(med.timing, med.custom_timing))} • {med.duration_days} days
                                   </p>
                                   {med.special_instructions && (
-                                    <p className="text-xs text-slate-500 mt-1">{med.special_instructions}</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">{med.special_instructions}</p>
                                   )}
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-0.5">
                                   <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    className="hover:bg-purple-100"
-                                    onClick={() => handleEditMedication(med)}
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="hover:bg-red-100 text-red-600"
-                                    onClick={() => handleDeleteMedication(med.id!)}
+                                    className="h-5 w-5 p-0 hover:bg-red-100 text-red-600"
+                                    onClick={() => handleDeleteMedication(index)}
                                   >
                                     <X className="w-3 h-3" />
                                   </Button>
@@ -1665,331 +1577,85 @@ const ConsultationWorkspace: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-6">
-                          <Pill className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                          <p className="text-sm text-slate-500">No medications added yet</p>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="mt-2 border-purple-300 hover:bg-purple-50 hover:border-purple-400"
-                            onClick={handleAddMedication}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add First Medication
-                          </Button>
+                        <div className="text-center py-4">
+                          <Pill className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                          <p className="text-xs text-slate-500">No medications added yet</p>
                         </div>
                       )}
                     </CardContent>
                   )}
                 </Card>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    onClick={handleSaveDraft}
-                    variant="outline" 
-                    className="flex-1 border-slate-300 hover:bg-slate-50 hover:border-slate-400"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Draft
-                  </Button>
-                  <Button 
-                    onClick={handleFinalize}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Finalize Prescription
-                  </Button>
-                  {prescription?.current_pdf && (
+              {/* Patient Instructions & Follow-up - Moved to Bottom */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                      <Clock className="w-3 h-3 text-purple-600" />
+                      Follow-up & Instructions
+                    </CardTitle>
                     <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedPrescription({
-                          id: prescription.id,
-                          issued_date: prescription.issued_date || new Date().toISOString(),
-                          primary_diagnosis: prescription.primary_diagnosis || '',
-                          is_finalized: prescription.is_finalized || false,
-                          medications: prescription.medications || [],
-                          current_pdf: prescription.current_pdf,
-                          pdf_versions: prescription.pdf_versions || []
-                        });
-                        setSelectedPdfVersion(prescription.current_pdf);
-                        setShowPdfModal(true);
-                      }}
-                      className="border-blue-300 hover:bg-blue-50"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowInstructions(!showInstructions)}
+                      className="h-5 w-5 p-0 hover:bg-purple-100"
                     >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View PDF
+                      {showInstructions ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </Button>
-                  )}
-                </div>
+                  </div>
+                </CardHeader>
+                {showInstructions && (
+                  <CardContent className="space-y-2 bg-white p-2">
+                    <div>
+                      <Label className="text-[10px] text-slate-700">Patient Instructions</Label>
+                      <Textarea
+                        rows={3}
+                        value={formData.general_instructions}
+                        onChange={(e) => setFormData({ ...formData, general_instructions: e.target.value })}
+                        placeholder="Enter special instructions for the patient (e.g., rest, diet, lifestyle advice)..."
+                        className="border-slate-300 focus:border-purple-500 focus:ring-purple-500 focus:ring-1 focus:outline-none text-xs p-1.5 min-h-[60px]"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-[10px] text-slate-700">Next Visit</Label>
+                      <Select
+                        value={formData.next_visit}
+                        onValueChange={(value) => setFormData({ ...formData, next_visit: value })}
+                      >
+                        <SelectTrigger className="border-slate-300 focus:border-purple-500 focus:ring-purple-500 focus:ring-1 focus:outline-none h-7 text-xs">
+                          <SelectValue placeholder="Select next visit timing" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1 week">1 week</SelectItem>
+                          <SelectItem value="2 weeks">2 weeks</SelectItem>
+                          <SelectItem value="3 weeks">3 weeks</SelectItem>
+                          <SelectItem value="4 weeks">4 weeks</SelectItem>
+                          <SelectItem value="6 weeks">6 weeks</SelectItem>
+                          <SelectItem value="8 weeks">8 weeks</SelectItem>
+                          <SelectItem value="10 weeks">10 weeks</SelectItem>
+                          <SelectItem value="12 weeks">12 weeks</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Medication Modal */}
-      <Dialog open={showMedicationModal} onOpenChange={setShowMedicationModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pill className="w-5 h-5 text-purple-600" />
-              {editingMedication ? 'Edit Medication' : 'Add New Medication'}
-            </DialogTitle>
-            <DialogDescription>
-              Enter the medication details for the prescription.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="relative">
-                <Label className="text-sm font-medium">Medicine Name *</Label>
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    value={medicationForm.medicine_name}
-                    onChange={(e) => {
-                      setMedicationForm({ ...medicationForm, medicine_name: e.target.value });
-                      handleMedicationSearchChange(e.target.value);
-                    }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search for medications..."
-                    className="pl-10"
-                  />
-                  {isSearchingMedications && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                    </div>
-                  )}
-                </div>
-                
-                {/* {searchError && (
-                  <div className="text-red-500 text-sm bg-red-50 p-2 rounded-lg mt-1">
-                    {searchError}
-                  </div>
-                )} */}
-                
-                {/* {searchSuccess && (
-                  <div className="text-green-600 text-sm bg-green-50 p-2 rounded-lg mt-1">
-                    {searchSuccess}
-                  </div>
-                )} */}
-
-                {showSearchResults && medicationSearchResults.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {medicationSearchResults
-                      .filter(medicationResult => medicationResult.source !== 'previously_prescribed')
-                      .map((medicationResult, resultIndex) => (
-                      <div
-                        key={medicationResult.id}
-                        onClick={() => selectMedication(medicationResult)}
-                        className={`flex items-center justify-between p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                          activeSearchIndex === resultIndex ? 'bg-blue-50' : ''
-                        }`}
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{medicationResult.name}</p>
-                          <div className="text-xs text-gray-500 space-y-1 mt-1">
-                            {medicationResult.brand_name && medicationResult.brand_name !== medicationResult.name && (
-                              <div className="font-medium text-blue-600">Brand: {medicationResult.brand_name}</div>
-                            )}
-                            {medicationResult.composition && (
-                              <div>Composition: {medicationResult.composition}</div>
-                            )}
-                            {medicationResult.dosage_form && (
-                              <div>Form: {medicationResult.dosage_form}</div>
-                            )}
-                            {medicationResult.strength && (
-                              <div>Strength: {medicationResult.strength}</div>
-                            )}
-                            {medicationResult.therapeutic_class && (
-                              <div className="text-purple-600">Class: {medicationResult.therapeutic_class}</div>
-                            )}
-                            {medicationResult.indication && (
-                              <div className="text-green-600">For: {medicationResult.indication}</div>
-                            )}
-                            {medicationResult.manufacturer && (
-                              <div>Manufacturer: {medicationResult.manufacturer}</div>
-                            )}
-                            {medicationResult.dosage_instructions && (
-                              <div className="text-orange-600">Instructions: {medicationResult.dosage_instructions}</div>
-                            )}
-                            {medicationResult.source === 'inventory' && medicationResult.stock !== undefined && (
-                              <span className={`px-1 py-0.5 rounded text-xs ${
-                                medicationResult.is_low_stock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                              }`}>
-                                Stock: {medicationResult.stock} {medicationResult.unit}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-blue-600 mt-1">
-                            {medicationResult.source === 'inventory' ? 'In Inventory' : 
-                             medicationResult.source === 'newly_created' ? 'Newly Created' : 'Local Database'}
-                          </p>
-                        </div>
-                        <Plus className="w-4 h-4 text-green-600" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {showSearchResults && medicationSearchResults.length === 0 && !isSearchingMedications && !searchError && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-                    <div className="text-center">
-                      <p className="text-gray-500 mb-2">No medications found</p>
-                      <Button 
-                        onClick={handleAddNewMedication}
-                        variant="outline" 
-                        size="sm"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                      >
-                        Add "{medicationForm.medicine_name}" to Inventory
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Dosage *</Label>
-                <Input
-                  value={medicationForm.dosage}
-                  onChange={(e) => setMedicationForm({ ...medicationForm, dosage: e.target.value })}
-                  placeholder="e.g., 500mg"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Frequency</Label>
-                <Select 
-                  value={medicationForm.frequency} 
-                  onValueChange={(value) => setMedicationForm({ ...medicationForm, frequency: value as any })}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="once_daily">Once daily</SelectItem>
-                    <SelectItem value="twice_daily">Twice daily</SelectItem>
-                    <SelectItem value="thrice_daily">Three times daily</SelectItem>
-                    <SelectItem value="four_times_daily">Four times daily</SelectItem>
-                    <SelectItem value="sos">SOS (as needed)</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-                {medicationForm.frequency === 'custom' && (
-                  <Input
-                    value={medicationForm.custom_frequency || ''}
-                    onChange={(e) => setMedicationForm({ ...medicationForm, custom_frequency: e.target.value })}
-                    placeholder="e.g., Every 8 hours"
-                    className="mt-2"
-                  />
-                )}
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Timing</Label>
-                <Select 
-                  value={medicationForm.timing} 
-                  onValueChange={(value) => setMedicationForm({ ...medicationForm, timing: value as any })}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="before_breakfast">Before breakfast</SelectItem>
-                    <SelectItem value="after_breakfast">After breakfast</SelectItem>
-                    <SelectItem value="before_lunch">Before lunch</SelectItem>
-                    <SelectItem value="after_lunch">After lunch</SelectItem>
-                    <SelectItem value="before_dinner">Before dinner</SelectItem>
-                    <SelectItem value="after_dinner">After dinner</SelectItem>
-                    <SelectItem value="bedtime">Bedtime</SelectItem>
-                    <SelectItem value="empty_stomach">Empty stomach</SelectItem>
-                    <SelectItem value="with_food">With food</SelectItem>
-                    <SelectItem value="custom">Custom timing</SelectItem>
-                  </SelectContent>
-                </Select>
-                {medicationForm.timing === 'custom' && (
-                  <Input
-                    value={medicationForm.custom_timing || ''}
-                    onChange={(e) => setMedicationForm({ ...medicationForm, custom_timing: e.target.value })}
-                    placeholder="e.g., 2 hours after meals"
-                    className="mt-2"
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Duration (days)</Label>
-                <Input
-                  type="number"
-                  value={medicationForm.duration_days}
-                  onChange={(e) => setMedicationForm({ ...medicationForm, duration_days: parseInt(e.target.value) || 0 })}
-                  placeholder="7"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Quantity</Label>
-                <Input
-                  value={medicationForm.quantity}
-                  onChange={(e) => setMedicationForm({ ...medicationForm, quantity: e.target.value })}
-                  placeholder="e.g., 10 tablets"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">Special Instructions</Label>
-              <Textarea
-                value={medicationForm.special_instructions || ''}
-                onChange={(e) => setMedicationForm({ ...medicationForm, special_instructions: e.target.value })}
-                placeholder="Any special instructions for the patient..."
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="before_meal"
-                  checked={medicationForm.before_meal}
-                  onChange={(e) => setMedicationForm({ ...medicationForm, before_meal: e.target.checked })}
-                  className="rounded"
-                />
-                <Label htmlFor="before_meal" className="text-sm">Take before meal</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_generic"
-                  checked={medicationForm.is_generic}
-                  onChange={(e) => setMedicationForm({ ...medicationForm, is_generic: e.target.checked })}
-                  className="rounded"
-                />
-                <Label htmlFor="is_generic" className="text-sm">Generic medicine</Label>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMedicationModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveMedication} className="bg-purple-600 hover:bg-purple-700">
-              {editingMedication ? 'Update Medication' : 'Add Medication'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Enhanced Medication Table */}
+      <EnhancedMedicationTable
+        isOpen={showEnhancedMedicationTable}
+        onClose={() => setShowEnhancedMedicationTable(false)}
+        onSave={handleBulkSaveMedications}
+        consultationId={consultationId || ''}
+        existingMedications={medications}
+      />
 
       {/* PDF Viewer Modal */}
       <Dialog open={showPdfModal} onOpenChange={setShowPdfModal}>
