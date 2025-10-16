@@ -725,7 +725,7 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
                 {patient.user_name}
               </CardTitle>
               <CardDescription>
-                Patient ID: {patient.user} | Age: {patient.age} | {patient.gender}
+                Patient ID: {patient.id} | Age: {patient.age} | {patient.gender}
               </CardDescription>
             </div>
             <Badge variant="default">

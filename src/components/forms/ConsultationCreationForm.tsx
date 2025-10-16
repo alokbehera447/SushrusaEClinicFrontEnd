@@ -496,7 +496,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
   const handlePatientSelect = (patient: PatientProfile) => {
     setSelectedPatient(patient);
-    setFormData(prev => ({ ...prev, patientId: patient.user }));
+    setFormData(prev => ({ ...prev, patientId: patient.id }));
     setPatientSearch(patient.user_name);
     setPatientOptions([]);
   };

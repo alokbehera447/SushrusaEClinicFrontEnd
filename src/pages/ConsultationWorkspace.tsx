@@ -781,13 +781,18 @@ const ConsultationWorkspace: React.FC = () => {
     setShowEnhancedMedicationTable(true);
   };
 
-  const handleBulkSaveMedications = async (newMedications: Medication[]) => {
+  const handleBulkSaveMedications = async (allMedications: Medication[]) => {
     try {
-      console.log('💾 Saving new medications:', newMedications.map(m => ({ name: m.medicine_name, dosage: `${m.morning_dose}-${m.afternoon_dose}-${m.evening_dose}` })));
+      console.log('💾 Saving all medications:', allMedications.map(m => ({ 
+        name: m.medicine_name, 
+        dosage: `${m.morning_dose}-${m.afternoon_dose}-${m.evening_dose}`,
+        isNew: !(m.id && m.id > 0)
+      })));
       if (!prescription?.id) throw new Error('Missing prescription id');
 
-      // Merge existing and new meds into payload and persist via auto-save
-      const merged = [...medications, ...newMedications].map((med, index) => ({
+      // The EnhancedMedicationTable now sends ALL medications (both existing and new)
+      // So we don't need to merge with existing medications anymore
+      const medicationsToSave = allMedications.map((med, index) => ({
         medicine_name: med.medicine_name,
         composition: med.composition || '',
         dosage_form: med.dosage_form || 'tablet',
@@ -807,10 +812,42 @@ const ConsultationWorkspace: React.FC = () => {
         order: index + 1,
       }));
 
-      await prescriptionApi.autoSave(prescription.id, { medications: merged });
+      await prescriptionApi.autoSave(prescription.id, { medications: medicationsToSave });
 
-      // Close dialog and reload from API to reflect persisted state
+      // Update local state immediately to prevent duplication
+      const updatedLocalMedications = allMedications.map((med, index) => ({
+        id: med.id,
+        medicine_name: med.medicine_name || '',
+        composition: med.composition || '',
+        dosage_form: med.dosage_form || 'tablet',
+        dosage: `${med.morning_dose || 0}-${med.afternoon_dose || 0}-${med.evening_dose || 0}`,
+        morning_dose: med.morning_dose || 0,
+        afternoon_dose: med.afternoon_dose || 0,
+        evening_dose: med.evening_dose || 0,
+        frequency: med.frequency || 'once_daily',
+        custom_frequency: med.custom_frequency || '',
+        timing: med.timing || 'with_food',
+        custom_timing: med.custom_timing || '',
+        timing_display_text: med.timing_display_text || '',
+        duration_days: med.duration_days || 7,
+        duration_weeks: med.duration_weeks || 0,
+        duration_months: med.duration_months || 0,
+        is_continuous: med.is_continuous || false,
+        special_instructions: med.special_instructions || '',
+        notes: med.notes || '',
+        before_meal: med.before_meal || false,
+        is_generic: med.is_generic || false,
+        quantity: med.quantity || '',
+        order: index + 1,
+      }));
+      
+      console.log('🔄 Updated local medications:', updatedLocalMedications.length);
+      setMedications(updatedLocalMedications);
+
+      // Close dialog
       setShowEnhancedMedicationTable(false);
+      
+      // Reload from API to get the latest state with proper IDs for new medications
       if (consultationId) {
         const updatedPrescription = await prescriptionApi.getConsultationPrescription(consultationId);
         setPrescription(updatedPrescription);
@@ -840,7 +877,7 @@ const ConsultationWorkspace: React.FC = () => {
             quantity: med.quantity || '',
             order: med.order || 0,
           }));
-          console.log('🔄 Medications reloaded from API:', localMedications.length);
+          console.log('🔄 Final medications from API:', localMedications.length);
           setMedications(localMedications);
         }
       }

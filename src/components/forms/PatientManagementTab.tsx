@@ -226,7 +226,7 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
 
   const handleDeletePatient = async (patient: PatientProfile) => {
     try {
-      await adminPatientApi.deletePatient(patient.user);
+      await adminPatientApi.deletePatient(patient.id);
       setPatients(prev => prev.filter(p => p.id !== patient.id));
       if (selectedPatient?.id === patient.id) {
         setSelectedPatient(null);
@@ -491,7 +491,7 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-600">User ID</Label>
-                        <p className="text-sm font-semibold">{selectedPatient.user}</p>
+                        <p className="text-sm font-semibold">{selectedPatient.id}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-600">Preferred Language</Label>

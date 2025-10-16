@@ -662,38 +662,16 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                       </div>
 
                       <div className="mt-4 lg:mt-0 lg:ml-6 flex flex-col sm:flex-row gap-2">
-                        {/* Show Join/Continue buttons only for active consultations */}
-                        {canJoinConsultation(consultation) ? (
+                        {/* Remove 'Continue' button; only show 'Join Now' for scheduled consultations */}
+                        {consultation.status === 'scheduled' && canJoinConsultation(consultation) && (
                           <Button 
                             onClick={() => onJoinConsultation(consultation.id)}
-                            className={`${
-                              consultation.status === 'scheduled' 
-                                ? 'bg-green-600 hover:bg-green-700' 
-                                : 'bg-[#E17726] hover:bg-[#c9651e]'
-                            } text-white shadow-md`}
+                            className="bg-green-600 hover:bg-green-700 text-white shadow-md"
                           >
-                            {consultation.status === 'scheduled' ? (
-                              <>
-                                <Video className="w-4 h-4 mr-2" />
-                                Join Now
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-4 h-4 mr-2" />
-                                Continue
-                              </>
-                            )}
+                            <Video className="w-4 h-4 mr-2" />
+                            Join Now
                           </Button>
-                        ) : (consultation.status === 'scheduled' || consultation.status === 'in_progress') ? (
-                          <Button 
-                            disabled
-                            className="bg-gray-400 text-white shadow-md cursor-not-allowed"
-                            title="Consultation is not available for joining at this time"
-                          >
-                            <Clock className="w-4 h-4 mr-2" />
-                            Not Available
-                          </Button>
-                        ) : null}
+                        )}
                         
                         {/* Show completed status badge for completed consultations */}
                         {consultation.status === 'completed' && (

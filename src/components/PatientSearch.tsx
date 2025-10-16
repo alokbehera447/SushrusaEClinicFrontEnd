@@ -423,7 +423,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
       state: {
         selectedPatient: {
           id: patient.id,
-          user: patient.user,
+          user: patient.id,
           user_name: patient.user_name,
           user_phone: patient.user_phone,
           user_email: patient.user_email
@@ -670,7 +670,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
                           
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                             <span>Age: {patient.age}</span>
-                            <span>ID: {patient.user}</span>
+                            <span>ID: {patient.id}</span>
                             {patient.chronic_conditions.length > 0 && (
                               <span>Conditions: {patient.chronic_conditions.length}</span>
                             )}

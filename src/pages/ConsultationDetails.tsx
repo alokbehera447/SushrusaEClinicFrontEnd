@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ import { formatDate, formatTime, formatDateTime } from '@/lib/utils';
 const ConsultationDetails: React.FC = () => {
   const { consultationId } = useParams<{ consultationId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // State management
   const [consultation, setConsultation] = useState<ConsultationDetails | null>(null);
@@ -76,6 +78,7 @@ const ConsultationDetails: React.FC = () => {
   const [prescriptionPdfVersions, setPrescriptionPdfVersions] = useState<any[]>([]);
   const [loadingPrescription, setLoadingPrescription] = useState(false);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([
     'basic-info', 'patient-info', 'doctor-info'
   ]));
@@ -108,8 +111,8 @@ const ConsultationDetails: React.FC = () => {
       setPrescriptionData(prescription);
       console.log('Prescription data loaded:', prescription);
       
-      // Fetch PDF versions for the prescription (only if finalized)
-      if (prescription && prescription.id && prescription.is_finalized) {
+      // Always try to fetch PDF versions (even if not finalized) to show latest available PDF
+      if (prescription && prescription.id) {
         try {
           const pdfVersions = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
           setPrescriptionPdfVersions(pdfVersions);
@@ -118,9 +121,6 @@ const ConsultationDetails: React.FC = () => {
           console.error('Error fetching prescription PDF versions:', pdfError);
           setPrescriptionPdfVersions([]);
         }
-      } else if (prescription && prescription.id && !prescription.is_finalized) {
-        console.log('Prescription not finalized yet, no PDF versions available');
-        setPrescriptionPdfVersions([]);
       }
     } catch (error) {
       console.error('Error fetching prescription:', error);
@@ -231,6 +231,39 @@ const ConsultationDetails: React.FC = () => {
       signs.push(`Glucose: ${vitals.blood_glucose} mg/dL`);
     }
     return signs;
+  };
+
+  // Finalize prescription
+  const handleFinalizePrescription = async () => {
+    if (!prescriptionData?.id) return;
+    
+    setFinalizing(true);
+    try {
+      const result = await prescriptionApi.finalizeAndGeneratePDF(prescriptionData.id);
+      toast.success('Prescription finalized and PDF generated successfully');
+      
+      // Update prescription data with the finalized version
+      setPrescriptionData(result.prescription);
+      
+      // Update PDF versions with the newly generated PDF
+      if (result.pdf) {
+        setPrescriptionPdfVersions([{
+          id: result.pdf.id,
+          version_number: result.pdf.version,
+          download_url: result.pdf.url,
+          file_url: result.pdf.url,
+          generated_at: result.pdf.generated_at,
+          generated_by: {
+            name: user?.name || 'Unknown'
+          }
+        }]);
+      }
+    } catch (error) {
+      console.error('Error finalizing prescription:', error);
+      toast.error('Failed to finalize prescription');
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   // Get attachment icon
@@ -936,39 +969,57 @@ const ConsultationDetails: React.FC = () => {
                         </div>
                       )}
                       
-                      {prescriptionData.is_finalized ? (
-                        prescriptionPdfVersions.length > 0 ? (
-                          <div>
-                            <label className="text-sm font-medium text-gray-500 mb-2 block">Latest PDF</label>
-                            <div className="flex flex-wrap gap-2">
-                              {prescriptionPdfVersions.slice(0, 2).map((pdf: any, index: number) => (
-                                <Button 
-                                  key={pdf.id}
-                                  variant={index === 0 ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => window.open(pdf.download_url || pdf.file_url, '_blank')}
-                                  className="flex items-center gap-1 text-xs"
-                                >
-                                  <Download className="w-3 h-3" />
-                                  {index === 0 ? 'Latest' : `V${pdf.version}`}
-                                </Button>
-                              ))}
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              By Dr. {prescriptionPdfVersions[0]?.generated_by?.name || 'Unknown'}
-                            </p>
+                      {prescriptionPdfVersions.length > 0 ? (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 mb-2 block">Latest PDF</label>
+                          <div className="flex flex-wrap gap-2">
+                            {prescriptionPdfVersions.slice(0, 2).map((pdf: any, index: number) => (
+                              <Button 
+                                key={pdf.id}
+                                variant={index === 0 ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => window.open(pdf.download_url || pdf.file_url, '_blank')}
+                                className="flex items-center gap-1 text-xs"
+                              >
+                                <Download className="w-3 h-3" />
+                                {index === 0 ? 'Latest' : `V${pdf.version}`}
+                              </Button>
+                            ))}
                           </div>
-                        ) : (
-                          <div className="text-center py-2">
-                            <AlertCircle className="w-4 h-4 text-orange-500 mx-auto mb-1" />
-                            <p className="text-xs text-orange-600">Prescription finalized but no PDF generated</p>
-                          </div>
-                        )
+                          <p className="text-xs text-gray-500 mt-1">
+                            By Dr. {prescriptionPdfVersions[0]?.generated_by?.name || 'Unknown'}
+                          </p>
+                        </div>
+                      ) : prescriptionData?.is_finalized ? (
+                        <div className="text-center py-2">
+                          <AlertCircle className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+                          <p className="text-xs text-orange-600">Prescription finalized but no PDF generated</p>
+                        </div>
                       ) : (
                         <div className="text-center py-2">
                           <FileText className="w-4 h-4 text-blue-500 mx-auto mb-1" />
                           <p className="text-xs text-blue-600">Prescription not finalized yet</p>
                           <p className="text-xs text-gray-500 mt-1">PDF will be available after finalization</p>
+                          {user?.role === 'doctor' && consultation?.doctor === user.id && (
+                            <Button
+                              onClick={handleFinalizePrescription}
+                              disabled={finalizing}
+                              size="sm"
+                              className="mt-2 h-7 text-xs px-3"
+                            >
+                              {finalizing ? (
+                                <>
+                                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                                  Finalizing...
+                                </>
+                              ) : (
+                                <>
+                                  <Printer className="w-3 h-3 mr-1" />
+                                  Finalize Prescription
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </div>
                       )}
                     </>

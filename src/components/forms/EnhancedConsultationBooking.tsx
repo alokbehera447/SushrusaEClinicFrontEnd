@@ -176,7 +176,7 @@ const EnhancedConsultationBooking = ({ onClose }: { onClose: () => void }) => {
     setSubmitting(true);
     try {
       const payload = {
-        patient: selectedPatient.user,
+        patient: selectedPatient.id,
         doctor: selectedDoctor.user,
         consultation_type: formData.consultationType,
         scheduled_date: selectedSlot.date,

@@ -39,14 +39,41 @@ const Register = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    
     try {
+      // First, check if phone number already exists
+      const formattedPhone = `+91${phoneNumber}`;
+      const checkResponse = await api.get(`/api/auth/account-type/?phone=${encodeURIComponent(formattedPhone)}`);
+      
+      if (checkResponse.data && checkResponse.data.success) {
+        // Phone number already exists
+        setError(`This phone number is already registered as a ${checkResponse.data.data.role}. Please use a different number or try logging in instead.`);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Phone number doesn't exist, proceed with OTP
       await api.post('/api/auth/send-otp/', { 
         phone: phoneNumber,
         purpose: 'registration'
       });
       setStep('info');
-    } catch (err) {
-      setError('Failed to send OTP. Please check your number and try again.');
+    } catch (err: any) {
+      // If the error is 404 (not found), that's good - phone doesn't exist
+      if (err.response?.status === 404) {
+        try {
+          // Phone number doesn't exist, proceed with OTP
+          await api.post('/api/auth/send-otp/', { 
+            phone: phoneNumber,
+            purpose: 'registration'
+          });
+          setStep('info');
+        } catch (otpErr) {
+          setError('Failed to send OTP. Please check your number and try again.');
+        }
+      } else {
+        setError('Failed to verify phone number. Please check your number and try again.');
+      }
     }
     setIsLoading(false);
   };
@@ -308,7 +335,7 @@ const Register = () => {
                     {isLoading ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
-                        Verifying...
+                        Checking phone number...
                       </div>
                     ) : (
                       <div className="flex items-center justify-center">

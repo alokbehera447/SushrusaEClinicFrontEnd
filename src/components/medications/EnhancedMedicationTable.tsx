@@ -369,10 +369,8 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
       updatedMedication.composition = medicationResult.composition;
       updatedMedication.dosage_form = medicationResult.dosage_form;
       
-      // Set default timing if available from medication options
-      if (medicationResult.timing_options && medicationResult.timing_options.length > 0) {
-        updatedMedication.timing = medicationResult.timing_options[0] as Medication['timing'];
-      }
+      // Keep the default timing (with_food) instead of using medication-specific timing
+      // This ensures consistent timing options across all medications
       
       newMedications[rowIndex] = updatedMedication;
       return newMedications;
@@ -399,21 +397,21 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
   }, []);
 
   const handleSave = async () => {
-    // Consider as NEW any medication without a persisted id
-    // This avoids relying on initialMedicationCountRef which can get out of sync
-    const newMedications = medications.filter(m => !(m.id && m.id > 0));
-
-    // Validate the new medications
-    const validMedications = newMedications.filter(med => 
-      med.medicine_name && med.medicine_name.trim() && 
-      (med.morning_dose > 0 || med.afternoon_dose > 0 || med.evening_dose > 0)
+    // Send all medications (both new and updated existing ones)
+    // Filter out empty medications (no medicine name)
+    const validMedications = medications.filter(med => 
+      med.medicine_name && med.medicine_name.trim()
     );
+
+    // Separate new vs existing medications for logging
+    const newMedications = validMedications.filter(m => !(m.id && m.id > 0));
+    const existingMedications = validMedications.filter(m => (m.id && m.id > 0));
 
     console.log('🔍 Save validation:', {
       totalMedications: medications.length,
-      existingCount: medications.filter(m => (m.id && m.id > 0)).length,
-      newMedications: newMedications.length,
       validMedications: validMedications.length,
+      newMedications: newMedications.length,
+      existingMedications: existingMedications.length,
       newMedicationsData: newMedications.map(m => ({
         name: m.medicine_name,
         morning: m.morning_dose,
@@ -422,15 +420,16 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
       }))
     });
 
-    if (validMedications.length === 0) {
-      toast.error('Please add at least one new medication with dosage');
-      return;
-    }
-
     setIsSaving(true);
     try {
       await onSave(validMedications);
-      toast.success(`Successfully added ${validMedications.length} medication(s)`);
+      if (newMedications.length > 0) {
+        toast.success(`Successfully added ${newMedications.length} new medication(s) and updated ${existingMedications.length} existing medication(s)`);
+      } else if (existingMedications.length > 0) {
+        toast.success(`Successfully updated ${existingMedications.length} medication(s)`);
+      } else {
+        toast.success('Medication changes saved successfully');
+      }
       onClose();
     } catch (error) {
       console.error('Error saving medications:', error);
@@ -510,10 +509,8 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
             updatedMedication.composition = newMedication.composition;
             updatedMedication.dosage_form = newMedication.dosage_form;
             
-            // Set default timing if available
-            if (newMedication.timing_options && newMedication.timing_options.length > 0) {
-              updatedMedication.timing = newMedication.timing_options[0] as Medication['timing'];
-            }
+            // Keep the default timing (with_food) instead of using medication-specific timing
+            // This ensures consistent timing options across all medications
             
             newMedications[rowIndex] = updatedMedication;
             return newMedications;
@@ -664,12 +661,6 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
                         value={medication.timing}
                         onValueChange={(value) => {
                           const selectedOption = getTimingOptions(medication).find(opt => opt.value === value);
-                          console.log('🕐 Timing changed:', { 
-                            from: medication.timing, 
-                            to: value,
-                            label: selectedOption?.label,
-                            options: getTimingOptions(medication)
-                          });
                           
                           // Update both timing value and display text
                           updateMedication(index, 'timing', value);
@@ -690,11 +681,6 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
                         </SelectContent>
                       </Select>
                       {/* Debug: Show current timing value */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <div className="text-[8px] text-gray-400 mt-1">
-                          Current: {medication.timing} | Display: {medication.timing_display_text}
-                        </div>
-                      )}
                     </TableCell>
 
                     {/* Duration */}
@@ -825,7 +811,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
                 .filter(med => (med.medicine_name && med.medicine_name.trim()) && ((med.morning_dose || 0) > 0 || (med.afternoon_dose || 0) > 0 || (med.evening_dose || 0) > 0))
                 .length;
               const total = existingCount + newCount;
-              return `Save New Medications (${total})`;
+              return `Save Medications (${total})`;
             })()}
           </Button>
         </DialogFooter>

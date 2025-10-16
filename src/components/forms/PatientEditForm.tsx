@@ -206,7 +206,7 @@ const PatientEditForm: React.FC<PatientEditFormProps> = ({
 
       // Update both user and profile
       const [updatedUser, updatedProfile] = await Promise.all([
-        adminPatientApi.updatePatientUser(patient.user, userUpdateData),
+        adminPatientApi.updatePatientUser(patient.id, userUpdateData),
         adminPatientApi.updatePatientProfile(patient.id, profileUpdateData)
       ]);
 

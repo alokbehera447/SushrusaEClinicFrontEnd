@@ -106,7 +106,7 @@ interface EditProfileForm {
   name: string;
   email: string;
   phone: string;
-  age: string;
+  date_of_birth: string;
   gender: string;
   blood_group: string;
   address: string;
@@ -204,7 +204,7 @@ const PatientDashboard = () => {
     name: '',
     email: '',
     phone: '',
-    age: '',
+    date_of_birth: '',
     gender: '',
     blood_group: '',
     address: '',
@@ -626,7 +626,7 @@ const PatientDashboard = () => {
         name: userProfile.name || '',
         email: userProfile.email || '',
         phone: userProfile.phone || '',
-        age: userProfile.age?.toString() || '',
+        date_of_birth: userProfile.date_of_birth || '',
         gender: userProfile.gender || '',
         blood_group: userProfile.blood_group || '',
         address: userProfile.street || '',
@@ -1199,12 +1199,12 @@ const PatientDashboard = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Age</label>
+                  <label className="text-sm font-medium text-gray-700">Date of Birth</label>
                   <Input
-                    type="number"
-                    value={editForm.age}
-                    onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
-                    placeholder="Enter your age"
+                    type="date"
+                    value={editForm.date_of_birth}
+                    onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
+                    placeholder="Select your date of birth"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1365,7 +1365,7 @@ const PatientDashboard = () => {
                     name: editForm.name,
                     email: editForm.email,
                     phone: editForm.phone,
-                    age: parseInt(editForm.age) || null,
+                    date_of_birth: editForm.date_of_birth || undefined,
                     gender: editForm.gender,
                     blood_group: editForm.blood_group,
                     street: editForm.address,

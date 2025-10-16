@@ -132,7 +132,7 @@ const PatientManagement: React.FC = () => {
                       <div>
                         <CardTitle className="text-2xl">{selectedPatient.user_name}</CardTitle>
                         <CardDescription>
-                          Patient ID: {selectedPatient.user} | Age: {selectedPatient.age} | {selectedPatient.gender}
+                          Patient ID: {selectedPatient.id} | Age: {selectedPatient.age} | {selectedPatient.gender}
                         </CardDescription>
                       </div>
                     </div>
@@ -170,7 +170,7 @@ const PatientManagement: React.FC = () => {
               </Card>
 
               {/* Patient Management Dashboard */}
-              <PatientManagementDashboard patientId={selectedPatient.user} />
+              <PatientManagementDashboard patientId={selectedPatient.id} />
             </div>
           ) : (
             <div className="space-y-6">

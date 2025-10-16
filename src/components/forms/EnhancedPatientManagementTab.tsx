@@ -788,7 +788,7 @@ const EnhancedPatientManagementTab: React.FC = () => {
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-600">User ID</Label>
-                        <p className="text-sm font-semibold">{selectedPatient.user}</p>
+                        <p className="text-sm font-semibold">{selectedPatient.id}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-600">Preferred Language</Label>
