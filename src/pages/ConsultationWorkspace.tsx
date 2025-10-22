@@ -100,12 +100,16 @@ interface PatientProfile {
 }
 
 interface MedicalRecord {
-  id: string;
+  id: string | number;
   title: string;
-  file_url: string;
-  file_type: string;
-  uploaded_date: string;
+  document_url: string;
+  record_type: string;
+  date_recorded: string;
   description?: string;
+  patient?: string;
+  patient_name?: string;
+  recorded_by?: string;
+  recorded_by_name?: string;
 }
 
 interface PrescriptionPDF {
@@ -1212,10 +1216,10 @@ const ConsultationWorkspace: React.FC = () => {
                               </div>
                               <div>
                                 <p className="text-[10px] font-medium text-slate-800 truncate max-w-[120px]">{record.title}</p>
-                                <p className="text-[9px] text-slate-600">{new Date(record.uploaded_date).toLocaleDateString()}</p>
+                                <p className="text-[9px] text-slate-600">{new Date(record.date_recorded).toLocaleDateString()}</p>
                               </div>
                             </div>
-                            <a href={record.file_url} target="_blank" rel="noreferrer">
+                            <a href={record.document_url} target="_blank" rel="noreferrer">
                               <Button variant="ghost" size="sm" className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors">
                                 <Eye className="w-2.5 h-2.5" />
                               </Button>

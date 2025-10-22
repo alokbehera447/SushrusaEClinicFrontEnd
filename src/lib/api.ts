@@ -386,12 +386,15 @@ export interface Medication {
 export interface MedicalRecord {
   id: number;
   patient: string;
+  patient_name?: string;
   record_type: string;
   title: string;
   description: string;
   date_recorded: string;
   document: string | null;
+  document_url?: string;
   recorded_by: string | null;
+  recorded_by_name?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
