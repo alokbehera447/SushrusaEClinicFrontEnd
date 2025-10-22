@@ -1217,12 +1217,12 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: 
                   onClick={() => slot.isAvailable ? handleInputChange('selectedSlot', slot) : null} 
                   disabled={!slot.isAvailable}
                   className={cn(
-                    "w-full rounded-md p-2 text-center text-sm font-medium transition-all duration-200 border",
+                    "w-full rounded-md p-2 text-center text-sm font-medium transition-all duration-200 border relative",
                     slot.isAvailable && formData.selectedSlot?.startTime === slot.startTime 
                       ? "bg-blue-500 text-white border-blue-500 shadow-sm" 
                       : slot.isAvailable
                       ? "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-                      : "bg-red-50 border-red-200 text-red-600 cursor-not-allowed opacity-75"
+                      : "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
                   )}
                   title={!slot.isAvailable && slot.booked_in_different_clinic 
                     ? `Already booked in ${slot.booked_in_clinic}` 
@@ -1230,10 +1230,14 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: 
                     ? 'Already booked' 
                     : ''}
                 >
-                  {slot.startTime}
-                  {!slot.isAvailable && (
-                    <div className="text-[9px] mt-0.5 font-normal">
-                      {slot.booked_in_different_clinic ? 'Booked' : 'Unavailable'}
+                  {slot.isAvailable ? (
+                    slot.startTime
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <span className="line-through text-gray-400">{slot.startTime}</span>
+                      <span className="text-[10px] text-gray-500 font-normal mt-0.5">
+                        {slot.booked_in_different_clinic ? 'Booked' : 'Unavailable'}
+                      </span>
                     </div>
                   )}
                 </button>
@@ -1251,7 +1255,7 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: 
               <span>Available</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-50 border border-red-200 rounded"></div>
+              <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
               <span>Already Booked</span>
             </div>
             <div className="flex items-center gap-1">
