@@ -121,6 +121,19 @@ class InvestigationService {
   async deleteInvestigation(id: number): Promise<void> {
     await api.delete(`${this.baseUrl}/investigations/prescription/${id}/`);
   }
+
+  // Auto-create investigation test if it doesn't exist
+  async autoCreateTest(testData: { name: string; category_id?: number }): Promise<{
+    success: boolean;
+    data: {
+      test: InvestigationTest;
+      source: 'existing' | 'newly_created';
+    };
+    message: string;
+  }> {
+    const response = await api.post(`${this.baseUrl}/investigations/auto-create/`, testData);
+    return response.data;
+  }
 }
 
 export const investigationService = new InvestigationService();

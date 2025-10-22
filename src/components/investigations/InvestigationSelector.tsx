@@ -51,6 +51,7 @@ export default function InvestigationSelector({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [isCreatingTest, setIsCreatingTest] = useState(false);
   const [investigationDetails, setInvestigationDetails] = useState<{
     [testId: number]: {
       priority: 'routine' | 'urgent' | 'emergency';
@@ -207,6 +208,49 @@ export default function InvestigationSelector({
     }
   };
 
+  const handleCreateNewTest = async () => {
+    if (!searchTerm.trim()) {
+      toast.error('Please enter a test name');
+      return;
+    }
+
+    try {
+      setIsCreatingTest(true);
+      
+      // Get the selected category ID if a specific category is selected
+      const categoryId = selectedCategory !== 'all' 
+        ? categories.find(cat => cat.name === selectedCategory)?.id 
+        : undefined;
+
+      const response = await investigationService.autoCreateTest({
+        name: searchTerm.trim(),
+        category_id: categoryId
+      });
+
+      if (response.success) {
+        const newTest = response.data.test;
+        
+        // Add the new test to our local tests array
+        setTests(prev => [...prev, newTest]);
+        
+        // Automatically select the newly created test
+        setSelectedTests(prev => new Set([...prev, newTest.id]));
+        
+        toast.success(`Test "${newTest.name}" created successfully!`);
+        
+        // Clear the search term
+        setSearchTerm('');
+      } else {
+        toast.error('Failed to create test');
+      }
+    } catch (error) {
+      console.error('Error creating test:', error);
+      toast.error('Failed to create test');
+    } finally {
+      setIsCreatingTest(false);
+    }
+  };
+
   const getPriorityIcon = (priority: 'routine' | 'urgent' | 'emergency') => {
     const IconComponent = priorityIcons[priority];
     return <IconComponent className="w-4 h-4" />;
@@ -284,7 +328,38 @@ export default function InvestigationSelector({
             <div className="max-h-80 overflow-y-auto border rounded-lg p-3 bg-white">
               {filteredTests.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 text-sm">
-                  {loading ? 'Loading tests...' : 'No tests found matching your criteria'}
+                  {loading ? (
+                    'Loading tests...'
+                  ) : searchTerm.trim() ? (
+                    <div className="space-y-3">
+                      <div className="w-8 h-8 mx-auto mb-2 bg-slate-100 rounded-full flex items-center justify-center">
+                        <Search className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <p className="text-xs text-slate-600 mb-1">No tests found for</p>
+                      <p className="text-sm font-medium text-slate-800 mb-2">"{searchTerm}"</p>
+                      <Button 
+                        onClick={handleCreateNewTest}
+                        disabled={isCreatingTest}
+                        variant="outline" 
+                        size="sm"
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50 hover:text-blue-700 text-xs"
+                      >
+                        {isCreatingTest ? (
+                          <>
+                            <div className="w-3 h-3 mr-1 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add to Database
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    'No tests found matching your criteria'
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
