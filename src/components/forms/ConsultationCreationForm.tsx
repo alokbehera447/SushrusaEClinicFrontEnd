@@ -31,6 +31,9 @@ interface DoctorSlotFrontend {
   created_at: string;
   updated_at: string;
   type: 'available' | 'booked';
+  booked_in_clinic?: string;
+  booked_clinic_id?: string;
+  booked_in_different_clinic?: boolean;
 }
 
 // --- Reusable UI Components (defined within this file for simplicity) ---
@@ -405,7 +408,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       
       const frontendSlots: DoctorSlotFrontend[] = result.slots.map((slot: any) => ({
         id: -1, // Temporary ID for calculated slots
-        doctor: Number(selectedDoctor.user),
+        doctor: selectedDoctor.user.toString(),
         date: formattedDate,
         startTime: slot.start_time,
         endTime: slot.end_time,
@@ -413,6 +416,9 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         type: slot.is_available ? 'available' : 'booked',
+        booked_in_clinic: slot.booked_in_clinic,
+        booked_clinic_id: slot.booked_clinic_id,
+        booked_in_different_clinic: slot.booked_in_different_clinic,
       }));
       
       setDoctorSlots(frontendSlots);
@@ -1201,24 +1207,59 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: 
             <span className="text-sm">Loading available slots...</span>
           </div>
         </div>
-      ) : doctorSlots.filter((slot: DoctorSlotFrontend) => slot.isAvailable).length > 0 ? (
-        <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
-          {doctorSlots.filter((slot: DoctorSlotFrontend) => slot.isAvailable).map((slot: DoctorSlotFrontend, index: number) => (
-            <button 
-              type="button" 
-              key={index} 
-              onClick={() => handleInputChange('selectedSlot', slot)} 
-              className={cn(
-                "rounded-md p-2 text-center text-sm font-medium transition-all duration-200 border",
-                formData.selectedSlot?.startTime === slot.startTime 
-                  ? "bg-blue-500 text-white border-blue-500 shadow-sm" 
-                  : "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-              )}
-            >
-              {slot.startTime}
-            </button>
-          ))}
-        </div>
+      ) : doctorSlots.length > 0 ? (
+        <>
+          <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+            {doctorSlots.map((slot: DoctorSlotFrontend, index: number) => (
+              <div key={index} className="relative group">
+                <button 
+                  type="button" 
+                  onClick={() => slot.isAvailable ? handleInputChange('selectedSlot', slot) : null} 
+                  disabled={!slot.isAvailable}
+                  className={cn(
+                    "w-full rounded-md p-2 text-center text-sm font-medium transition-all duration-200 border",
+                    slot.isAvailable && formData.selectedSlot?.startTime === slot.startTime 
+                      ? "bg-blue-500 text-white border-blue-500 shadow-sm" 
+                      : slot.isAvailable
+                      ? "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                      : "bg-red-50 border-red-200 text-red-600 cursor-not-allowed opacity-75"
+                  )}
+                  title={!slot.isAvailable && slot.booked_in_different_clinic 
+                    ? `Already booked in ${slot.booked_in_clinic}` 
+                    : !slot.isAvailable 
+                    ? 'Already booked' 
+                    : ''}
+                >
+                  {slot.startTime}
+                  {!slot.isAvailable && (
+                    <div className="text-[9px] mt-0.5 font-normal">
+                      {slot.booked_in_different_clinic ? 'Booked' : 'Unavailable'}
+                    </div>
+                  )}
+                </button>
+                {!slot.isAvailable && slot.booked_in_clinic && (
+                  <div className="hidden group-hover:block absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap">
+                    Already booked in {slot.booked_in_clinic}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-4 text-xs text-gray-600 mt-2">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-white border border-gray-200 rounded"></div>
+              <span>Available</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-red-50 border border-red-200 rounded"></div>
+              <span>Already Booked</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500 rounded"></div>
+              <span>Selected</span>
+            </div>
+          </div>
+        </>
       ) : formData.consultationDate ? (
         <div className="flex flex-col items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
           <Clock className="w-6 h-6 mb-2"/>
