@@ -217,6 +217,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
   const [selectedClinic, setSelectedClinic] = useState<EClinic | null>(null);
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
   const [patientSearch, setPatientSearch] = useState('');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [patientOptions, setPatientOptions] = useState<PatientProfile[]>([]);
@@ -646,7 +647,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       <div key={currentStep} className="animate-in fade-in-50 slide-in-from-bottom-5 duration-500">
         {currentStep === 1 && renderStep1(stepProps)}
         {currentStep === 2 && renderStep2(stepProps)}
-        {currentStep === 3 && renderStep3(stepProps)}
+        {currentStep === 3 && renderStep3({ ...stepProps, isDatePopoverOpen, setIsDatePopoverOpen })}
         {currentStep === 4 && renderStep4(stepProps)}
       </div>
     );
@@ -1159,12 +1160,12 @@ const renderStep2 = ({ doctorSearch, setDoctorSearch, doctorOptions, handleDocto
   </div>
 );
 
-const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: any) => (
+const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading, isDatePopoverOpen, setIsDatePopoverOpen }: any) => (
   <div className="space-y-6">
     {/* Date Selection */}
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
-      <Popover>
+      <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
@@ -1181,7 +1182,7 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading }: 
           <Calendar 
             mode="single" 
             selected={formData.consultationDate} 
-            onSelect={(d: any) => handleInputChange('consultationDate', d)} 
+            onSelect={(d: any) => { handleInputChange('consultationDate', d); setIsDatePopoverOpen(false); }} 
             disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
             initialFocus 
           />
