@@ -82,6 +82,48 @@ class InvestigationService {
     return response.data.data;
   }
 
+  // Get tests with pagination and filters
+  async getTestsPaginated(params: {
+    search?: string;
+    category_id?: number | string;
+    is_active?: boolean;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ results: InvestigationTest[]; count: number } > {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.category_id !== undefined && params.category_id !== null && params.category_id !== '') query.set('category_id', String(params.category_id));
+    if (typeof params.is_active === 'boolean') query.set('is_active', String(params.is_active));
+    if (params.page) query.set('page', String(params.page));
+    if (params.page_size) query.set('page_size', String(params.page_size));
+    const url = `${this.baseUrl}/investigations/tests/?${query.toString()}`;
+    const response = await api.get(url);
+    if (response.data && typeof response.data.count === 'number' && Array.isArray(response.data.results)) {
+      return { results: response.data.results, count: response.data.count };
+    }
+    // Fallback to non-paginated
+    const list: InvestigationTest[] = response.data.data || response.data || [];
+    return { results: list, count: list.length };
+  }
+
+  // Create a new investigation test
+  async createTest(data: { name: string; category_id?: number }): Promise<InvestigationTest> {
+    const response = await api.post(`${this.baseUrl}/investigations/auto-create/`, data);
+    // API returns { success, data: { test, source }, ... }
+    return response.data?.data?.test || response.data?.test || response.data;
+  }
+
+  // Update an investigation test
+  async updateTest(id: number, data: Partial<InvestigationTest>): Promise<InvestigationTest> {
+    const response = await api.patch(`${this.baseUrl}/investigations/tests/${id}/`, data);
+    return response.data?.data || response.data;
+  }
+
+  // Delete an investigation test
+  async deleteTest(id: number): Promise<void> {
+    await api.delete(`${this.baseUrl}/investigations/tests/${id}/`);
+  }
+
   // Get investigations for a specific prescription
   async getPrescriptionInvestigations(prescriptionId: number): Promise<PrescriptionInvestigation[]> {
     const response = await api.get(`${this.baseUrl}/investigations/prescription/?prescription_id=${prescriptionId}`);

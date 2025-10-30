@@ -39,6 +39,7 @@ import {
   AlertCircle,
   CheckCircle,
   Plus,
+  Minus,
   Edit,
   ChevronLeft,
   X,
@@ -197,6 +198,73 @@ const ConsultationWorkspace: React.FC = () => {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPrescription, setSelectedPrescription] = useState<ExistingPrescription | null>(null);
   const [selectedPdfVersion, setSelectedPdfVersion] = useState<PrescriptionPDF | null>(null);
+
+  // Medical Record Preview Modal states
+  const [showRecordPreview, setShowRecordPreview] = useState(false);
+  const [selectedRecordUrl, setSelectedRecordUrl] = useState<string | null>(null);
+  const [selectedRecordTitle, setSelectedRecordTitle] = useState<string>("");
+  const [recordPreviewFullscreen, setRecordPreviewFullscreen] = useState<boolean>(true);
+  const [imageZoom, setImageZoom] = useState<number>(1);
+  const [imageRotation, setImageRotation] = useState<number>(0);
+  const [recordPdfBlobUrl, setRecordPdfBlobUrl] = useState<string | null>(null);
+  const [recordPdfLoading, setRecordPdfLoading] = useState<boolean>(false);
+  const [recordPdfError, setRecordPdfError] = useState<string | null>(null);
+
+  const openPdfInSystemPrintViewer = (url: string) => {
+    try {
+      const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+      if (!printWindow) return;
+      const escapedUrl = url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html><html><head><title>Print PDF</title><style>html,body{height:100%;margin:0;} iframe{border:0;width:100%;height:100%;}</style></head><body><iframe id="pdfFrame" src="${escapedUrl}"></iframe><script>\n(function(){\n  function trigger(){\n    try{window.focus(); setTimeout(function(){ window.print(); }, 300); }catch(e){}\n  }\n  const f = document.getElementById('pdfFrame');\n  if (f) { f.onload = trigger; } else { trigger(); }\n})();\n<\/script></body></html>`);
+      printWindow.document.close();
+    } catch (e) {
+      console.error('Failed to open print viewer', e);
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  useEffect(() => {
+    // Reset transforms whenever a new record is opened
+    if (showRecordPreview) {
+      setImageZoom(1);
+      setImageRotation(0);
+    }
+  }, [selectedRecordUrl, showRecordPreview]);
+
+  // Fetch PDF as blob to avoid browser auto-download when server forces attachment
+  useEffect(() => {
+    let revokeUrl: string | null = null;
+    const isPdf = !!selectedRecordUrl && /\.pdf(\?|$)/i.test(selectedRecordUrl);
+    if (showRecordPreview && isPdf && selectedRecordUrl) {
+      setRecordPdfLoading(true);
+      setRecordPdfError(null);
+      setRecordPdfBlobUrl(null);
+      fetch(selectedRecordUrl, { mode: 'cors' })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const blob = await res.blob();
+          const type = blob.type || 'application/pdf';
+          const pdfBlob = blob.type ? blob : new Blob([blob], { type });
+          const url = URL.createObjectURL(pdfBlob);
+          setRecordPdfBlobUrl(url);
+          revokeUrl = url;
+        })
+        .catch((err) => {
+          console.error('PDF fetch failed:', err);
+          setRecordPdfError('Unable to preview PDF due to browser or server restrictions.');
+        })
+        .finally(() => setRecordPdfLoading(false));
+    }
+    return () => {
+      if (revokeUrl) {
+        URL.revokeObjectURL(revokeUrl);
+      }
+      setRecordPdfBlobUrl(null);
+      setRecordPdfLoading(false);
+      setRecordPdfError(null);
+    };
+  }, [showRecordPreview, selectedRecordUrl]);
 
   // Data states
   const [consultation, setConsultation] = useState<Consultation | null>(null);
@@ -1219,11 +1287,20 @@ const ConsultationWorkspace: React.FC = () => {
                                 <p className="text-[9px] text-slate-600">{new Date(record.date_recorded).toLocaleDateString()}</p>
                               </div>
                             </div>
-                            <a href={record.document_url} target="_blank" rel="noreferrer">
-                              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors">
-                                <Eye className="w-2.5 h-2.5" />
-                              </Button>
-                            </a>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors"
+                              onClick={() => {
+                                setSelectedRecordUrl(record.document_url);
+                                setSelectedRecordTitle(record.title || 'Medical Record');
+                                setRecordPreviewFullscreen(true);
+                                setShowRecordPreview(true);
+                              }}
+                              title="Preview"
+                            >
+                              <Eye className="w-2.5 h-2.5" />
+                            </Button>
                           </div>
                         ))}
                         {medicalRecords.length > 3 && (
@@ -1803,7 +1880,6 @@ const ConsultationWorkspace: React.FC = () => {
                     src={`${selectedPdfVersion.file_url}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
                     className="w-full h-full min-h-[500px]"
                     title={`Prescription PDF Version ${selectedPdfVersion.version}`}
-                    type="application/pdf"
                     onError={(e) => {
                       console.log('Iframe failed to load PDF, showing fallback');
                     }}
@@ -1858,6 +1934,148 @@ const ConsultationWorkspace: React.FC = () => {
                 </Button>
               </div>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Medical Record Viewer Modal */}
+      <Dialog open={showRecordPreview} onOpenChange={setShowRecordPreview}>
+        <DialogContent className={`${recordPreviewFullscreen ? 'w-[96vw] max-w-[96vw] h-[92vh]' : 'max-w-4xl max-h-[90vh]'} overflow-hidden`}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2 truncate">
+                <FileText className="w-5 h-5 text-emerald-600" />
+                <span className="truncate" title={selectedRecordTitle}>{selectedRecordTitle || 'Medical Record'}</span>
+              </span>
+              <div className="flex items-center gap-2">
+                {/* Image controls (only show for non-PDFs) */}
+                {selectedRecordUrl && !/\.pdf(\?|$)/i.test(selectedRecordUrl) && (
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 w-7 p-0"
+                      onClick={() => setImageRotation((r) => (r + 90) % 360)}
+                      title="Rotate"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 w-7 p-0"
+                      onClick={() => setImageZoom((z) => Math.max(0.25, Number((z - 0.25).toFixed(2))))}
+                      title="Zoom Out"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 w-7 p-0"
+                      onClick={() => setImageZoom((z) => Math.min(4, Number((z + 0.25).toFixed(2))))}
+                      title="Zoom In"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 px-2 text-xs"
+                      onClick={() => { setImageZoom(1); setImageRotation(0); }}
+                      title="Reset"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                )}
+                {selectedRecordUrl && /\.pdf(\?|$)/i.test(selectedRecordUrl) && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 px-2 text-xs"
+                    onClick={() => openPdfInSystemPrintViewer(recordPdfBlobUrl || selectedRecordUrl)}
+                    title="Print PDF"
+                  >
+                    Print
+                  </Button>
+                )}
+                {selectedRecordUrl && (
+                  <a href={selectedRecordUrl} target="_blank" rel="noreferrer">
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                      Open
+                    </Button>
+                  </a>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-7 w-7 p-0"
+                  onClick={() => setRecordPreviewFullscreen(!recordPreviewFullscreen)}
+                  title={recordPreviewFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                >
+                  {recordPreviewFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
+            </DialogTitle>
+            <DialogDescription>
+              Preview the medical record. Supports PDF and images.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 border border-slate-200 rounded-lg overflow-hidden bg-white">
+            {selectedRecordUrl ? (
+              <div className="w-full h-[70vh] md:h-[75vh]">
+                {/* Heuristic: if URL ends with .pdf treat as PDF */}
+                {/\.pdf(\?|$)/i.test(selectedRecordUrl) ? (
+                  <div className="w-full h-full">
+                    {recordPdfLoading && (
+                      <div className="w-full h-full flex items-center justify-center text-slate-600 text-sm">Loading PDF…</div>
+                    )}
+                    {!recordPdfLoading && recordPdfBlobUrl && (
+                      <iframe
+                        src={`${recordPdfBlobUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
+                        className="w-full h-full"
+                        title="Medical Record PDF"
+                      />
+                    )}
+                    {!recordPdfLoading && !recordPdfBlobUrl && (
+                      <div className="w-full h-full flex items-center justify-center p-4 text-center">
+                        <div>
+                          <p className="text-slate-600 text-sm mb-3">{recordPdfError || 'PDF preview is unavailable.'}</p>
+                          <a href={selectedRecordUrl} target="_blank" rel="noreferrer">
+                            <Button variant="outline" size="sm">Open PDF in new tab</Button>
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-full h-full overflow-auto bg-slate-50">
+                    <div className="w-full h-full flex items-center justify-center p-4">
+                      <img 
+                        src={selectedRecordUrl} 
+                        alt={selectedRecordTitle}
+                        className="max-w-none object-contain"
+                        style={{ transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`, transformOrigin: 'center center' }}
+                        onError={(e) => {
+                          const container = (e.target as HTMLImageElement).parentElement;
+                          if (container) {
+                            container.innerHTML = `<iframe src='${selectedRecordUrl}' class='w-full h-[70vh] md:h-[75vh]'></iframe>`;
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-slate-500 text-sm">No record selected</p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

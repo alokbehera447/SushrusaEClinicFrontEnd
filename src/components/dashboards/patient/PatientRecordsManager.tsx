@@ -543,13 +543,13 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="lab_report">Lab Report</SelectItem>
               <SelectItem value="prescription">Prescription</SelectItem>
-              <SelectItem value="xray">X-Ray</SelectItem>
+              {/* <SelectItem value="xray">X-Ray</SelectItem>
               <SelectItem value="mri">MRI</SelectItem>
               <SelectItem value="blood_test">Blood Test</SelectItem>
               <SelectItem value="vaccination">Vaccination</SelectItem>
               <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
               <SelectItem value="insurance">Insurance</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
+              <SelectItem value="other">Other</SelectItem> */}
             </SelectContent>
           </Select>
         </div>
@@ -954,12 +954,12 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                   <SelectContent>
                     <SelectItem value="lab_report">Lab Report</SelectItem>
                     <SelectItem value="prescription">Prescription</SelectItem>
-                    <SelectItem value="xray">X-Ray</SelectItem>
+                    {/* <SelectItem value="xray">X-Ray</SelectItem>
                     <SelectItem value="mri">MRI</SelectItem>
                     <SelectItem value="blood_test">Blood Test</SelectItem>
                     <SelectItem value="vaccination">Vaccination</SelectItem>
                     <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="other">Other</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
@@ -1068,12 +1068,12 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                   <SelectContent>
                     <SelectItem value="prescription">Prescription</SelectItem>
                     <SelectItem value="lab_report">Lab Report</SelectItem>
-                    <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
+                    {/* <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
                     <SelectItem value="insurance">Insurance Document</SelectItem>
-                    <SelectItem value="vaccination">Vaccination Record</SelectItem>
-                    <SelectItem value="xray">X-Ray</SelectItem>
+                    <SelectItem value="vaccination">Vaccination Record</SelectItem> */}
+                    {/* <SelectItem value="xray">X-Ray</SelectItem>
                     <SelectItem value="mri">MRI</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="other">Other</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
@@ -1373,12 +1373,12 @@ const PatientRecordsManager: React.FC<PatientRecordsManagerProps> = ({ patientId
                         <SelectContent>
                           <SelectItem value="lab_report">Lab Report</SelectItem>
                           <SelectItem value="prescription">Prescription</SelectItem>
-                          <SelectItem value="xray">X-Ray</SelectItem>
-                          <SelectItem value="mri">MRI</SelectItem>
-                          <SelectItem value="blood_test">Blood Test</SelectItem>
+                          {/* <SelectItem value="xray">X-Ray</SelectItem>
+                          <SelectItem value="mri">MRI</SelectItem> */}
+                          {/* <SelectItem value="blood_test">Blood Test</SelectItem>
                           <SelectItem value="vaccination">Vaccination</SelectItem>
                           <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                          <SelectItem value="other">Other</SelectItem> */}
                         </SelectContent>
                       </Select>
                     </div>

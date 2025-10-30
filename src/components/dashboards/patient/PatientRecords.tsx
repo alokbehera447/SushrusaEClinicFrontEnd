@@ -389,11 +389,11 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="lab_report">Lab Report</SelectItem>
               <SelectItem value="prescription">Prescription</SelectItem>
-              <SelectItem value="xray">X-Ray</SelectItem>
+              {/* <SelectItem value="xray">X-Ray</SelectItem>
               <SelectItem value="mri">MRI</SelectItem>
               <SelectItem value="blood_test">Blood Test</SelectItem>
               <SelectItem value="vaccination">Vaccination</SelectItem>
-              <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
+              <SelectItem value="medical_certificate">Medical Certificate</SelectItem> */}
             </SelectContent>
           </Select>
         </div>
@@ -717,12 +717,12 @@ const PatientRecords: React.FC<PatientRecordsProps> = ({
                   <SelectContent>
                     <SelectItem value="lab_report">Lab Report</SelectItem>
                     <SelectItem value="prescription">Prescription</SelectItem>
-                    <SelectItem value="xray">X-Ray</SelectItem>
+                    {/* <SelectItem value="xray">X-Ray</SelectItem>
                     <SelectItem value="mri">MRI</SelectItem>
                     <SelectItem value="blood_test">Blood Test</SelectItem>
                     <SelectItem value="vaccination">Vaccination</SelectItem>
                     <SelectItem value="medical_certificate">Medical Certificate</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="other">Other</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
