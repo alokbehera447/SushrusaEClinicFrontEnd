@@ -21,6 +21,7 @@ import {
   Calendar,
   FileText
 } from 'lucide-react';
+import { paymentApi } from '@/lib/api';
 
 const PaymentProcessing = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
@@ -46,6 +47,14 @@ const PaymentProcessing = () => {
   };
 
   const paymentMethods = [
+    {
+      id: 'phonepe',
+      name: 'PhonePe',
+      icon: Smartphone,
+      description: 'Pay securely with PhonePe UPI, Cards, or Wallet',
+      color: 'text-[#5F259F]',
+      bgColor: 'bg-purple-50'
+    },
     {
       id: 'upi',
       name: 'UPI Payment',
@@ -118,12 +127,46 @@ const PaymentProcessing = () => {
     }
   ];
 
-  const processPayment = () => {
+  const processPayment = async () => {
     setPaymentStatus('processing');
-    // Simulate payment processing
-    setTimeout(() => {
-      setPaymentStatus('completed');
-    }, 3000);
+    
+    try {
+      // For PhonePe, we need to create a payment and then process it
+      if (selectedPaymentMethod === 'phonepe') {
+        // Create payment record first (this would typically come from consultation/appointment)
+        // For now, using mock data - in real implementation, get this from props or context
+        const paymentData = {
+          amount: appointmentData.totalAmount,
+          payment_type: 'consultation',
+          description: `Payment for consultation - ${appointmentData.doctor}`,
+          payment_method: 'upi'
+        };
+        
+        // Create payment
+        const createResponse = await paymentApi.createPayment(paymentData);
+        const paymentId = createResponse.data?.id || createResponse.id;
+        
+        // Process payment with PhonePe gateway
+        const processResponse = await paymentApi.processPayment(paymentId, 'phonepe');
+        
+        if (processResponse.success && processResponse.payment_url) {
+          // Redirect to PhonePe payment page
+          window.location.href = processResponse.payment_url;
+        } else {
+          setPaymentStatus('failed');
+          alert('Failed to initiate PhonePe payment. Please try again.');
+        }
+      } else {
+        // For other payment methods, simulate processing
+        setTimeout(() => {
+          setPaymentStatus('completed');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      setPaymentStatus('failed');
+      alert('Payment processing failed. Please try again.');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -252,6 +295,18 @@ const PaymentProcessing = () => {
                   <CardTitle className="text-xl font-bold text-midnight">Payment Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {selectedPaymentMethod === 'phonepe' && (
+                    <div className="text-center space-y-4">
+                      <div className="w-48 h-48 bg-purple-50 rounded-xl mx-auto flex items-center justify-center border-2 border-purple-200">
+                        <Smartphone className="w-32 h-32 text-[#5F259F]" />
+                      </div>
+                      <p className="text-sm text-gray-600">You will be redirected to PhonePe for secure payment</p>
+                      <div className="text-xs text-gray-500">
+                        Amount: ₹{appointmentData.totalAmount}
+                      </div>
+                    </div>
+                  )}
+
                   {selectedPaymentMethod === 'upi' && (
                     <div className="text-center space-y-4">
                       <div className="w-48 h-48 bg-gray-100 rounded-xl mx-auto flex items-center justify-center">

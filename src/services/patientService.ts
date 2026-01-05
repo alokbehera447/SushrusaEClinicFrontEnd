@@ -173,6 +173,15 @@ export const patientService = {
     return response.data;
   },
 
+  async createMedicalRecordsBulk(patientId: string, data: FormData): Promise<ApiResponse<MedicalRecord[]>> {
+    const response = await api.post(`/api/patients/${patientId}/medical-records/bulk/`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   async updateMedicalRecord(patientId: string, recordId: number, data: Partial<MedicalRecord>): Promise<ApiResponse<MedicalRecord>> {
     const response = await api.patch(`/api/patients/${patientId}/medical-records/${recordId}/`, data);
     return response.data;

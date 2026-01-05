@@ -155,6 +155,7 @@ const PaymentProcessingForm = () => {
   };
 
   const paymentMethods = [
+    { id: 'phonepe', name: 'PhonePe', icon: Smartphone, color: 'text-[#5F259F]' },
     { id: 'cash', name: 'Cash', icon: Banknote, color: 'text-green-600' },
     { id: 'card', name: 'Credit/Debit Card', icon: CreditCard, color: 'text-blue-600' },
     { id: 'upi', name: 'UPI', icon: Smartphone, color: 'text-purple-600' }

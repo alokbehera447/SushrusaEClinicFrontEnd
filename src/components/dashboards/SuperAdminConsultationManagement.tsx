@@ -1025,6 +1025,23 @@ const SuperAdminConsultationManagement: React.FC = () => {
                       <span>₹{selectedConsultation.consultation_fee || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between text-xs">
+                      <span className="font-medium">eClinic:</span>
+                      {selectedConsultation.clinic_name && selectedConsultation.clinic_name !== 'N/A' && selectedConsultation.clinic_id ? (
+                        <button
+                          onClick={() => {
+                            // Open clinic details in a new window/tab
+                            window.open(`/superadmin/eclinics/${selectedConsultation.clinic_id}`, '_blank');
+                          }}
+                          className="text-[#E17726] hover:text-[#C16620] underline flex items-center gap-1"
+                        >
+                          {selectedConsultation.clinic_name}
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <span className="text-gray-500">N/A</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between text-xs">
                       <span className="font-medium">Date:</span>
                       <span>{formatDate(selectedConsultation.scheduled_date)}</span>
                     </div>

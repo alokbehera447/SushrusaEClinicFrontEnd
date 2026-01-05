@@ -3339,12 +3339,40 @@ export const getStatusColor = (status: string): string => {
 }; 
 
 export const paymentApi = {
+  // Create a payment record
+  createPayment: async (paymentData: {
+    consultation_id?: string;
+    patient_id?: string;
+    doctor_id?: string;
+    amount: number;
+    payment_type?: string;
+    description?: string;
+    payment_method?: string;
+  }) => {
+    const response = await api.post('/api/payments/', paymentData);
+    return response.data;
+  },
+  
+  // Process payment with a specific gateway
+  processPayment: async (paymentId: string, gateway: 'stripe' | 'razorpay' | 'payu' | 'phonepe', data?: {
+    payment_token?: string;
+    return_url?: string;
+    cancel_url?: string;
+  }) => {
+    const response = await api.post(`/api/payments/${paymentId}/process/`, {
+      gateway,
+      ...data
+    });
+    return response.data;
+  },
+  
   // Initiate a payment for a consultation
   initiatePayment: async ({ consultation_id, amount }: { consultation_id: string; amount: number | string }) => {
     // Placeholder endpoint, update as per backend
     const response = await api.post('/api/payments/initiate/', { consultation_id, amount });
     return response.data;
   },
+  
   // Get payment status for a consultation
   getPaymentStatus: async ({ consultation_id }: { consultation_id: string }) => {
     // Placeholder endpoint, update as per backend

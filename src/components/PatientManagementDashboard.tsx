@@ -103,10 +103,20 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
   const [medicalRecordForm, setMedicalRecordForm] = useState({
     record_type: 'lab_report' as 'lab_report' | 'prescription' | 'diagnosis' | 'vaccination' | 'surgery' | 'allergy' | 'other',
     title: '',
-    description: '',
     date_recorded: new Date().toISOString().split('T')[0],
-    document: null as File | null
+    documents: [] as File[]
   });
+
+  // Queue for batch medical record uploads
+  interface QueuedRecord {
+    id: string;
+    record_type: 'lab_report' | 'prescription' | 'diagnosis' | 'vaccination' | 'surgery' | 'allergy' | 'other';
+    title: string;
+    date_recorded: string;
+    files: File[];
+  }
+  const [recordQueue, setRecordQueue] = useState<QueuedRecord[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [documentForm, setDocumentForm] = useState({
     document_type: 'medical_report' as 'id_proof' | 'address_proof' | 'insurance_card' | 'medical_report' | 'prescription' | 'lab_report' | 'other',
@@ -432,14 +442,11 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
   const handleMedicalRecordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const formData = patientService.createFormData(medicalRecordForm);
-      
       if (editingRecord) {
         // Update existing record
         const updateData = {
           record_type: medicalRecordForm.record_type,
           title: medicalRecordForm.title,
-          description: medicalRecordForm.description,
           date_recorded: medicalRecordForm.date_recorded
         };
         await patientService.updateMedicalRecord(patientId, editingRecord.id, updateData);
@@ -447,31 +454,154 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
           title: "Success",
           description: "Medical record updated successfully",
         });
-      } else {
-        // Create new record
-        await patientService.createMedicalRecord(patientId, formData);
-        toast({
-          title: "Success",
-          description: "Medical record created successfully",
+        setShowMedicalRecordDialog(false);
+        setEditingRecord(null);
+        setMedicalRecordForm({
+          record_type: 'lab_report',
+          title: '',
+          date_recorded: new Date().toISOString().split('T')[0],
+          documents: []
         });
+        loadPatientData();
+      } else {
+        // Add to queue instead of submitting directly
+        if (medicalRecordForm.title && medicalRecordForm.documents.length > 0) {
+          const newQueueItem: QueuedRecord = {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            record_type: medicalRecordForm.record_type,
+            title: medicalRecordForm.title,
+            date_recorded: medicalRecordForm.date_recorded,
+            files: medicalRecordForm.documents
+          };
+          setRecordQueue(prev => [...prev, newQueueItem]);
+          
+          // Reset form for next entry but keep dialog open
+          setMedicalRecordForm({
+            record_type: 'lab_report',
+            title: '',
+            date_recorded: new Date().toISOString().split('T')[0],
+            documents: []
+          });
+          
+          toast({
+            title: "Added to Queue",
+            description: `"${newQueueItem.title}" added. You can add more records or click "Upload All" to submit.`,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Please provide a title and select at least one file",
+            variant: "destructive",
+          });
+        }
       }
-      
-      setShowMedicalRecordDialog(false);
-      setEditingRecord(null);
-      setMedicalRecordForm({
-        record_type: 'lab_report',
-        title: '',
-        description: '',
-        date_recorded: new Date().toISOString().split('T')[0],
-        document: null
-      });
-      loadPatientData();
     } catch (error) {
       console.error('Error saving medical record:', error);
       toast({
         title: "Error",
-        description: editingRecord ? "Failed to update medical record" : "Failed to create medical record",
+        description: editingRecord ? "Failed to update medical record" : "Failed to add record to queue",
         variant: "destructive",
+      });
+    }
+  };
+
+  // Remove item from queue
+  const handleRemoveFromQueue = (id: string) => {
+    setRecordQueue(prev => prev.filter(item => item.id !== id));
+  };
+
+  // Upload all queued records
+  const handleUploadAllRecords = async () => {
+    if (recordQueue.length === 0) {
+      toast({
+        title: "Error",
+        description: "No records in queue to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      for (const record of recordQueue) {
+        try {
+          const formData = new FormData();
+          formData.append('record_type', record.record_type);
+          formData.append('title', record.title);
+          formData.append('date_recorded', record.date_recorded);
+          
+          record.files.forEach((file) => {
+            formData.append('documents', file);
+          });
+          
+          await patientService.createMedicalRecordsBulk(patientId, formData);
+          successCount++;
+        } catch (error) {
+          console.error(`Error uploading record "${record.title}":`, error);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Success",
+          description: `${successCount} record(s) uploaded successfully${failCount > 0 ? `, ${failCount} failed` : ''}`,
+        });
+      }
+
+      if (failCount > 0 && successCount === 0) {
+        toast({
+          title: "Error",
+          description: `Failed to upload ${failCount} record(s)`,
+          variant: "destructive",
+        });
+      }
+
+      // Clear queue and close dialog
+      setRecordQueue([]);
+      setShowMedicalRecordDialog(false);
+      setMedicalRecordForm({
+        record_type: 'lab_report',
+        title: '',
+        date_recorded: new Date().toISOString().split('T')[0],
+        documents: []
+      });
+      loadPatientData();
+    } catch (error) {
+      console.error('Error uploading records:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload records",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Close dialog and clear queue
+  const handleCloseRecordDialog = () => {
+    if (recordQueue.length > 0) {
+      if (window.confirm('You have records in the queue. Are you sure you want to close without uploading?')) {
+        setRecordQueue([]);
+        setShowMedicalRecordDialog(false);
+        setMedicalRecordForm({
+          record_type: 'lab_report',
+          title: '',
+          date_recorded: new Date().toISOString().split('T')[0],
+          documents: []
+        });
+      }
+    } else {
+      setShowMedicalRecordDialog(false);
+      setMedicalRecordForm({
+        record_type: 'lab_report',
+        title: '',
+        date_recorded: new Date().toISOString().split('T')[0],
+        documents: []
       });
     }
   };
@@ -481,9 +611,8 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
     setMedicalRecordForm({
       record_type: record.record_type,
       title: record.title,
-      description: record.description,
       date_recorded: record.date_recorded,
-      document: null
+      documents: []
     });
     setShowMedicalRecordDialog(true);
   };
@@ -658,9 +787,9 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setMedicalRecordForm(prev => ({ ...prev, document: file }));
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setMedicalRecordForm(prev => ({ ...prev, documents: Array.from(files) }));
     }
   };
 
@@ -820,40 +949,112 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
         <TabsContent value="medical-records" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Medical Records ({totalRecords})</h3>
-            <Dialog open={showMedicalRecordDialog} onOpenChange={setShowMedicalRecordDialog}>
+            <Dialog open={showMedicalRecordDialog} onOpenChange={(open) => {
+              if (!open) {
+                handleCloseRecordDialog();
+              } else {
+                setShowMedicalRecordDialog(true);
+              }
+            }}>
               <DialogTrigger asChild>
-                <Button onClick={() => setEditingRecord(null)}>
+                <Button onClick={() => {
+                  setEditingRecord(null);
+                  setRecordQueue([]);
+                }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Record
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingRecord ? 'Edit Medical Record' : 'Add Medical Record'}</DialogTitle>
+                  <DialogTitle>{editingRecord ? 'Edit Medical Record' : 'Add Medical Records'}</DialogTitle>
                   <DialogDescription>
-                    {editingRecord ? 'Update the medical record details.' : 'Create a new medical record for this patient.'}
+                    {editingRecord 
+                      ? 'Update the medical record details.' 
+                      : 'Add multiple medical records. Fill in the details, add to queue, then upload all at once.'}
                   </DialogDescription>
                 </DialogHeader>
+                
+                {/* Queue Display */}
+                {!editingRecord && recordQueue.length > 0 && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-blue-800">Records Queue ({recordQueue.length})</h4>
+                      <Button 
+                        onClick={handleUploadAllRecords} 
+                        disabled={isUploading}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        size="sm"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Upload All ({recordQueue.length})
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {recordQueue.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                          <div className="flex items-center gap-2">
+                            <Badge className={getRecordTypeColor(item.record_type)}>
+                              {item.record_type.replace('_', ' ')}
+                            </Badge>
+                            <span className="font-medium text-sm">{item.title}</span>
+                            <span className="text-xs text-gray-500">({item.files.length} file{item.files.length > 1 ? 's' : ''})</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleRemoveFromQueue(item.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleMedicalRecordSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="record_type">Record Type</Label>
-                    <Select 
-                      value={medicalRecordForm.record_type} 
-                      onValueChange={(value) => setMedicalRecordForm(prev => ({ ...prev, record_type: value as 'lab_report' | 'prescription' | 'diagnosis' | 'vaccination' | 'surgery' | 'allergy' | 'other' }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lab_report">Lab Report</SelectItem>
-                        <SelectItem value="prescription">Prescription</SelectItem>
-                        <SelectItem value="diagnosis">Diagnosis</SelectItem>
-                        <SelectItem value="vaccination">Vaccination</SelectItem>
-                        <SelectItem value="surgery">Surgery</SelectItem>
-                        <SelectItem value="allergy">Allergy</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="record_type">Record Type</Label>
+                      <Select 
+                        value={medicalRecordForm.record_type} 
+                        onValueChange={(value) => setMedicalRecordForm(prev => ({ ...prev, record_type: value as 'lab_report' | 'prescription' | 'diagnosis' | 'vaccination' | 'surgery' | 'allergy' | 'other' }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lab_report">Lab Report</SelectItem>
+                          <SelectItem value="prescription">Prescription</SelectItem>
+                          <SelectItem value="diagnosis">Diagnosis</SelectItem>
+                          <SelectItem value="vaccination">Vaccination</SelectItem>
+                          <SelectItem value="surgery">Surgery</SelectItem>
+                          <SelectItem value="allergy">Allergy</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="date_recorded">Date Recorded</Label>
+                      <Input
+                        id="date_recorded"
+                        type="date"
+                        value={medicalRecordForm.date_recorded}
+                        onChange={(e) => setMedicalRecordForm(prev => ({ ...prev, date_recorded: e.target.value }))}
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="title">Title</Label>
@@ -861,42 +1062,75 @@ export const PatientManagementDashboard: React.FC<PatientManagementDashboardProp
                       id="title"
                       value={medicalRecordForm.title}
                       onChange={(e) => setMedicalRecordForm(prev => ({ ...prev, title: e.target.value }))}
-                      required
+                      placeholder="e.g., Blood Test Report, X-Ray Scan"
+                      required={!editingRecord}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={medicalRecordForm.description}
-                      onChange={(e) => setMedicalRecordForm(prev => ({ ...prev, description: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date_recorded">Date Recorded</Label>
-                    <Input
-                      id="date_recorded"
-                      type="date"
-                      value={medicalRecordForm.date_recorded}
-                      onChange={(e) => setMedicalRecordForm(prev => ({ ...prev, date_recorded: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="document">Document (Optional)</Label>
-                    <Input
-                      id="document"
-                      type="file"
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setShowMedicalRecordDialog(false)}>
-                      Cancel
+                  {!editingRecord && (
+                    <div>
+                      <Label htmlFor="document">
+                        Documents {medicalRecordForm.documents.length > 0 && `(${medicalRecordForm.documents.length} selected)`}
+                      </Label>
+                      <Input
+                        id="document"
+                        type="file"
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
+                        multiple
+                      />
+                      {medicalRecordForm.documents.length > 0 && (
+                        <div className="mt-2 text-sm text-gray-600 p-2 bg-gray-50 rounded">
+                          <p className="font-medium mb-1">Selected files:</p>
+                          <ul className="list-disc list-inside space-y-1">
+                            {medicalRecordForm.documents.map((file, index) => (
+                              <li key={index} className="text-xs">{file.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-4 border-t">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleCloseRecordDialog}
+                    >
+                      {recordQueue.length > 0 ? 'Cancel All' : 'Cancel'}
                     </Button>
-                    <Button type="submit">{editingRecord ? 'Update Record' : 'Create Record'}</Button>
+                    <div className="flex gap-2">
+                      {!editingRecord && (
+                        <Button 
+                          type="submit" 
+                          variant="secondary"
+                          disabled={!medicalRecordForm.title || medicalRecordForm.documents.length === 0}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add to Queue
+                        </Button>
+                      )}
+                      {editingRecord ? (
+                        <Button type="submit">Update Record</Button>
+                      ) : recordQueue.length > 0 ? (
+                        <Button 
+                          type="button" 
+                          onClick={handleUploadAllRecords}
+                          disabled={isUploading}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {isUploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              Upload All ({recordQueue.length})
+                            </>
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </form>
               </DialogContent>
