@@ -65,7 +65,8 @@ import {
   Users2,
   UserPlus,
   UserCheck,
-  UserX
+  UserX,
+  Building2
 } from 'lucide-react';
 
 
@@ -980,6 +981,7 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                       </TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Medical Info</TableHead>
+                      <TableHead>E-Clinics</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>
                         <Button
@@ -1032,6 +1034,32 @@ const PatientManagementTab: React.FC<PatientManagementTabProps> = ({ isDarkMode 
                             )}
                             {patient.age && (
                               <p className="text-sm text-gray-600">{patient.age} years</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 max-w-[140px]">
+                            {patient.clinics && patient.clinics.length > 0 ? (
+                              <>
+                                {patient.clinics.slice(0, 2).map((clinic: any) => (
+                                  <span 
+                                    key={clinic.clinic_id} 
+                                    className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 truncate"
+                                    title={clinic.clinic_name}
+                                  >
+                                    {clinic.clinic_name.length > 15 
+                                      ? clinic.clinic_name.substring(0, 15) + '...' 
+                                      : clinic.clinic_name}
+                                  </span>
+                                ))}
+                                {patient.clinics.length > 2 && (
+                                  <span className="text-xs text-gray-500">
+                                    +{patient.clinics.length - 2} more
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">No clinic</span>
                             )}
                           </div>
                         </TableCell>

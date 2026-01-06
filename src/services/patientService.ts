@@ -1,6 +1,13 @@
 import { api } from '@/lib/utils';
 
 // Types for Patient Management
+export interface PatientClinic {
+  clinic_id: string;
+  clinic_name: string;
+  registered_at: string;
+  registration_source: 'admin_created' | 'consultation' | 'self_registered' | 'migrated';
+}
+
 export interface PatientProfile {
   id: number;
   user: string;
@@ -31,6 +38,8 @@ export interface PatientProfile {
   age: number;
   total_consultations?: number;
   last_consultation_date?: string | null;
+  clinics?: PatientClinic[];
+  is_active?: boolean;
 }
 
 export interface MedicalRecord {

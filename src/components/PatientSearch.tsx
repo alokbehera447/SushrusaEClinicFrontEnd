@@ -35,7 +35,8 @@ import {
   Key,
   AlertTriangle,
   Shield,
-  Loader2
+  Loader2,
+  Building2
 } from 'lucide-react';
 import { 
   patientService, 
@@ -678,6 +679,29 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({
                               <span>Consultations: {patient.total_consultations}</span>
                             )}
                           </div>
+                          
+                          {/* Clinic Information */}
+                          {patient.clinics && patient.clinics.length > 0 && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <Building2 className="h-3 w-3 text-emerald-600" />
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {patient.clinics.slice(0, 3).map((clinic) => (
+                                  <span 
+                                    key={clinic.clinic_id} 
+                                    className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    title={clinic.clinic_name}
+                                  >
+                                    {clinic.clinic_name.length > 20 
+                                      ? clinic.clinic_name.substring(0, 20) + '...' 
+                                      : clinic.clinic_name}
+                                  </span>
+                                ))}
+                                {patient.clinics.length > 3 && (
+                                  <span className="text-xs text-gray-500">+{patient.clinics.length - 3} more</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 

@@ -102,6 +102,13 @@ export interface EClinic {
 }
 
 // Types for patient data
+export interface PatientClinic {
+  clinic_id: string;
+  clinic_name: string;
+  registered_at: string;
+  registration_source: 'admin_created' | 'consultation' | 'self_registered' | 'migrated';
+}
+
 export interface PatientProfile {
   id: string;
   user: string;
@@ -132,6 +139,7 @@ export interface PatientProfile {
   created_at: string;
   updated_at: string;
   age: number | null;
+  clinics?: PatientClinic[];
 }
 
 export interface UserProfile {
