@@ -58,7 +58,7 @@ import {
 } from 'lucide-react';
 import { 
   adminAnalyticsApi, 
-  AdminDashboardStats, 
+  DetailedAnalytics, 
   Consultation, 
   adminConsultationApi, 
   EClinic,
@@ -124,7 +124,7 @@ const AdminDashboardEnhanced = () => {
   
   // State management
   const [activeTab, setActiveTab] = useState('overview');
-  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<DetailedAnalytics | null>(null);
   const [patientStats, setPatientStats] = useState<PatientStats | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [patients, setPatients] = useState<PatientProfile[]>([]);
@@ -183,7 +183,7 @@ const AdminDashboardEnhanced = () => {
     try {
       setLoadingStats(true);
       setStatsError(null);
-      const stats = await adminAnalyticsApi.getDashboardStats();
+      const stats = await adminAnalyticsApi.getDetailedAnalytics();
       setDashboardStats(stats);
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -422,7 +422,7 @@ const AdminDashboardEnhanced = () => {
   const statsCards = [
     {
       title: "Today's Consultations",
-      value: dashboardStats?.consultations_today || 0,
+      value: dashboardStats?.today?.consultations || 0,
       icon: Video,
       color: 'text-[#E17726]',
       bgColor: 'bg-[#E17726]/10',
@@ -431,7 +431,7 @@ const AdminDashboardEnhanced = () => {
     },
     {
       title: "Total Patients",
-      value: dashboardStats?.total_patients || 0,
+      value: dashboardStats?.overview?.total_patients || 0,
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
@@ -440,7 +440,7 @@ const AdminDashboardEnhanced = () => {
     },
     {
       title: "Total Revenue",
-      value: `₹${dashboardStats?.total_revenue?.toLocaleString() || 0}`,
+      value: `₹${(dashboardStats?.overview?.total_revenue || 0).toLocaleString()}`,
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
@@ -449,7 +449,7 @@ const AdminDashboardEnhanced = () => {
     },
     {
       title: "Active Doctors",
-      value: dashboardStats?.active_doctors || 0,
+      value: dashboardStats?.overview?.active_doctors || 0,
       icon: UserCheck,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
