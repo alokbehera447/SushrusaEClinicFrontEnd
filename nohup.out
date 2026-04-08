@@ -1,0 +1,34 @@
+
+> vite_react_shadcn_ts@0.0.0 dev
+> vite --host
+
+
+  VITE v5.4.10  ready in 396 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://192.168.0.123:8080/
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+4:14:52 PM [vite] hmr update /src/index.css, /src/components/dashboards/PatientDashboard.tsx, /src/components/dashboards/SuperAdminDashboard.tsx, /src/components/forms/AdminDoctorManagementTab.tsx, /src/components/forms/PatientManagementTab.tsx, /src/components/dashboards/ManageAdmins.tsx, /src/components/forms/PatientEditForm.tsx, /src/components/forms/PatientCreationForm.tsx
+4:15:01 PM [vite] hmr update /src/index.css, /src/components/dashboards/PatientDashboard.tsx, /src/components/dashboards/SuperAdminDashboard.tsx, /src/components/forms/AdminDoctorManagementTab.tsx, /src/components/forms/PatientManagementTab.tsx, /src/components/dashboards/ManageAdmins.tsx, /src/components/forms/PatientEditForm.tsx, /src/components/forms/PatientCreationForm.tsx
+4:15:23 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css
+4:15:30 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css
+4:16:29 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css
+
+> vite_react_shadcn_ts@0.0.0 dev
+> vite --host
+
+
+  VITE v5.4.10  ready in 250 ms
+
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://192.168.0.123:8080/
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+4:23:04 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css
+4:24:29 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css
+4:26:58 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css
+4:30:01 PM [vite] hmr update /src/index.css, /src/components/dashboards/AdminDashboard.tsx, /src/components/dashboards/PatientDashboard.tsx, /src/components/dashboards/SuperAdminDashboard.tsx, /src/components/forms/AdminDoctorManagementTab.tsx, /src/components/forms/PatientManagementTab.tsx, /src/components/dashboards/ManageAdmins.tsx, /src/components/forms/PatientEditForm.tsx, /src/components/forms/PatientCreationForm.tsx
+4:31:27 PM [vite] hmr update /src/components/dashboards/AdminDashboard.tsx, /src/index.css

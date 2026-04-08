@@ -1,0 +1,73 @@
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Heart, LogOut, ArrowLeft } from 'lucide-react';
+import DoctorDashboard from '@/components/dashboards/DoctorDashboard';
+import { useAuth } from '@/context/AuthContext';
+
+const DoctorDashboardPage = () => {
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+  const username = user && user.name ? (user.name.startsWith('Dr.') ? user.name : `Dr. ${user.name}`) : 'Doctor';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link to="/" className="flex items-center space-x-2">
+                <div className="bg-[#E17726] p-1.5 sm:p-2 rounded-xl shadow-md">
+                  <Heart className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+                </div>
+                <div className="hidden sm:block">
+                  <span className="text-xl font-bold text-midnight">SUSHRUSA</span>
+                  <span className="text-sm text-gray-500 ml-1">eClinic</span>
+                </div>
+                <div className="sm:hidden">
+                  <span className="text-lg font-bold text-midnight">SUSHRUSA</span>
+                </div>
+              </Link>
+              <div className="hidden sm:block h-6 w-px bg-gray-300"></div>
+              <div className="hidden lg:block">
+                <h1 className="text-lg font-semibold text-midnight">Doctor Dashboard</h1>
+                <p className="text-sm text-gray-500">Welcome back, {username}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link to="/">
+                <Button variant="outline" size="sm" className="border-gray-300 hidden sm:flex">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Home
+                </Button>
+                <Button variant="outline" size="sm" className="border-gray-300 sm:hidden p-2">
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Button 
+                onClick={handleLogout}
+                variant="outline" 
+                size="sm"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dashboard Content */}
+      <DoctorDashboard />
+    </div>
+  );
+};
+
+export default DoctorDashboardPage; 
