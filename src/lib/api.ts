@@ -8,39 +8,49 @@ export const extractErrorMessage = (error: unknown): string => {
   console.log('Error object:', error);
   
   // If it's an axios error with response data
-  if (error.response && error.response.data) {
-    const responseData = error.response.data;
-    
-    // Handle Django REST Framework validation errors
-    if (responseData.admin && Array.isArray(responseData.admin)) {
-      return responseData.admin[0]; // Return first admin error
+  if (error.response) {
+    // Handle specific HTTP status codes
+    if (error.response.status === 401) {
+      return 'Your session has expired. Please log in again to save your changes.';
     }
     
-    // Handle field-specific errors
-    if (typeof responseData === 'object') {
-      const fieldErrors = Object.entries(responseData)
-        .filter(([key, value]) => Array.isArray(value) && value.length > 0)
-        .map(([key, value]) => `${key}: ${(value as string[])[0]}`)
-        .join(', ');
+    if (error.response.status === 403) {
+      return 'You do not have permission to perform this action.';
+    }
+
+    if (error.response.data) {
+      const responseData = error.response.data;
       
-      if (fieldErrors) {
-        return fieldErrors;
+      // Handle Django REST Framework validation errors
+      if (responseData.admin && Array.isArray(responseData.admin)) {
+        return responseData.admin[0]; // Return first admin error
       }
-    }
-    
-    // Handle general error message
-    if (responseData.message) {
-      return responseData.message;
-    }
-    
-    // Handle non-field error
-    if (responseData.error) {
-      return responseData.error;
-    }
-    
-    // Handle string error
-    if (typeof responseData === 'string') {
-      return responseData;
+      
+      // Handle field-specific errors
+      if (typeof responseData === 'object') {
+        const fieldErrors = Object.entries(responseData)
+          .filter(([key, value]) => Array.isArray(value) && value.length > 0)
+          .map(([key, value]) => `${key}: ${(value as string[])[0]}`)
+          .join(', ');
+        
+        if (fieldErrors) {
+          return fieldErrors;
+        }
+      }
+      
+      // Handle general error message
+      if (responseData.message) {
+        return responseData.message;
+      }
+      
+      // Handle non-field error
+      if (responseData.error && typeof responseData.error === 'string') {
+        return responseData.error;
+      }
+      
+      if (responseData.error && typeof responseData.error === 'object' && responseData.error.message) {
+        return responseData.error.message;
+      }
     }
   }
   

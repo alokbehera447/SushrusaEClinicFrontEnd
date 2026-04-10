@@ -131,8 +131,14 @@ api.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed, only logout if we're not already on login page
         if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+          // Notify the user via a global alert since we're outside React context
+          alert('Your session has expired. You will be redirected to the login page.');
+          
           localStorage.clear();
-          window.location.href = '/login';
+          // Delay redirect so user can see what happened
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
         }
       }
     }
