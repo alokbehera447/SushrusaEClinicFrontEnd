@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DoctorDetailsModal from '@/components/DoctorDetailsModal';
 import NearbyEClinics from '@/components/NearbyEClinics';
+import BookConsultationModal from '@/components/BookConsultationModal';
 import { API_BASE_URL } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -60,6 +61,10 @@ const FindDoctors = () => {
   // State for modal
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for booking modal (Razorpay)
+  const [bookingDoctor, setBookingDoctor] = useState<Doctor | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   
   // State for filters
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
@@ -208,14 +213,19 @@ const FindDoctors = () => {
     setSelectedDoctor(null);
   };
 
-  // Handle book now - redirect to login
+  // Handle book now - open Razorpay modal for logged-in patients, redirect others
   const handleBookNow = (doctor: Doctor) => {
-    navigate('/login', { 
-      state: { 
-        returnUrl: '/find-doctors',
-        message: 'Please login to book an appointment with Dr. ' + doctor.name 
-      } 
-    });
+    if (isAuthenticated) {
+      setBookingDoctor(doctor);
+      setIsBookingModalOpen(true);
+    } else {
+      navigate('/login', { 
+        state: { 
+          returnUrl: '/find-doctors',
+          message: 'Please login to book an appointment with Dr. ' + doctor.name 
+        } 
+      });
+    }
   };
 
   return (
@@ -604,6 +614,16 @@ const FindDoctors = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onBookNow={handleBookNow}
+      />
+
+      {/* Book Consultation & Payment Modal */}
+      <BookConsultationModal
+        open={isBookingModalOpen}
+        onClose={() => {
+          setIsBookingModalOpen(false);
+          setBookingDoctor(null);
+        }}
+        initialDoctor={bookingDoctor}
       />
 
       <Footer />

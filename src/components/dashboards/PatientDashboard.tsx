@@ -59,7 +59,8 @@ import {
   Users,
   BookOpen,
   Target,
-  Zap
+  Zap,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -91,7 +92,9 @@ import { useToast } from '@/components/ui/use-toast';
 import PatientOverview from './patient/PatientOverview';
 import PatientConsultations from './patient/PatientConsultations';
 import PatientRecordsManager from './patient/PatientRecordsManager';
+import PatientPaymentsTab from './patient/PatientPaymentsTab';
 import PatientIDCard from '../patient/PatientIDCard';
+import BookConsultationModal from '@/components/BookConsultationModal';
 
 // Define interfaces
 interface TransformedPrescription {
@@ -813,6 +816,10 @@ const PatientDashboard = () => {
               <FileText className="w-4 h-4 mr-2" />
               Records
             </TabsTrigger>
+            <TabsTrigger value="payments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#E17726] data-[state=active]:to-[#FF8A56] data-[state=active]:text-white">
+              <CreditCard className="w-4 h-4 mr-2" />
+              Payments
+            </TabsTrigger>
             <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#E17726] data-[state=active]:to-[#FF8A56] data-[state=active]:text-white">
               <UserCircle className="w-4 h-4 mr-2" />
               Profile
@@ -964,6 +971,11 @@ const PatientDashboard = () => {
             )}
           </TabsContent>
 
+          {/* Payments Tab */}
+          <TabsContent value="payments" className="space-y-6 mt-6">
+            <PatientPaymentsTab />
+          </TabsContent>
+
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6 mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1078,36 +1090,19 @@ const PatientDashboard = () => {
         </Tabs>
       </div>
 
-      {/* Book Consultation Modal */}
-      <Dialog open={bookConsultationOpen} onOpenChange={setBookConsultationOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Book Consultation</DialogTitle>
-            <DialogDescription>
-              Schedule a consultation with one of our qualified doctors.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              This feature is coming soon! You'll be able to book consultations directly from your dashboard.
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                className="flex-1 bg-gradient-to-r from-[#E17726] to-[#FF8A56] hover:from-[#c9651e] hover:to-[#e67e22] text-white"
-                onClick={() => {
-                  toast({ title: 'Coming Soon', description: 'Consultation booking will be available soon!' });
-                  setBookConsultationOpen(false);
-                }}
-              >
-                Book Now
-              </Button>
-              <Button variant="outline" onClick={() => setBookConsultationOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Book Consultation Modal — with Razorpay payment */}
+      <BookConsultationModal
+        open={bookConsultationOpen}
+        onClose={() => setBookConsultationOpen(false)}
+        onBookingComplete={({ doctorName, amount, paymentId }) => {
+          toast({
+            title: '🎉 Booking Confirmed!',
+            description: `Consultation with ${doctorName} booked. Payment ID: ${paymentId}`,
+          });
+          // Refresh consultations list after successful booking
+          if (userProfile?.id) fetchConsultations(1);
+        }}
+      />
 
       {/* Prescription Detail Modal */}
       <Dialog open={prescriptionModalOpen} onOpenChange={setPrescriptionModalOpen}>

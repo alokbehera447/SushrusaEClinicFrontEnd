@@ -1398,3 +1398,8 @@ a:focus-visible,
 .animate-scalein {
   animation: scalein 0.3s cubic-bezier(0.4,0,0.2,1);
 }
+
+/* Fix Radix UI Dialog blocking pointer events on Razorpay checkout */
+.razorpay-container {
+  pointer-events: auto !important;
+}

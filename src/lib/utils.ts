@@ -32,7 +32,7 @@ export function formatTime(timeString: string): string {
       const [hours, minutes] = timeString.split(':');
       time = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
     }
-    
+
     return time.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -58,12 +58,12 @@ export function formatDateTime(dateTimeString: string): string {
   } catch (error) {
     console.error('Error formatting datetime:', error);
     return dateTimeString;
-    }
   }
+}
 
-  // API base URL utility
-export const API_BASE_URL = 'https://sushrusaeclinic.com';
-// export const API_BASE_URL = 'http://127.0.0.1:8000';  
+// API base URL utility
+// export const API_BASE_URL = 'https://sushrusaeclinic.com';
+export const API_BASE_URL = 'http://127.0.0.1:8000';
 
 import axios from 'axios';
 export const api = axios.create({
@@ -78,7 +78,7 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     // Debug logging
     console.log('🚀 API Request:', {
       method: config.method?.toUpperCase(),
@@ -86,7 +86,7 @@ api.interceptors.request.use(
       params: config.params,
       hasToken: !!token
     });
-    
+
     return config;
   },
   (error) => {

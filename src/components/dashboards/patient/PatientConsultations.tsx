@@ -613,9 +613,9 @@ const PatientConsultations: React.FC<PatientConsultationsProps> = ({
                             
                             <div className="mt-3 flex items-center gap-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-sm font-medium text-green-600">
-                                  {consultation.payment_status}
+                                <div className={`w-2 h-2 rounded-full ${consultation.payment_status === 'completed' || consultation.payment_status === 'paid' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                <span className={`text-sm font-medium ${consultation.payment_status === 'completed' || consultation.payment_status === 'paid' ? 'text-green-600' : 'text-red-600'}`}>
+                                  Payment {consultation.payment_status}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
