@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ChevronRight, CalendarIcon, Clock, User, Stethoscope, CheckCircle, ArrowRight, ArrowLeft, Search, Phone, Star, Timer, DollarSign, FileText, X, Video, Users, Plus } from 'lucide-react';
+import { ChevronRight, CalendarIcon, Clock, User, Stethoscope, CheckCircle, ArrowRight, ArrowLeft, Search, Phone, Star, Timer, DollarSign, FileText, X, Video, Users, Plus, CreditCard, Smartphone, Banknote, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { debounce } from 'lodash';
@@ -16,8 +16,9 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 // --- Restored Original API and Type Imports ---
-import { adminPatientApi, doctorApi, superAdminApi, PatientProfile, DoctorProfile, EClinic, createConsultation, calculateAvailableSlots, adminConsultationApi } from '@/lib/api';
+import { adminPatientApi, doctorApi, superAdminApi, PatientProfile, DoctorProfile, EClinic, createConsultation, calculateAvailableSlots, adminConsultationApi, extractErrorMessage } from '@/lib/api';
 import { api } from '@/lib/utils';
+import { razorpayService } from '@/services/razorpayService';
 
 // --- Restored Original Type Definition for Slots ---
 // This defines the structure of a slot object after being processed for the frontend.
@@ -188,6 +189,9 @@ const BASIC_COMPLAINTS: string[] = [
 ];
 
 
+// Payment status type
+type PaymentStatus = 'idle' | 'loading' | 'popup' | 'verifying' | 'success' | 'failed' | 'cancelled';
+
 // --- Main Component ---
 const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => void; assignedClinicId?: string }) => {
   console.log('🚀 NewConsultationPage props:', { assignedClinicId });
@@ -212,6 +216,10 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const [generatedReceipt, setGeneratedReceipt] = useState<any>(null);
   const [createdConsultation, setCreatedConsultation] = useState<any>(null);
   const [meetingLink, setMeetingLink] = useState<string>('');
+  // Payment gateway state
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentVerified, setPaymentVerified] = useState(false);
   
   // UI State
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
@@ -503,7 +511,9 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
   const handlePatientSelect = (patient: PatientProfile) => {
     setSelectedPatient(patient);
-    setFormData(prev => ({ ...prev, patientId: patient.id }));
+    // Use patient.user (user_id like "PAT002") — NOT patient.id (numeric profile PK like 2)
+    // The consultation API foreign key expects the user_id string
+    setFormData(prev => ({ ...prev, patientId: patient.user }));
     setPatientSearch(patient.user_name);
     setPatientOptions([]);
   };
@@ -536,6 +546,15 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     }
     try {
       setIsSubmitting(true);
+      setPaymentError(null);
+
+      // Basic amount validation for online payments
+      const feeNum = parseFloat(formData.consultationFee) || 0;
+      if (formData.paymentMethod !== 'cash' && feeNum < 1) {
+        toast.error('Online payments must be at least ₹1.00. Please adjust the fee or use Cash payment.');
+        setIsSubmitting(false);
+        return;
+      }
       
       const consultationData = {
         patient: formData.patientId,
@@ -547,73 +566,137 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         chief_complaint: formData.chiefComplaint,
         symptoms: formData.symptoms,
         consultation_fee: parseFloat(formData.consultationFee) || 0,
-        clinic_id: assignedClinicId || 'CLI002', // Use the assigned clinic ID or fallback
+        clinic_id: assignedClinicId || 'CLI002',
         payment_method: formData.paymentMethod,
         payment_status: formData.paymentMethod === 'cash' ? 'paid' : 'pending',
       };
 
       console.log('🚀 Creating consultation with data:', consultationData);
-      console.log('🚀 Clinic ID being used:', assignedClinicId || 'CLI002');
-      console.log('🚀 selectedClinic.id:', selectedClinic?.id);
       
-      // Use the dynamic consultation creation endpoint that doesn't require slot_id
+      // Step 1: Create consultation on backend
       const response = await api.post('/api/consultations/create-dynamic/', consultationData);
       const consultation = response.data.data;
       console.log('Consultation created:', consultation);
       
-      // Store consultation data and meeting link
       setCreatedConsultation(consultation);
       setMeetingLink(consultation.doctor_meeting_link || '');
-      
-      // Generate receipt if cash payment
+
+      // Step 2: Handle payment based on method
       if (formData.paymentMethod === 'cash') {
+        // Cash: generate receipt immediately
         try {
           const receipt = await adminConsultationApi.generateReceipt(consultation.id);
-          console.log('Receipt generated:', receipt);
           setGeneratedReceipt(receipt);
           setShowReceiptModal(true);
-          toast.success(`Consultation created and receipt generated (${receipt.receipt_number})`);
+          toast.success(`Consultation scheduled & receipt generated (${receipt.receipt_number})`);
         } catch (receiptError) {
           console.error('Failed to generate receipt:', receiptError);
-          toast.success('Consultation created successfully (receipt generation failed)');
+          toast.success('Consultation created successfully');
           setShowSuccessModal(true);
         }
+        resetForm();
+      } else if (formData.paymentMethod === 'online' || formData.paymentMethod === 'razorpay') {
+        // Online: move to payment step and trigger Razorpay
+        setCurrentStep(5);
+        await triggerRazorpayPayment(consultation);
       } else {
-        toast.success('Consultation created successfully');
-        setShowSuccessModal(true);
+        // Card / UPI: move to payment step
+        setCurrentStep(5);
+        await triggerRazorpayPayment(consultation);
       }
-      
-      // Reset form
-      setFormData({
-        patientId: '',
-        doctorId: '',
-        clinicId: assignedClinicId || 'CLI002',
-        consultationType: 'video_call',
-        consultationDate: undefined,
-        selectedSlot: null,
-        duration: '5', // Default to 5 minutes
-        chiefComplaint: '',
-        symptoms: '',
-        consultationFee: '',
-        paymentMethod: 'cash',
-      });
-      setSelectedPatient(null);
-      setSelectedDoctor(null);
-      setCurrentStep(1);
+
     } catch (error) {
+      const msg = extractErrorMessage(error);
       console.error('Failed to create consultation:', error);
-      toast.error('Failed to create consultation. Please try again.');
+      toast.error(msg || 'Failed to create consultation. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Trigger Razorpay payment for a created consultation
+  const triggerRazorpayPayment = async (consultation: any) => {
+    try {
+      setPaymentStatus('loading');
+      setPaymentError(null);
+
+      const fee = parseFloat(formData.consultationFee) || 0;
+
+      const verifyResponse = await razorpayService.initiatePayment(
+        {
+          amount: fee,
+          currency: 'INR',
+          consultation_id: consultation.id,
+          description: `Consultation with ${consultation.doctor_name || 'Doctor'} on ${consultation.scheduled_date}`,
+        },
+        {
+          name: selectedPatient?.user_name || consultation.patient_name || '',
+          email: (selectedPatient as any)?.user_email || '',
+          contact: selectedPatient?.user_phone || '',
+        },
+        (status) => setPaymentStatus(status)
+      );
+
+      // Payment successful
+      setPaymentVerified(true);
+      setPaymentStatus('success');
+      toast.success('Payment successful! Consultation confirmed.');
+
+      // Generate receipt after online payment too
+      try {
+        const receipt = await adminConsultationApi.generateReceipt(consultation.id);
+        setGeneratedReceipt(receipt);
+        setTimeout(() => {
+          setShowReceiptModal(true);
+        }, 1500);
+      } catch (rErr) {
+        console.error('Receipt error:', rErr);
+      }
+
+      resetForm();
+    } catch (err: any) {
+      const msg = extractErrorMessage(err);
+      if (msg === 'Payment cancelled by user') {
+        setPaymentStatus('cancelled');
+        setPaymentError('Payment was cancelled. You can retry or choose a different method.');
+        toast.warning('Payment cancelled. The consultation has been created but payment is pending.');
+      } else {
+        setPaymentStatus('failed');
+        setPaymentError(msg || 'Payment failed. Please retry or contact support.');
+        toast.error(msg || 'Payment failed. Consultation created but payment pending.');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      patientId: '',
+      doctorId: '',
+      clinicId: assignedClinicId || 'CLI002',
+      consultationType: 'video_call',
+      consultationDate: undefined,
+      selectedSlot: null,
+      duration: '5',
+      chiefComplaint: '',
+      symptoms: '',
+      consultationFee: '',
+      paymentMethod: 'cash',
+    });
+    setSelectedPatient(null);
+    setSelectedDoctor(null);
+    setCurrentStep(1);
+    setPaymentStatus('idle');
+    setPaymentError(null);
+    setPaymentVerified(false);
+  };
+
   // --- UI Logic ---
   const STEPS = [
-    { number: 1, title: 'Patient Information', icon: User },
-    { number: 2, title: 'Doctor & Clinic', icon: Stethoscope },
-    { number: 3, title: 'Schedule Appointment', icon: CalendarIcon },
-    { number: 4, title: 'Consultation Details', icon: FileText },
+    { number: 1, title: 'Patient', icon: User },
+    { number: 2, title: 'Doctor', icon: Stethoscope },
+    { number: 3, title: 'Schedule', icon: CalendarIcon },
+    { number: 4, title: 'Details', icon: FileText },
+    { number: 5, title: 'Payment', icon: CreditCard },
   ];
 
   const nextStep = () => setCurrentStep(s => Math.min(s + 1, STEPS.length));
@@ -622,7 +705,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const canProceedToNext = () => {
     switch (currentStep) {
       case 1: return !!selectedPatient;
-      case 2: return !!selectedDoctor; // Removed clinic check since we use default
+      case 2: return !!selectedDoctor;
       case 3: return !!formData.consultationDate && !!formData.selectedSlot;
       case 4: return formData.chiefComplaint.trim() !== '';
       default: return false;
@@ -649,6 +732,16 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         {currentStep === 2 && renderStep2(stepProps)}
         {currentStep === 3 && renderStep3({ ...stepProps, isDatePopoverOpen, setIsDatePopoverOpen })}
         {currentStep === 4 && renderStep4(stepProps)}
+        {currentStep === 5 && renderStep5({
+          formData,
+          createdConsultation,
+          paymentStatus,
+          paymentError,
+          paymentVerified,
+          selectedPatient,
+          triggerRazorpayPayment,
+          resetForm,
+        })}
       </div>
     );
   };
@@ -865,6 +958,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                 </div>
 
                 {/* Compact Navigation */}
+                {currentStep < 5 && (
                 <div className="flex items-center justify-between pt-6 border-t border-gray-200">
                   <Button 
                     type="button" 
@@ -878,13 +972,13 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                     Previous
                   </Button>
                   
-                  {currentStep < STEPS.length ? (
+                  {currentStep < 4 ? (
                     <Button 
                       type="button" 
                       size="sm"
                       onClick={nextStep} 
                       disabled={!canProceedToNext()}
-                      className="text-sm"
+                      className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
                     >
                       Next
                       <ArrowRight className="w-4 h-4 ml-1" />
@@ -894,22 +988,33 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                       type="submit" 
                       size="sm"
                       disabled={isSubmitting || !canProceedToNext()}
-                      className="text-sm"
+                      className={cn(
+                        "text-sm text-white",
+                        formData.paymentMethod === 'cash'
+                          ? 'bg-green-600 hover:bg-green-700'
+                          : 'bg-[#E17726] hover:bg-[#c9651e]'
+                      )}
                     >
                       {isSubmitting ? (
                         <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/50 border-t-white mr-2"></div>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Creating...
+                        </>
+                      ) : formData.paymentMethod === 'cash' ? (
+                        <>
+                          <Banknote className="w-4 h-4 mr-1" />
+                          Create & Mark Paid
                         </>
                       ) : (
                         <>
-                          <Plus className="w-4 h-4 mr-1" />
-                          Create Consultation
+                          <CreditCard className="w-4 h-4 mr-1" />
+                          Create & Pay Online
                         </>
                       )}
                     </Button>
                   )}
                 </div>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -1336,14 +1441,14 @@ const renderStep4 = ({ formData, handleInputChange }: any) => (
     {/* Fee and Duration */}
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Fee</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Fee (₹)</label>
         <div className="relative">
           <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             type="number"
             value={formData.consultationFee}
             disabled
-            className="pl-10 h-9 text-sm bg-gray-50"
+            className="pl-10 h-9 text-sm bg-gray-50 font-semibold"
           />
         </div>
       </div>
@@ -1357,42 +1462,6 @@ const renderStep4 = ({ formData, handleInputChange }: any) => (
             className="pl-10 h-9 text-sm bg-gray-50"
           />
         </div>
-      </div>
-    </div>
-    
-    {/* Payment Method and Status */}
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-        <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
-          <SelectTrigger className="w-full h-9 text-sm border border-gray-300">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cash">Cash</SelectItem>
-            <SelectItem value="online">Online Payment</SelectItem>
-            <SelectItem value="card">Card</SelectItem>
-            <SelectItem value="upi">UPI</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
-        <div className="h-9 flex items-center px-3 bg-gray-50 border border-gray-200 rounded-md">
-          <Badge 
-            variant="outline" 
-            className={`text-xs ${
-              formData.paymentMethod === 'cash' 
-                ? 'bg-green-100 text-green-800 border-green-200' 
-                : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-            }`}
-          >
-            {formData.paymentMethod === 'cash' ? 'Completed' : 'Pending'}
-          </Badge>
-        </div>
-        {formData.paymentMethod === 'cash' && (
-          <p className="text-xs text-green-600 mt-1">Payment will be marked as completed</p>
-        )}
       </div>
     </div>
 
@@ -1410,30 +1479,250 @@ const renderStep4 = ({ formData, handleInputChange }: any) => (
         </SelectContent>
       </Select>
     </div>
+    
+    {/* Payment Method Selection - Full width, prominent */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-800 mb-3">Payment Method *</label>
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { value: 'cash', label: 'Cash', icon: Banknote, color: 'green', desc: 'Mark as paid instantly' },
+          { value: 'online', label: 'Online (Razorpay)', icon: CreditCard, color: 'purple', desc: 'UPI / Card / Net Banking' },
+        ].map(({ value, label, icon: Icon, color, desc }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleInputChange('paymentMethod', value)}
+            className={cn(
+              'flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 text-center cursor-pointer',
+              formData.paymentMethod === value
+                ? color === 'green'
+                  ? 'border-green-500 bg-green-50 shadow-md'
+                  : 'border-purple-500 bg-purple-50 shadow-md'
+                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+            )}
+          >
+            <Icon className={cn(
+              'w-7 h-7 mb-2',
+              formData.paymentMethod === value
+                ? color === 'green' ? 'text-green-600' : 'text-purple-600'
+                : 'text-gray-400'
+            )} />
+            <span className={cn(
+              'text-sm font-semibold',
+              formData.paymentMethod === value
+                ? color === 'green' ? 'text-green-800' : 'text-purple-800'
+                : 'text-gray-600'
+            )}>{label}</span>
+            <span className={cn(
+              'text-xs mt-0.5',
+              formData.paymentMethod === value
+                ? color === 'green' ? 'text-green-600' : 'text-purple-500'
+                : 'text-gray-400'
+            )}>{desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
 
-    {/* Summary */}
+    {/* Dynamic info box based on payment method */}
+    {formData.paymentMethod === 'cash' ? (
+      <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+        <Banknote className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-green-800">Cash Payment</p>
+          <p className="text-xs text-green-700 mt-0.5">Consultation will be marked as <strong>Paid</strong> immediately and a receipt will be generated.</p>
+        </div>
+      </div>
+    ) : (
+      <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+        <ShieldCheck className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-purple-800">Online Payment via Razorpay</p>
+          <p className="text-xs text-purple-700 mt-0.5">Razorpay payment portal will open after scheduling. Supports UPI, Credit/Debit Card, Net Banking, and Wallets. Amount: <strong>₹{formData.consultationFee}</strong></p>
+        </div>
+      </div>
+    )}
+
+    {/* Final Summary */}
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-      <h4 className="text-sm font-medium text-gray-700 mb-2">Consultation Summary</h4>
-      <div className="space-y-1 text-xs text-gray-600">
+      <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        <FileText className="w-4 h-4 text-[#E17726]" />
+        Consultation Summary
+      </h4>
+      <div className="space-y-1.5 text-xs text-gray-600">
         <div className="flex justify-between">
           <span>Type:</span>
-          <span className="capitalize">{formData.consultationType?.replace('_', ' ')}</span>
+          <span className="font-medium capitalize">{formData.consultationType?.replace('_', ' ')}</span>
         </div>
         <div className="flex justify-between">
           <span>Fee:</span>
-          <span>${formData.consultationFee}</span>
+          <span className="font-semibold text-green-700">₹{formData.consultationFee}</span>
         </div>
         <div className="flex justify-between">
           <span>Duration:</span>
-          <span>{formData.duration} minutes</span>
+          <span className="font-medium">{formData.duration} minutes</span>
         </div>
         <div className="flex justify-between">
           <span>Payment:</span>
-          <span className="capitalize">{formData.paymentMethod}</span>
+          <span className={cn(
+            'font-medium px-1.5 py-0.5 rounded-full text-[10px]',
+            formData.paymentMethod === 'cash'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-purple-100 text-purple-800'
+          )}>
+            {formData.paymentMethod === 'cash' ? 'Cash (Paid)' : 'Online (Razorpay)'}
+          </span>
         </div>
       </div>
     </div>
   </div>
 );
+
+// Step 5: Payment Processing / Status
+const renderStep5 = ({ formData, createdConsultation, paymentStatus, paymentError, paymentVerified, selectedPatient, triggerRazorpayPayment, resetForm }: any) => {
+  const fee = parseFloat(formData.consultationFee) || 0;
+
+  const statusConfig: Record<PaymentStatus, { icon: React.ReactNode; title: string; subtitle: string; color: string; bgColor: string }> = {
+    idle: {
+      icon: <CreditCard className="w-12 h-12" />,
+      title: 'Ready to Process Payment',
+      subtitle: 'Click "Pay Now" to open the Razorpay payment gateway.',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 border-blue-200',
+    },
+    loading: {
+      icon: <Loader2 className="w-12 h-12 animate-spin" />,
+      title: 'Preparing Payment...',
+      subtitle: 'Setting up your payment. Please wait.',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 border-blue-200',
+    },
+    popup: {
+      icon: <Smartphone className="w-12 h-12" />,
+      title: 'Payment Portal Open',
+      subtitle: 'Complete the payment in the Razorpay popup window.',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50 border-indigo-200',
+    },
+    verifying: {
+      icon: <ShieldCheck className="w-12 h-12 animate-pulse" />,
+      title: 'Verifying Payment...',
+      subtitle: 'Please wait while we confirm your payment with our server.',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50 border-amber-200',
+    },
+    success: {
+      icon: <CheckCircle className="w-12 h-12" />,
+      title: 'Payment Successful!',
+      subtitle: 'Consultation confirmed and payment recorded.',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50 border-emerald-200',
+    },
+    failed: {
+      icon: <AlertCircle className="w-12 h-12" />,
+      title: 'Payment Failed',
+      subtitle: 'There was an issue processing your payment.',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 border-red-200',
+    },
+    cancelled: {
+      icon: <AlertCircle className="w-12 h-12" />,
+      title: 'Payment Cancelled',
+      subtitle: 'The payment was cancelled. Consultation is created but payment is pending.',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 border-orange-200',
+    },
+  };
+
+  const config = statusConfig[paymentStatus as PaymentStatus] || statusConfig.idle;
+
+  return (
+    <div className="space-y-6 py-2">
+      {/* Payment Status Card */}
+      <div className={cn('flex flex-col items-center justify-center p-8 rounded-2xl border-2 text-center', config.bgColor)}>
+        <div className={cn('mb-4', config.color)}>
+          {config.icon}
+        </div>
+        <h3 className={cn('text-lg font-bold mb-1', config.color)}>{config.title}</h3>
+        <p className="text-sm text-gray-600">{config.subtitle}</p>
+      </div>
+
+      {/* Consultation & Amount Info */}
+      {createdConsultation && (
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-gray-800 border-b pb-2">Consultation Details</h4>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="text-gray-500">Patient</span>
+              <p className="font-medium text-gray-800">{createdConsultation.patient_name}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Doctor</span>
+              <p className="font-medium text-gray-800">{createdConsultation.doctor_name}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Date & Time</span>
+              <p className="font-medium text-gray-800">{createdConsultation.scheduled_date} {createdConsultation.scheduled_time}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Amount</span>
+              <p className="font-bold text-emerald-700 text-sm">₹{fee.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error message */}
+      {paymentError && (
+        <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{paymentError}</p>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="space-y-3">
+        {/* Retry / Pay Now */}
+        {(paymentStatus === 'idle' || paymentStatus === 'failed' || paymentStatus === 'cancelled') && (
+          <Button
+            className="w-full h-12 text-base font-semibold bg-[#E17726] hover:bg-[#c9651e] text-white rounded-xl shadow-md hover:shadow-lg transition-all"
+            onClick={() => triggerRazorpayPayment(createdConsultation)}
+          >
+            <CreditCard className="w-5 h-5 mr-2" />
+            {paymentStatus === 'idle' ? `Pay Now — ₹${fee.toFixed(2)}` : `Retry Payment — ₹${fee.toFixed(2)}`}
+          </Button>
+        )}
+
+        {/* Success — go to consultations */}
+        {paymentStatus === 'success' && (
+          <Button
+            className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
+            onClick={resetForm}
+          >
+            <CheckCircle className="w-5 h-5 mr-2" />
+            Done — View Consultations
+          </Button>
+        )}
+
+        {/* Skip payment (for cancelled/failed — consultation still exists) */}
+        {(paymentStatus === 'failed' || paymentStatus === 'cancelled') && (
+          <Button
+            variant="outline"
+            className="w-full h-10 text-sm border-gray-300 text-gray-600"
+            onClick={resetForm}
+          >
+            Skip Payment (Mark as Pending)
+          </Button>
+        )}
+      </div>
+
+      {/* Security note */}
+      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <ShieldCheck className="w-4 h-4" />
+        <span>Secured by Razorpay — 256-bit SSL encrypted</span>
+      </div>
+    </div>
+  );
+};
 
 export default NewConsultationPage;

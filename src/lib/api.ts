@@ -38,6 +38,16 @@ export const extractErrorMessage = (error: unknown): string => {
         }
       }
       
+      if (responseData.error && typeof responseData.error === 'object') {
+        // Handle Razorpay specific error structure
+        if (responseData.error.detail?.error?.description) {
+          return responseData.error.detail.error.description;
+        }
+        if (responseData.error.message) {
+          return responseData.error.message;
+        }
+      }
+      
       // Handle general error message
       if (responseData.message) {
         return responseData.message;
@@ -47,19 +57,16 @@ export const extractErrorMessage = (error: unknown): string => {
       if (responseData.error && typeof responseData.error === 'string') {
         return responseData.error;
       }
-      
-      if (responseData.error && typeof responseData.error === 'object' && responseData.error.message) {
-        return responseData.error.message;
-      }
     }
   }
   
   // Handle network errors
-  if (error.message) {
-    if (error.message.includes('Network Error')) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const err = error as { message: string };
+    if (err.message.includes('Network Error')) {
       return 'Network error. Please check your connection.';
     }
-    return error.message;
+    return err.message;
   }
   
   // Default error message
@@ -2279,18 +2286,7 @@ export const adminConsultationApi = {
   },
 
   // Update consultation
-  updateConsultation: async (consultationId: string, consultationData: Partial<{
-    patient: string | number;
-    doctor: string | number;
-    consultation_type: string;
-    scheduled_date: string;
-    scheduled_time: string;
-    duration: number | string;
-    chief_complaint: string;
-    symptoms: string;
-    consultation_fee: number | string;
-    status: string;
-  }>): Promise<Consultation> => {
+  updateConsultation: async (consultationId: string, consultationData: Partial<Consultation>): Promise<Consultation> => {
     const response = await api.put<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
     return response.data.data;
   },

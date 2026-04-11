@@ -74,6 +74,7 @@ import {
 } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+import RazorpayPaymentModal from '@/components/modals/RazorpayPaymentModal';
 
 // Consultation Management Enhanced Component
 interface ConsultationManagementEnhancedProps {
@@ -113,6 +114,10 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
   const [upcomingConsultation, setUpcomingConsultation] = useState<Consultation | null>(null);
   const [shownPopupConsultations, setShownPopupConsultations] = useState<Set<string>>(new Set());
   const [isProcessingPopup, setIsProcessingPopup] = useState(false);
+
+  // Payment modal state
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedConsultationForPayment, setSelectedConsultationForPayment] = useState<Consultation | null>(null);
 
   // Load shown consultations from localStorage on mount
   useEffect(() => {
@@ -333,6 +338,10 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
         case 'cancel':
           // You would implement cancel consultation API call here
           toast.info('Cancel consultation functionality will be implemented');
+          break;
+        case 'pay':
+          setSelectedConsultationForPayment(consultation);
+          setIsPaymentModalOpen(true);
           break;
         default:
           break;
@@ -703,8 +712,12 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getPaymentStatusColor(consultation.is_paid)}>
+                          <Badge 
+                            className={`${getPaymentStatusColor(consultation.is_paid)} ${!consultation.is_paid ? 'cursor-pointer hover:opacity-80' : ''}`}
+                            onClick={() => !consultation.is_paid && handleConsultationAction('pay', consultation)}
+                          >
                             {consultation.is_paid ? 'Paid' : 'Pending'}
+                            {!consultation.is_paid && <DollarSign className="w-3 h-3 ml-1" />}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -739,6 +752,13 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                                     <AlertTriangle className="w-4 h-4 mr-2" />
                                     Cancel
                                   </DropdownMenuItem>
+
+                                  {!consultation.is_paid && (
+                                    <DropdownMenuItem onClick={() => handleConsultationAction('pay', consultation)}>
+                                      <DollarSign className="w-4 h-4 mr-2 text-[#E17726]" />
+                                      Confirm Payment
+                                    </DropdownMenuItem>
+                                  )}
                                 </>
                               )}
 
@@ -1009,6 +1029,16 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
           </div>
         </DialogContent>
       </Dialog>
+      {/* Payment Modal */}
+      <RazorpayPaymentModal 
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        consultation={selectedConsultationForPayment}
+        onSuccess={() => {
+          fetchConsultations();
+          fetchConsultationStats();
+        }}
+      />
     </div>
   );
 };
