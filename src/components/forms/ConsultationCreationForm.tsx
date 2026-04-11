@@ -510,23 +510,31 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   };
 
   const handlePatientSelect = (patient: PatientProfile) => {
+    console.log('🚀 handlePatientSelect called with patient:', patient);
     setSelectedPatient(patient);
-    // Use patient.user (user_id like "PAT002") — NOT patient.id (numeric profile PK like 2)
-    // The consultation API foreign key expects the user_id string
-    setFormData(prev => ({ ...prev, patientId: patient.user }));
-    setPatientSearch(patient.user_name);
+    // Use patient.user (user_id like "PAT002")
+    // Fallback to patient.id if user is missing (some serializers might name it differently)
+    const patientIdentifier = (patient.user || patient.id).toString();
+    console.log('🚀 Selected patient identifier:', patientIdentifier);
+    setFormData(prev => ({ ...prev, patientId: patientIdentifier }));
+    setPatientSearch(patient.user_name || "");
     setPatientOptions([]);
   };
 
   const handleDoctorSelect = (doctor: DoctorProfile) => {
+    console.log('🚀 handleDoctorSelect called with doctor:', doctor);
     setSelectedDoctor(doctor);
+    // Use doctor.user (user_id like "DOC019")
+    // Fallback to doctor.id if user is missing
+    const doctorIdentifier = (doctor.user || doctor.id).toString();
+    console.log('🚀 Selected doctor identifier:', doctorIdentifier);
     setFormData(prev => ({ 
       ...prev, 
-      doctorId: doctor.user,
-      consultationFee: doctor.consultation_fee.toString(), // Auto-set consultation fee from doctor
-      duration: (doctor.consultation_duration || 5).toString() // Auto-set consultation duration from doctor
+      doctorId: doctorIdentifier,
+      consultationFee: doctor.consultation_fee.toString(),
+      duration: (doctor.consultation_duration || 5).toString()
     }));
-    setDoctorSearch(doctor.user_name);
+    setDoctorSearch(doctor.user_name || "");
     setDoctorOptions([]);
   };
 
@@ -573,6 +581,26 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
       console.log('🚀 Creating consultation with data:', consultationData);
       
+      if (!consultationData.patient) {
+        console.error('❌ CRITICAL ERROR: patientId is missing right before API call!', {
+          formData_patientId: formData.patientId,
+          selectedPatient: selectedPatient
+        });
+        toast.error('Internal Error: Patient selection lost. Please re-select the patient.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!consultationData.doctor) {
+        console.error('❌ CRITICAL ERROR: doctorId is missing right before API call!', {
+          formData_doctorId: formData.doctorId,
+          selectedDoctor: selectedDoctor
+        });
+        toast.error('Internal Error: Doctor selection lost. Please re-select the doctor.');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Step 1: Create consultation on backend
       const response = await api.post('/api/consultations/create-dynamic/', consultationData);
       const consultation = response.data.data;

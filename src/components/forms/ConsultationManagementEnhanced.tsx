@@ -163,6 +163,7 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
         response = await adminConsultationApi.getAllConsultations(params);
       }
       setConsultations(response.results);
+      console.log('🚀 Fetched consultations:', response.results);
       setTotalConsultations(response.count);
     } catch (error) {
       console.error('Error fetching consultations:', error);
@@ -716,7 +717,12 @@ const ConsultationManagementEnhanced = ({ isAssignedToClinic = true, clinicId }:
                             className={`${getPaymentStatusColor(consultation.is_paid)} ${!consultation.is_paid ? 'cursor-pointer hover:opacity-80' : ''}`}
                             onClick={() => !consultation.is_paid && handleConsultationAction('pay', consultation)}
                           >
-                            {consultation.is_paid ? 'Paid' : 'Pending'}
+                            { (consultation.is_paid || consultation.payment_status?.toLowerCase() === 'paid') 
+                              ? `Paid (${consultation.payment_method?.toLowerCase() === 'cash' ? 'CASH' : 
+                                 (['card', 'upi', 'net_banking', 'wallet', 'online'].includes(consultation.payment_method?.toLowerCase() || '') || consultation.consultation_type === 'video_call') ? 'ONLINE' : 
+                                 'CASH'})` 
+                              : 'Pending' 
+                            }
                             {!consultation.is_paid && <DollarSign className="w-3 h-3 ml-1" />}
                           </Badge>
                         </TableCell>

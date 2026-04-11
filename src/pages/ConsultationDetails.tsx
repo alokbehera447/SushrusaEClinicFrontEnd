@@ -417,7 +417,11 @@ const ConsultationDetails: React.FC = () => {
                   {consultation.status.replace('_', ' ').toUpperCase()}
                 </Badge>
                 <Badge className={`${getPaymentStatusColor(consultation.is_paid)} px-3 py-1`}>
-                  {consultation.is_paid ? 'PAID' : 'PENDING'}
+                  {consultation.is_paid 
+                    ? `PAID (${consultation.payment_method?.toLowerCase() === 'cash' ? 'CASH' : 
+                       (['card', 'upi', 'net_banking', 'wallet', 'online'].includes(consultation.payment_method?.toLowerCase() || '') || consultation.consultation_type === 'video_call') ? 'ONLINE' : 
+                       'CASH'})` 
+                    : 'PENDING'}
                 </Badge>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">Consultation Fee</p>

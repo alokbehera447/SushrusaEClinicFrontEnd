@@ -100,15 +100,23 @@ const RazorpayPaymentModal: React.FC<RazorpayPaymentModalProps> = ({
     try {
       // Use the general update endpoint or a specific payment endpoint
       // Assuming adminConsultationApi.updateConsultation exists
-      await adminConsultationApi.updateConsultation(consultation.id, {
+      const updatedConsultation = await adminConsultationApi.updateConsultation(consultation.id, {
         payment_method: 'cash',
         payment_status: 'paid',
-        is_paid: true
+        is_paid: true,
+        scheduled_date: consultation.scheduled_date,
+        scheduled_time: consultation.scheduled_time
       });
+      
+      console.log('✅ Cash payment update response:', updatedConsultation);
 
       setPaymentStatus('success');
       toast.success('Payment recorded as Cash successfully!');
-      if (onSuccess) onSuccess();
+      
+      // Give backend a moment to settle before refresh
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+      }, 1500);
 
       setTimeout(() => {
         onClose();

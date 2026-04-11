@@ -62,8 +62,8 @@ export function formatDateTime(dateTimeString: string): string {
 }
 
 // API base URL utility
-// export const API_BASE_URL = 'https://sushrusaeclinic.com';
-export const API_BASE_URL = 'http://127.0.0.1:8000';
+export const API_BASE_URL = 'https://sushrusaeclinic.com';
+// export const API_BASE_URL = 'http://127.0.0.1:8000';
 
 import axios from 'axios';
 export const api = axios.create({
@@ -94,6 +94,8 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+let isLoggingOut = false;
 
 // Handle 401 errors and try to refresh token
 api.interceptors.response.use(
@@ -130,15 +132,15 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         // Refresh failed, only logout if we're not already on login page
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/' && !isLoggingOut) {
+          isLoggingOut = true; // Set flag to prevent multiple alerts
+
           // Notify the user via a global alert since we're outside React context
           alert('Your session has expired. You will be redirected to the login page.');
-          
+
           localStorage.clear();
-          // Delay redirect so user can see what happened
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 2000);
+          // Redirect immediately to the login page
+          window.location.href = '/login';
         }
       }
     }

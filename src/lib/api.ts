@@ -835,7 +835,7 @@ export const patientApi = {
 
   // Update consultation
   updateConsultation: async (consultationId: string, consultationData: Partial<Consultation>): Promise<Consultation> => {
-    const response = await api.put<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
+    const response = await api.patch<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
     return response.data.data;
   },
 
@@ -2287,7 +2287,7 @@ export const adminConsultationApi = {
 
   // Update consultation
   updateConsultation: async (consultationId: string, consultationData: Partial<Consultation>): Promise<Consultation> => {
-    const response = await api.put<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
+    const response = await api.patch<ApiResponse<Consultation>>(`/api/consultations/${consultationId}/`, consultationData);
     return response.data.data;
   },
 
