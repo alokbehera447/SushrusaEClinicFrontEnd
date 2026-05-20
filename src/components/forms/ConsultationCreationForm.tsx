@@ -67,15 +67,15 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
   // Check if consultation time is now or within 15 minutes
   const isConsultationTimeNow = () => {
     if (!consultation?.scheduled_date || !consultation?.scheduled_time) return false;
-    
+
     const now = new Date();
     const consultationDate = new Date(consultation.scheduled_date);
     const [hours, minutes] = consultation.scheduled_time.split(':');
     consultationDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    
+
     const timeDiff = consultationDate.getTime() - now.getTime();
     const minutesDiff = timeDiff / (1000 * 60);
-    
+
     // Return true if consultation is within 15 minutes (before or after)
     return Math.abs(minutesDiff) <= 15;
   };
@@ -99,7 +99,7 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
         </div>
         <h2 className="text-3xl font-bold text-slate-800">Success!</h2>
         <p className="mt-2 text-slate-600">The consultation has been scheduled.</p>
-        
+
         {canJoinMeeting && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <div className="flex items-center justify-center mb-2">
@@ -107,7 +107,7 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
               <span className="text-blue-800 font-semibold">Consultation Time!</span>
             </div>
             <p className="text-blue-700 text-sm mb-3">Your consultation is scheduled to start now. Click below to join the meeting.</p>
-            <Button 
+            <Button
               onClick={handleJoinMeeting}
               className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white transition-transform hover:scale-105 active:scale-100"
             >
@@ -116,7 +116,7 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
             </Button>
           </div>
         )}
-        
+
         <div className="mt-6 space-y-3 rounded-xl bg-slate-100/70 p-4 text-left">
           <div className="flex items-center">
             <User className="mr-3 h-5 w-5 text-orange-500" />
@@ -131,19 +131,19 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
             <span className="font-medium text-slate-700">{appointmentTime}</span>
           </div>
         </div>
-        
+
         <div className="mt-6 flex gap-3">
           {canJoinMeeting ? (
             <>
-              <Button 
+              <Button
                 onClick={handleJoinMeeting}
                 className="flex-1 h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white transition-transform hover:scale-105 active:scale-100"
               >
                 <Video className="h-4 w-4 mr-2" />
                 Join Meeting
               </Button>
-              <Button 
-                onClick={onClose} 
+              <Button
+                onClick={onClose}
                 variant="outline"
                 className="flex-1 h-12 text-lg border-orange-500 text-orange-500 hover:bg-orange-50 transition-transform hover:scale-105 active:scale-100"
               >
@@ -151,8 +151,8 @@ const SuccessModal = ({ isOpen, onClose, patientName, doctorName, appointmentTim
               </Button>
             </>
           ) : (
-            <Button 
-              onClick={onClose} 
+            <Button
+              onClick={onClose}
               className="w-full h-12 text-lg bg-orange-500 hover:bg-orange-600 transition-transform hover:scale-105 active:scale-100"
             >
               Done
@@ -220,7 +220,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentVerified, setPaymentVerified] = useState(false);
-  
+
   // UI State
   const [selectedPatient, setSelectedPatient] = useState<PatientProfile | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
@@ -232,7 +232,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const [doctorOptions, setDoctorOptions] = useState<DoctorProfile[]>([]);
   const [doctorSlots, setDoctorSlots] = useState<DoctorSlotFrontend[]>([]);
   const [slotLoading, setSlotLoading] = useState(false);
-  
+
   // Pagination state
   const [patientPage, setPatientPage] = useState(1);
   const [doctorPage, setDoctorPage] = useState(1);
@@ -241,18 +241,18 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   const [loadingMorePatients, setLoadingMorePatients] = useState(false);
   const [loadingMoreDoctors, setLoadingMoreDoctors] = useState(false);
   const [searchingPatients, setSearchingPatients] = useState(false);
-  
+
   // --- Restored Original API Logic ---
 
   const debouncedPatientSearch = useMemo(() => debounce(async (query: string) => {
     try {
       console.log("🔍 Patient search query:", query);
       setSearchingPatients(true);
-      
+
       // Reset pagination when search query changes
       setPatientPage(1);
       setPatientHasMore(true);
-      
+
       if (!query) {
         // Load patients with pagination
         console.log("📋 Loading all patients (no search query)");
@@ -262,39 +262,39 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         setPatientHasMore(res?.count ? res.results.length < res.count : false);
         return;
       }
-      
+
       // For search queries, use the getPatients API with search parameter
       // This supports searching by name, phone number, and other fields
       console.log("🔍 Searching patients with query:", query);
-      
+
       // Try the main search first
-      let results = await adminPatientApi.getPatients({ 
-        page: 1, 
+      let results = await adminPatientApi.getPatients({
+        page: 1,
         page_size: 50, // Get more results for search
-        search: query 
+        search: query
       });
       console.log("🔍 Search results:", results);
-      
+
       // If no results and query looks like a phone number, try alternative search
       if ((!results?.results || results.results.length === 0) && /^\d+$/.test(query.replace(/\s+/g, ''))) {
         console.log("📱 Query looks like phone number, trying alternative search");
-        
+
         // Try searching with cleaned phone number (remove spaces, dashes, etc.)
         const cleanQuery = query.replace(/[\s\-\(\)\+]/g, '');
         console.log("📱 Cleaned phone query:", cleanQuery);
-        
-        const altResults = await adminPatientApi.getPatients({ 
-          page: 1, 
+
+        const altResults = await adminPatientApi.getPatients({
+          page: 1,
           page_size: 50,
-          search: cleanQuery 
+          search: cleanQuery
         });
         console.log("📱 Alternative search results:", altResults);
-        
+
         if (altResults?.results && altResults.results.length > 0) {
           results = altResults;
         }
       }
-      
+
       setPatientOptions(Array.isArray(results?.results) ? results.results : []);
       setPatientHasMore(false); // Search results don't need pagination
     } catch (e) {
@@ -311,7 +311,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       // Reset pagination when search query changes
       setDoctorPage(1);
       setDoctorHasMore(true);
-      
+
       if (!query) {
         // Load doctors with pagination
         const res = await doctorApi.getDoctors({ page: 1, page_size: 20 });
@@ -335,12 +335,12 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   // Load more patients function
   const loadMorePatients = async () => {
     if (loadingMorePatients || !patientHasMore || patientSearch) return; // Don't load more during search
-    
+
     try {
       setLoadingMorePatients(true);
       const nextPage = patientPage + 1;
       const res = await adminPatientApi.getPatients({ page: nextPage, page_size: 20 });
-      
+
       if (Array.isArray(res?.results) && res.results.length > 0) {
         setPatientOptions(prev => [...prev, ...res.results]);
         setPatientPage(nextPage);
@@ -359,12 +359,12 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
   // Load more doctors function
   const loadMoreDoctors = async () => {
     if (loadingMoreDoctors || !doctorHasMore || doctorSearch) return; // Don't load more during search
-    
+
     try {
       setLoadingMoreDoctors(true);
       const nextPage = doctorPage + 1;
       const res = await doctorApi.getDoctors({ page: nextPage, page_size: 20 });
-      
+
       if (Array.isArray(res?.results) && res.results.length > 0) {
         setDoctorOptions(prev => [...prev, ...res.results]);
         setDoctorPage(nextPage);
@@ -384,7 +384,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     console.log('🚀 fetchAvailableSlots called with date:', date);
     console.log('🚀 selectedDoctor:', selectedDoctor);
     console.log('🚀 selectedClinic:', selectedClinic);
-    
+
     if (!selectedDoctor || !selectedClinic) {
       console.log('🚀 Early return - missing doctor or clinic');
       return;
@@ -400,21 +400,21 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         clinic_id: assignedClinicId,
         date: formattedDate,
       });
-      
+
       console.log('🚀 About to call calculateAvailableSlots with:', {
         doctor_id: selectedDoctor.user,
         clinic_id: assignedClinicId,
         date: formattedDate,
       });
-      
+
       const result = await calculateAvailableSlots({
         doctor_id: selectedDoctor.user,
         date: formattedDate,
         clinic_id: assignedClinicId, // Use the admin's assigned clinic ID
       });
-      
+
       console.log('🚀 calculateAvailableSlots result:', result);
-      
+
       const frontendSlots: DoctorSlotFrontend[] = result.slots.map((slot: any) => ({
         id: -1, // Temporary ID for calculated slots
         doctor: selectedDoctor.user.toString(),
@@ -429,7 +429,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         booked_clinic_id: slot.booked_clinic_id,
         booked_in_different_clinic: slot.booked_in_different_clinic,
       }));
-      
+
       setDoctorSlots(frontendSlots);
       setFormData(prev => ({ ...prev, duration: result.clinic_duration.toString() }));
     } catch (error) {
@@ -445,7 +445,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
   useEffect(() => { debouncedPatientSearch(patientSearch); }, [patientSearch, debouncedPatientSearch]);
   useEffect(() => { debouncedDoctorSearch(doctorSearch); }, [doctorSearch, debouncedDoctorSearch]);
-  
+
   // Load initial data when component mounts
   useEffect(() => {
     console.log('🚀 Component mounted - loading initial data');
@@ -455,7 +455,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     // Load initial doctors
     console.log('🚀 Loading initial doctors...');
     debouncedDoctorSearch('');
-    
+
     // Load default clinic
     const loadDefaultClinic = async () => {
       try {
@@ -477,7 +477,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         setSelectedClinic({ id: 'CLI002', name: 'Default Clinic' } as EClinic);
       }
     };
-    
+
     loadDefaultClinic();
   }, [debouncedPatientSearch, debouncedDoctorSearch]);
 
@@ -488,7 +488,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       consultationDate: formData.consultationDate,
       allConditionsMet: !!(selectedDoctor && selectedClinic && formData.consultationDate)
     });
-    
+
     if (selectedDoctor && selectedClinic && formData.consultationDate) {
       console.log('🚀 All conditions met, fetching slots...');
       fetchAvailableSlots(formData.consultationDate);
@@ -528,8 +528,8 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
     // Fallback to doctor.id if user is missing
     const doctorIdentifier = (doctor.user || doctor.id).toString();
     console.log('🚀 Selected doctor identifier:', doctorIdentifier);
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       doctorId: doctorIdentifier,
       consultationFee: doctor.consultation_fee.toString(),
       duration: (doctor.consultation_duration || 5).toString()
@@ -563,7 +563,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
         setIsSubmitting(false);
         return;
       }
-      
+
       const consultationData = {
         patient: formData.patientId,
         doctor: formData.doctorId,
@@ -580,7 +580,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       };
 
       console.log('🚀 Creating consultation with data:', consultationData);
-      
+
       if (!consultationData.patient) {
         console.error('❌ CRITICAL ERROR: patientId is missing right before API call!', {
           formData_patientId: formData.patientId,
@@ -605,7 +605,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
       const response = await api.post('/api/consultations/create-dynamic/', consultationData);
       const consultation = response.data.data;
       console.log('Consultation created:', consultation);
-      
+
       setCreatedConsultation(consultation);
       setMeetingLink(consultation.doctor_meeting_link || '');
 
@@ -742,18 +742,18 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
   const renderStepContent = () => {
     const stepProps = {
-        formData, handleInputChange, handlePatientSelect, handleDoctorSelect,
-        patientSearch, setPatientSearch, doctorSearch, setDoctorSearch,
-        patientOptions, doctorOptions,
-        selectedPatient, setSelectedPatient, selectedDoctor, setSelectedDoctor, selectedClinic,
-        doctorSlots, slotLoading,
-        // Pagination props
-        patientHasMore, loadingMorePatients, loadMorePatients,
-        doctorHasMore, loadingMoreDoctors, loadMoreDoctors,
-        // Search loading state
-        searchingPatients,
+      formData, handleInputChange, handlePatientSelect, handleDoctorSelect,
+      patientSearch, setPatientSearch, doctorSearch, setDoctorSearch,
+      patientOptions, doctorOptions,
+      selectedPatient, setSelectedPatient, selectedDoctor, setSelectedDoctor, selectedClinic,
+      doctorSlots, slotLoading,
+      // Pagination props
+      patientHasMore, loadingMorePatients, loadMorePatients,
+      doctorHasMore, loadingMoreDoctors, loadMoreDoctors,
+      // Search loading state
+      searchingPatients,
     };
-    
+
     return (
       <div key={currentStep} className="animate-in fade-in-50 slide-in-from-bottom-5 duration-500">
         {currentStep === 1 && renderStep1(stepProps)}
@@ -816,7 +816,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
             <DialogHeader>
               <DialogTitle className="text-center">Payment Receipt</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               {/* Receipt Header */}
               <div className="text-center border-b pb-4">
@@ -824,7 +824,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                 <p className="text-sm text-gray-600">Consultation Receipt</p>
                 <p className="text-xs text-gray-500 mt-1">Receipt #: {generatedReceipt.receipt_number}</p>
               </div>
-              
+
               {/* Receipt Details */}
               <div className="space-y-3">
                 <div className="flex justify-between">
@@ -853,16 +853,15 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Status:</span>
-                  <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                    generatedReceipt.payment_status === 'paid' 
-                      ? 'bg-green-100 text-green-800' 
+                  <span className={`text-sm font-medium px-2 py-1 rounded-full ${generatedReceipt.payment_status === 'paid'
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-yellow-100 text-yellow-800'
-                  }`}>
+                    }`}>
                     {generatedReceipt.payment_status === 'paid' ? 'Paid' : 'Pending'}
                   </span>
                 </div>
               </div>
-              
+
               {/* Amount */}
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center">
@@ -870,7 +869,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                   <span className="text-xl font-bold text-green-600">{generatedReceipt.formatted_amount}</span>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div className="text-center text-xs text-gray-500 border-t pt-4">
                 <p>Issued by: {generatedReceipt.issued_by_name}</p>
@@ -878,10 +877,10 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                 <p className="mt-2">Thank you for choosing Sushrusa E-Clinic!</p>
               </div>
             </div>
-            
+
             <DialogFooter className="flex gap-2">
               {meetingLink && createdConsultation?.consultation_type === 'video_call' && (
-                <Button 
+                <Button
                   onClick={() => {
                     window.open(meetingLink, '_blank', 'noopener,noreferrer');
                   }}
@@ -891,8 +890,8 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                   Join Meeting
                 </Button>
               )}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowReceiptModal(false);
                   setGeneratedReceipt(null);
@@ -902,7 +901,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
               >
                 Close
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   // Print receipt
                   window.print();
@@ -946,7 +945,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                   Step {currentStep} of {STEPS.length}
                 </Badge>
               </div>
-              
+
               {/* Compact Stepper */}
               <div className="mt-4">
                 <div className="flex items-center space-x-2">
@@ -957,8 +956,8 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                           className={cn(
                             "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium transition-all",
                             currentStep > step.number ? "bg-green-500 text-white" :
-                            currentStep === step.number ? "bg-blue-500 text-white" :
-                            "bg-gray-200 text-gray-600"
+                              currentStep === step.number ? "bg-blue-500 text-white" :
+                                "bg-gray-200 text-gray-600"
                           )}
                         >
                           {currentStep > step.number ? <CheckCircle className="h-3 w-3" /> : step.number}
@@ -978,7 +977,7 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
                 </div>
               </div>
             </CardHeader>
-            
+
             <CardContent className="pt-0">
               <form onSubmit={handleSubmit}>
                 <div className="min-h-[300px]">
@@ -987,61 +986,61 @@ const NewConsultationPage = ({ onClose, assignedClinicId }: { onClose: () => voi
 
                 {/* Compact Navigation */}
                 {currentStep < 5 && (
-                <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={prevStep} 
-                    disabled={currentStep === 1}
-                    className="text-sm"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-1" />
-                    Previous
-                  </Button>
-                  
-                  {currentStep < 4 ? (
-                    <Button 
-                      type="button" 
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                    <Button
+                      type="button"
+                      variant="outline"
                       size="sm"
-                      onClick={nextStep} 
-                      disabled={!canProceedToNext()}
-                      className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={prevStep}
+                      disabled={currentStep === 1}
+                      className="text-sm"
                     >
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-1" />
+                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      Previous
                     </Button>
-                  ) : (
-                    <Button 
-                      type="submit" 
-                      size="sm"
-                      disabled={isSubmitting || !canProceedToNext()}
-                      className={cn(
-                        "text-sm text-white",
-                        formData.paymentMethod === 'cash'
-                          ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-[#E17726] hover:bg-[#c9651e]'
-                      )}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating...
-                        </>
-                      ) : formData.paymentMethod === 'cash' ? (
-                        <>
-                          <Banknote className="w-4 h-4 mr-1" />
-                          Create & Mark Paid
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="w-4 h-4 mr-1" />
-                          Create & Pay Online
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
+
+                    {currentStep < 4 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={nextStep}
+                        disabled={!canProceedToNext()}
+                        className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        Next
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={isSubmitting || !canProceedToNext()}
+                        className={cn(
+                          "text-sm text-white",
+                          formData.paymentMethod === 'cash'
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-[#E17726] hover:bg-[#c9651e]'
+                        )}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : formData.paymentMethod === 'cash' ? (
+                          <>
+                            <Banknote className="w-4 h-4 mr-1" />
+                            Create & Mark Paid
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="w-4 h-4 mr-1" />
+                            Create & Pay Online
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </form>
             </CardContent>
@@ -1086,9 +1085,9 @@ const renderStep1 = ({ patientSearch, setPatientSearch, patientOptions, handlePa
           {patientOptions.length > 0 ? (
             <div className="divide-y divide-gray-200">
               {patientOptions.map((p: PatientProfile) => (
-                <div 
-                  key={p.id} 
-                  onClick={() => handlePatientSelect(p)} 
+                <div
+                  key={p.id}
+                  onClick={() => handlePatientSelect(p)}
                   className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center space-x-3">
@@ -1115,7 +1114,7 @@ const renderStep1 = ({ patientSearch, setPatientSearch, patientOptions, handlePa
             </div>
           )}
         </div>
-        
+
         {/* Load More Patients Button */}
         {patientHasMore && !patientSearch && (
           <div className="mt-2 text-center">
@@ -1155,13 +1154,13 @@ const renderStep1 = ({ patientSearch, setPatientSearch, patientOptions, handlePa
               <p className="text-xs text-green-600">{selectedPatient.user_phone}</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => { 
-              setSelectedPatient(null); 
-              setPatientSearch(''); 
-              setFormData((p:any) => ({...p, patientId: ''}))
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedPatient(null);
+              setPatientSearch('');
+              setFormData((p: any) => ({ ...p, patientId: '' }))
             }}
             className="text-green-700 hover:text-green-800 hover:bg-green-100"
           >
@@ -1200,9 +1199,9 @@ const renderStep2 = ({ doctorSearch, setDoctorSearch, doctorOptions, handleDocto
           {doctorOptions.length > 0 ? (
             <div className="divide-y divide-gray-200">
               {doctorOptions.map((d: DoctorProfile) => (
-                <div 
-                  key={d.user} 
-                  onClick={() => handleDoctorSelect(d)} 
+                <div
+                  key={d.user}
+                  onClick={() => handleDoctorSelect(d)}
                   className="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center space-x-3">
@@ -1232,7 +1231,7 @@ const renderStep2 = ({ doctorSearch, setDoctorSearch, doctorOptions, handleDocto
             </div>
           )}
         </div>
-        
+
         {/* Load More Doctors Button */}
         {doctorHasMore && !doctorSearch && (
           <div className="mt-2 text-center">
@@ -1275,13 +1274,13 @@ const renderStep2 = ({ doctorSearch, setDoctorSearch, doctorOptions, handleDocto
               </p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => { 
-              setSelectedDoctor(null); 
-              setDoctorSearch(''); 
-              setFormData((p:any) => ({...p, doctorId: ''}))
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedDoctor(null);
+              setDoctorSearch('');
+              setFormData((p: any) => ({ ...p, doctorId: '' }))
             }}
             className="text-green-700 hover:text-green-800 hover:bg-green-100"
           >
@@ -1300,8 +1299,8 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading, is
       <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
       <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
         <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className={cn(
               "w-full h-9 justify-start text-left text-sm border border-gray-300",
               !formData.consultationDate && "text-gray-500"
@@ -1312,12 +1311,12 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading, is
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
-          <Calendar 
-            mode="single" 
-            selected={formData.consultationDate} 
-            onSelect={(d: any) => { handleInputChange('consultationDate', d); setIsDatePopoverOpen(false); }} 
-            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
-            initialFocus 
+          <Calendar
+            mode="single"
+            selected={formData.consultationDate}
+            onSelect={(d: any) => { handleInputChange('consultationDate', d); setIsDatePopoverOpen(false); }}
+            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+            initialFocus
           />
         </PopoverContent>
       </Popover>
@@ -1333,7 +1332,7 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading, is
           </span>
         )}
       </div>
-      
+
       {slotLoading ? (
         <div className="flex items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50">
           <div className="flex items-center space-x-2 text-gray-500">
@@ -1346,23 +1345,23 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading, is
           <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
             {doctorSlots.map((slot: DoctorSlotFrontend, index: number) => (
               <div key={index} className="relative group">
-                <button 
-                  type="button" 
-                  onClick={() => slot.isAvailable ? handleInputChange('selectedSlot', slot) : null} 
+                <button
+                  type="button"
+                  onClick={() => slot.isAvailable ? handleInputChange('selectedSlot', slot) : null}
                   disabled={!slot.isAvailable}
                   className={cn(
                     "w-full rounded-md p-2 text-center text-sm font-medium transition-all duration-200 border relative",
-                    slot.isAvailable && formData.selectedSlot?.startTime === slot.startTime 
-                      ? "bg-blue-500 text-white border-blue-500 shadow-sm" 
+                    slot.isAvailable && formData.selectedSlot?.startTime === slot.startTime
+                      ? "bg-blue-500 text-white border-blue-500 shadow-sm"
                       : slot.isAvailable
-                      ? "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-                      : "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
+                        ? "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                        : "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
                   )}
-                  title={!slot.isAvailable && slot.booked_in_different_clinic 
-                    ? `Already booked in ${slot.booked_in_clinic}` 
-                    : !slot.isAvailable 
-                    ? 'Already booked' 
-                    : ''}
+                  title={!slot.isAvailable && slot.booked_in_different_clinic
+                    ? `Already booked in ${slot.booked_in_clinic}`
+                    : !slot.isAvailable
+                      ? 'Already booked'
+                      : ''}
                 >
                   {slot.isAvailable ? (
                     slot.startTime
@@ -1400,13 +1399,13 @@ const renderStep3 = ({ formData, handleInputChange, doctorSlots, slotLoading, is
         </>
       ) : formData.consultationDate ? (
         <div className="flex flex-col items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
-          <Clock className="w-6 h-6 mb-2"/>
+          <Clock className="w-6 h-6 mb-2" />
           <p className="text-sm font-medium">No slots available</p>
           <p className="text-xs">Please select another date</p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-32 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
-          <CalendarIcon className="w-6 h-6 mb-2"/>
+          <CalendarIcon className="w-6 h-6 mb-2" />
           <p className="text-sm font-medium">Select a date first</p>
           <p className="text-xs">Available slots will appear here</p>
         </div>
@@ -1458,11 +1457,11 @@ const renderStep4 = ({ formData, handleInputChange }: any) => (
     {/* Symptoms */}
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">Symptoms (Optional)</label>
-      <Textarea 
+      <Textarea
         placeholder="Describe symptoms in detail..."
-        value={formData.symptoms} 
-        onChange={(e) => handleInputChange('symptoms', e.target.value)} 
-        className="min-h-[80px] text-sm border border-gray-300 resize-none" 
+        value={formData.symptoms}
+        onChange={(e) => handleInputChange('symptoms', e.target.value)}
+        className="min-h-[80px] text-sm border border-gray-300 resize-none"
       />
     </div>
 
@@ -1507,7 +1506,7 @@ const renderStep4 = ({ formData, handleInputChange }: any) => (
         </SelectContent>
       </Select>
     </div>
-    
+
     {/* Payment Method Selection - Full width, prominent */}
     <div>
       <label className="block text-sm font-semibold text-gray-800 mb-3">Payment Method *</label>

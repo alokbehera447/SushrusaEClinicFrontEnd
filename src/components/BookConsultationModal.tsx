@@ -131,12 +131,6 @@ const tomorrow = (): string => {
   return d.toISOString().split('T')[0];
 };
 
-const TIME_SLOTS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-  '17:00', '17:30', '18:00',
-];
-
 const STEP_LABELS: Record<Step, string> = {
   1: 'Choose Doctor',
   2: 'Appointment Details',
@@ -154,29 +148,26 @@ const StepIndicator = ({ current }: { current: Step }) => (
       <React.Fragment key={step}>
         <div className="flex flex-col items-center gap-1">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-              step < current
-                ? 'bg-green-500 text-white shadow-green-200 shadow-md'
-                : step === current
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${step < current
+              ? 'bg-green-500 text-white shadow-green-200 shadow-md'
+              : step === current
                 ? 'bg-gradient-to-br from-[#E17726] to-[#FF8A56] text-white shadow-orange-200 shadow-md'
                 : 'bg-gray-100 text-gray-400'
-            }`}
+              }`}
           >
             {step < current ? <CheckCircle className="w-4 h-4" /> : step}
           </div>
           <span
-            className={`text-xs font-medium hidden sm:block ${
-              step === current ? 'text-[#E17726]' : step < current ? 'text-green-600' : 'text-gray-400'
-            }`}
+            className={`text-xs font-medium hidden sm:block ${step === current ? 'text-[#E17726]' : step < current ? 'text-green-600' : 'text-gray-400'
+              }`}
           >
             {STEP_LABELS[step]}
           </span>
         </div>
         {idx < 3 && (
           <div
-            className={`flex-1 h-0.5 mx-2 transition-all duration-500 ${
-              step < current ? 'bg-green-400' : 'bg-gray-200'
-            }`}
+            className={`flex-1 h-0.5 mx-2 transition-all duration-500 ${step < current ? 'bg-green-400' : 'bg-gray-200'
+              }`}
           />
         )}
       </React.Fragment>
@@ -208,11 +199,10 @@ const DoctorCard = ({
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left rounded-xl border-2 p-4 transition-all duration-200 hover:shadow-lg group ${
-        selected
-          ? 'border-[#E17726] bg-orange-50 shadow-md shadow-orange-100'
-          : 'border-gray-100 bg-white hover:border-[#E17726]/40'
-      }`}
+      className={`w-full text-left rounded-xl border-2 p-4 transition-all duration-200 hover:shadow-lg group ${selected
+        ? 'border-[#E17726] bg-orange-50 shadow-md shadow-orange-100'
+        : 'border-gray-100 bg-white hover:border-[#E17726]/40'
+        }`}
       id={`doctor-card-${doctor.id}`}
     >
       <div className="flex items-start gap-3">
@@ -322,44 +312,59 @@ const BookConsultationModal: React.FC<Props> = ({
     completedAt: string;
   } | null>(null);
   const [paymentError, setPaymentError] = useState<string>('');
-  
+
   // ── Available Slots ──
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
   const [isSlotsLoading, setIsSlotsLoading] = useState(false);
 
   const fetchAvailableSlots = useCallback(async () => {
     if (!booking.doctor || !booking.preferredDate) return;
-    
+
     setIsSlotsLoading(true);
+
     try {
       const data = await calculateAvailableSlots({
-        doctor_id: booking.doctor.id, 
+        doctor_id: booking.doctor.user_id,
         date: booking.preferredDate,
       });
-      // Extract times that are marked as available
-      const enabledTimes = data.slots
-        .filter(s => s.is_available)
-        .map(s => s.start_time.substring(0, 5));
-      setAvailableSlots(enabledTimes);
-      
-      // If current selected time is not in available list, pick the first available one
-      if (enabledTimes.length > 0 && !enabledTimes.includes(booking.preferredTime)) {
-        setBooking(prev => ({ ...prev, preferredTime: enabledTimes[0] }));
+
+      // ✅ Store full slot objects (NOT strings)
+      const slots = data?.slots || [];
+      setAvailableSlots(slots);
+
+      // ✅ Extract only available times
+      const availableTimes = slots
+        .filter((s: any) => s.is_available)
+        .map((s: any) => s.start_time.substring(0, 5));
+
+      // ✅ Auto-select first available time if current not valid
+      if (
+        availableTimes.length > 0 &&
+        !availableTimes.includes(booking.preferredTime)
+      ) {
+        setBooking((prev) => ({
+          ...prev,
+          preferredTime: availableTimes[0],
+        }));
       }
-    } catch (e) {
-      console.error('Error fetching available slots:', e);
-      // Fallback to all slots if API fails, but ideally we show error
-      setAvailableSlots(TIME_SLOTS);
+
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+
+      // ❌ Don't use TIME_SLOTS anymore (wrong type)
+      // ✅ Safe fallback
+      setAvailableSlots([]);
+
     } finally {
       setIsSlotsLoading(false);
     }
-  }, [booking.doctor?.id, booking.preferredDate]);
+  }, [booking.doctor?.user_id, booking.preferredDate]);
 
   useEffect(() => {
     if (open && step === 2 && booking.doctor) {
       fetchAvailableSlots();
     }
-  }, [open, step, booking.doctor?.id, booking.preferredDate, fetchAvailableSlots]);
+  }, [open, step, booking.doctor?.user_id, booking.preferredDate, fetchAvailableSlots]);
 
   // ── Load doctors ──
   const fetchDoctors = useCallback(async () => {
@@ -420,7 +425,7 @@ const BookConsultationModal: React.FC<Props> = ({
       setPaymentStatus('creating_order');
       // Create backend consultation first
       const consultation = await createConsultation({
-        patient: user?.id || '', 
+        patient: user?.id || '',
         doctor: booking.doctor.user_id, // Safely use the User table ID instead of Profile ID
         consultation_type: booking.consultationType === 'video' ? 'video_call' : 'in_person',
         scheduled_date: booking.preferredDate || '',
@@ -618,11 +623,10 @@ const BookConsultationModal: React.FC<Props> = ({
                       key={value}
                       id={`consultation-type-${value}`}
                       onClick={() => setBooking((p) => ({ ...p, consultationType: value }))}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                        booking.consultationType === value
-                          ? 'border-[#E17726] bg-orange-50 text-[#E17726]'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-sm font-medium transition-all ${booking.consultationType === value
+                        ? 'border-[#E17726] bg-orange-50 text-[#E17726]'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
                     >
                       <Icon className="w-5 h-5" />
                       {label}
@@ -645,50 +649,93 @@ const BookConsultationModal: React.FC<Props> = ({
                   onChange={(e) => setBooking((p) => ({ ...p, preferredDate: e.target.value }))}
                 />
               </div>
+              <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
 
-              {/* Time slots */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#E17726]" />
-                  Preferred Time
-                </label>
-                <div className="relative">
-                  {isSlotsLoading && (
-                    <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center rounded-lg">
-                      <Loader2 className="w-6 h-6 animate-spin text-[#E17726]" />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-5 gap-2">
-                    {TIME_SLOTS.map((t) => {
-                      const isAvailable = availableSlots.includes(t);
-                      const isBooked = !isAvailable;
-                      
-                      return (
-                        <button
-                          key={t}
-                          id={`time-slot-${t.replace(':', '')}`}
-                          disabled={isBooked || isSlotsLoading}
-                          onClick={() => setBooking((p) => ({ ...p, preferredTime: t }))}
-                          className={`py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                            booking.preferredTime === t
-                              ? 'border-[#E17726] bg-[#E17726] text-white shadow-md'
-                              : isBooked
-                              ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed opacity-50'
-                              : 'border-gray-200 text-gray-600 hover:border-[#E17726]/50 hover:bg-orange-50'
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      );
-                    })}
+                {/* 🔄 Loading State */}
+                {isSlotsLoading ? (
+                  <div className="flex items-center justify-center h-32 text-gray-500">
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    <span className="text-sm">Loading available slots...</span>
                   </div>
-                  {availableSlots.length === 0 && !isSlotsLoading && (
-                    <p className="text-[10px] text-red-500 mt-2 text-center font-medium">
-                      ⚠️ No slots available for this date. Please try another day.
-                    </p>
-                  )}
-                </div>
+                ) : availableSlots.length === 0 ? (
+
+                  /* ❌ Empty State */
+                  <div className="flex flex-col items-center justify-center h-32 text-gray-500">
+                    <Clock className="w-6 h-6 mb-2 text-gray-400" />
+                    <p className="text-sm font-medium">No slots available</p>
+                    <p className="text-xs">Please select another date</p>
+                  </div>
+
+                ) : (
+
+                  /* ✅ Slots Available */
+                  <>
+                    <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto">
+                      {availableSlots.map((slot: any, index: number) => {
+                        const time = slot.start_time.substring(0, 5);
+                        const isSelected = booking.preferredTime === time;
+
+                        return (
+                          <div key={index} className="relative group">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                slot.is_available
+                                  ? setBooking((p) => ({ ...p, preferredTime: time }))
+                                  : null
+                              }
+                              disabled={!slot.is_available}
+                              className={`w-full h-10 rounded-md text-sm font-medium transition-all border
+                  ${isSelected
+                                  ? "bg-blue-500 text-white border-blue-500 shadow-sm"
+                                  : slot.is_available
+                                    ? "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                                    : "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed"
+                                }`}
+                            >
+                              {slot.is_available ? (
+                                time
+                              ) : (
+                                <div className="flex flex-col items-center leading-tight">
+                                  <span className="line-through">{time}</span>
+                                  <span className="text-[10px] mt-0.5">
+                                    {slot.booked_in_clinic ? "Booked" : "Unavailable"}
+                                  </span>
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Tooltip */}
+                            {!slot.is_available && slot.booked_in_clinic && (
+                              <div className="hidden group-hover:block absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg whitespace-nowrap">
+                                Already booked in {slot.booked_in_clinic}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 text-xs text-gray-600 mt-3">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-white border border-gray-300 rounded"></div>
+                        <span>Available</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+                        <span>Booked</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                        <span>Selected</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
+
+
 
               {/* Chief complaint */}
               <div className="space-y-2">
@@ -767,8 +814,8 @@ const BookConsultationModal: React.FC<Props> = ({
                       {booking.consultationType === 'video'
                         ? 'Video Call'
                         : booking.consultationType === 'in_person'
-                        ? 'In-Person'
-                        : 'Audio Call'}
+                          ? 'In-Person'
+                          : 'Audio Call'}
                     </span>
                   </div>
                   <div className="flex justify-between">
