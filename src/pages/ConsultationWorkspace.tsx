@@ -171,6 +171,8 @@ const ConsultationWorkspace: React.FC = () => {
   const { user } = useAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const isMobile = useIsMobile();
+  const isSuperAdmin = user?.role === 'superadmin';
+  const showVideoSection = !isSuperAdmin;
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -288,8 +290,27 @@ const ConsultationWorkspace: React.FC = () => {
   const [existingPrescriptions, setExistingPrescriptions] = useState<ExistingPrescription[]>([]);
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
+
+  // Auto-completion states
+  const AUTO_COMPLETE_SECONDS = 3600;
+  const [autoCompleteTimer, setAutoCompleteTimer] = useState<number | null>(null);
+  const [autoCompleteTimeRemaining, setAutoCompleteTimeRemaining] = useState<number>(AUTO_COMPLETE_SECONDS);
+  const [showAutoCompleteWarning, setShowAutoCompleteWarning] = useState(false);
   const [prescriptionInvestigations, setPrescriptionInvestigations] = useState<PrescriptionInvestigation[]>([]);
 
+  const calculateAutoCompleteTimeRemaining = (consultation: Consultation | null) => {
+    if (!consultation || !consultation.actual_start_time) {
+      return AUTO_COMPLETE_SECONDS;
+    }
+
+    const startedAt = new Date(consultation.actual_start_time);
+    if (Number.isNaN(startedAt.getTime())) {
+      return AUTO_COMPLETE_SECONDS;
+    }
+
+    const elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+    return Math.max(0, AUTO_COMPLETE_SECONDS - elapsedSeconds);
+  };
 
 
   // Form state
@@ -736,6 +757,109 @@ const ConsultationWorkspace: React.FC = () => {
     return () => clearTimeout(handler);
   }, [formData, medications, prescription?.id]);
 
+  // Auto-completion timer - automatically complete consultation after 1 hour
+  useEffect(() => {
+    // Only start timer if consultation is in progress / ongoing
+    if (!consultation || (consultation.status !== 'in_progress' && consultation.status !== 'ongoing')) {
+      if (autoCompleteTimer) {
+        clearInterval(autoCompleteTimer);
+        setAutoCompleteTimer(null);
+      }
+      setAutoCompleteTimeRemaining(AUTO_COMPLETE_SECONDS);
+      setShowAutoCompleteWarning(false);
+      return;
+    }
+
+    const initialRemaining = calculateAutoCompleteTimeRemaining(consultation);
+    setAutoCompleteTimeRemaining(initialRemaining);
+
+    if (initialRemaining <= 0) {
+      handleAutoCompleteConsultation();
+      return;
+    }
+
+    let warningShown = showAutoCompleteWarning;
+    if (initialRemaining <= 900 && !warningShown) {
+      warningShown = true;
+      setShowAutoCompleteWarning(true);
+      toast.info('⏰ Consultation will auto-complete in 15 minutes');
+    }
+
+    const intervalId = setInterval(() => {
+      setAutoCompleteTimeRemaining(prev => {
+        const newTime = prev - 1;
+
+        if (newTime === 900 && !warningShown) {
+          warningShown = true;
+          setShowAutoCompleteWarning(true);
+          toast.info('⏰ Consultation will auto-complete in 15 minutes');
+        }
+
+        if (newTime === 300) {
+          toast.error('⚠️ Consultation will auto-complete in 5 minutes. Complete now to prevent automatic completion.');
+        }
+
+        if (newTime <= 0) {
+          clearInterval(intervalId);
+          handleAutoCompleteConsultation();
+          return 0;
+        }
+
+        return newTime;
+      });
+    }, 1000);
+
+    setAutoCompleteTimer(intervalId as any);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [consultation?.status, consultation?.actual_start_time, consultationId]);
+
+  // Auto-complete function
+  const handleAutoCompleteConsultation = async () => {
+    if (!consultationId || completing) return;
+    
+    try {
+      console.log('🤖 Auto-completing consultation after 1 hour...');
+      setCompleting(true);
+      
+      const response = await doctorConsultationApi.completeConsultation(consultationId);
+      setConsultation(prev => prev ? { ...prev, status: 'completed' } : null);
+      toast.success('✅ Auto-Completed: Consultation has been automatically completed after 1 hour.');
+
+      setTimeout(() => {
+        if (user?.role === 'superadmin') {
+          navigate('/superadmin/dashboard');
+        } else if (user?.role === 'admin') {
+          navigate('/dashboard');
+        } else {
+          navigate('/doctor/dashboard');
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error auto-completing consultation:', error);
+      toast.error('Failed to auto-complete consultation');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  // Format time remaining for display
+  const formatTimeRemaining = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
   // Show mobile component if on mobile device (after all hooks)
   if (isMobile) {
     return <MobileConsultationWorkspace />;
@@ -845,7 +969,7 @@ const ConsultationWorkspace: React.FC = () => {
       // Update consultation status to completed
       const response = await doctorConsultationApi.completeConsultation(consultationId);
 
-      if (response && response.success) {
+      if (response) {
         // Update local consultation state
         setConsultation(prev => prev ? { ...prev, status: 'completed' } : null);
         toast.success('Consultation completed successfully');
@@ -864,7 +988,7 @@ const ConsultationWorkspace: React.FC = () => {
           }, 1500);
         }, 3000);
       } else {
-        toast.error(response?.error || 'Failed to complete consultation');
+        toast.error('Failed to complete consultation');
       }
     } catch (error) {
       console.error('Error completing consultation:', error);
@@ -1105,6 +1229,16 @@ const ConsultationWorkspace: React.FC = () => {
                       consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'In Progress' :
                         consultation.status?.replace('_', ' ')}
                   </Badge>
+                  
+                  {/* Auto-completion timer display */}
+                  {(consultation.status === 'in_progress' || consultation.status === 'in progress' || consultation.status === 'ongoing') && (
+                    <div className="flex items-center space-x-1 ml-2 px-2 py-0.5 bg-yellow-100 rounded-md">
+                      <Clock className="w-3 h-3 text-yellow-600 animate-pulse" />
+                      <span className="text-xs font-semibold text-yellow-700">
+                        Auto-complete in: {formatTimeRemaining(autoCompleteTimeRemaining)}
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1679,75 +1813,75 @@ const ConsultationWorkspace: React.FC = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 flex">
-          {/* Video Meeting Section */}
-          <div className={`${isVideoMaximized ? 'w-full' : 'flex-1'} bg-white border-r border-slate-200 transition-all duration-300 shadow-sm`}>
-            <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold flex items-center gap-1.5 text-slate-800">
-                    <Video className="w-4 h-4 text-blue-600" />
-                    Jitsi Meet - Dirac AI
-                  </h2>
-                  <div className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">
-                    <AlertCircle className="w-2.5 h-2.5" />
-                    <span>Video conferencing</span>
+          {showVideoSection && (
+            <div className={`${isVideoMaximized ? 'w-full' : 'flex-1'} bg-white border-r border-slate-200 transition-all duration-300 shadow-sm`}>
+              <div className="h-full flex flex-col">
+                <div className="flex items-center justify-between p-2 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold flex items-center gap-1.5 text-slate-800">
+                      <Video className="w-4 h-4 text-blue-600" />
+                      Jitsi Meet - Dirac AI
+                    </h2>
+                    <div className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                      <AlertCircle className="w-2.5 h-2.5" />
+                      <span>Video conferencing</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsVideoMaximized(!isVideoMaximized)}
+                      className="border-slate-300 hover:bg-blue-50 hover:border-blue-300 h-6 w-6 p-0"
+                    >
+                      {isVideoMaximized ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsVideoMaximized(!isVideoMaximized)}
-                    className="border-slate-300 hover:bg-blue-50 hover:border-blue-300 h-6 w-6 p-0"
-                  >
-                    {isVideoMaximized ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-                  </Button>
-                </div>
-              </div>
 
-              <div className="flex-1 p-2 bg-slate-50">
-                <div className="w-full h-full relative">
-                  {/* Doctor's individual Jitsi Meet iframe */}
-                  <iframe
-                    src={consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
-                    className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
-                    allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
-                    allowFullScreen
-                    title="Jitsi Meet - Dirac AI"
-                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-camera allow-microphone"
-                    onLoad={() => {
-                      console.log('🎥 Jitsi Meet iframe loaded successfully');
-                      console.log('🔗 Current iframe src:', consultation?.doctor_meeting_link || "https://meet.diracai.com/office");
-                    }}
-                    onError={(e) => {
-                      console.error('❌ Jitsi Meet iframe failed to load:', e);
-                    }}
-                  />
+                <div className="flex-1 p-2 bg-slate-50">
+                  <div className="w-full h-full relative">
+                    {/* Doctor's individual Jitsi Meet iframe */}
+                    <iframe
+                      src={consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
+                      className="w-full h-full rounded-lg border border-slate-200 shadow-sm bg-white"
+                      allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                      allowFullScreen
+                      title="Jitsi Meet - Dirac AI"
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-camera allow-microphone"
+                      onLoad={() => {
+                        console.log('🎥 Jitsi Meet iframe loaded successfully');
+                        console.log('🔗 Current iframe src:', consultation?.doctor_meeting_link || "https://meet.diracai.com/office");
+                      }}
+                      onError={(e) => {
+                        console.error('❌ Jitsi Meet iframe failed to load:', e);
+                      }}
+                    />
 
-                  {/* Fallback message if iframe doesn't load */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-lg hidden" id="iframe-fallback">
-                    <div className="text-center p-4">
-                      <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Meeting</h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Meeting Link: {consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
-                      </p>
-                      <Button
-                        onClick={() => window.open(consultation?.doctor_meeting_link || "https://meet.diracai.com/office", '_blank')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Open Meeting in New Tab
-                      </Button>
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-lg hidden" id="iframe-fallback">
+                      <div className="text-center p-4">
+                        <Video className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Meeting</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Meeting Link: {consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
+                        </p>
+                        <Button
+                          onClick={() => window.open(consultation?.doctor_meeting_link || "https://meet.diracai.com/office", '_blank')}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          Open Meeting in New Tab
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Prescription Writer Section */}
           {!isVideoMaximized && (
-            <div className="w-[500px] bg-slate-50 overflow-y-auto">
+            <div className={`${showVideoSection ? 'w-[500px]' : 'w-full'} bg-slate-50 overflow-y-auto`}>
               <div className="p-2 space-y-1">
                 <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
                   <h2 className="text-sm font-semibold flex items-center gap-1.5 text-slate-800">

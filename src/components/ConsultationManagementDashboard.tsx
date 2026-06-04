@@ -838,7 +838,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                       </Button>
 
                       {/* Copy VC Link Button for admins/superadmins */}
-                      {(userRole === 'admin' || userRole === 'superadmin') && (
+                      {(userRole === 'superadmin') && (
                         <Button
                           onClick={() => {
                             const vcLink = consultation.doctor_meeting_link || consultation.meeting_link || "https://meet.diracai.com/office";
@@ -858,7 +858,7 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                       )}
                       
                       {/* Write Prescription Button for admins/superadmins */}
-                      {(userRole === 'admin' || userRole === 'superadmin') && (
+                      {(userRole === 'superadmin') && (
                         <Button
                           onClick={() => navigate(`/consultation/${consultation.id}/workspace`)}
                           size="sm"

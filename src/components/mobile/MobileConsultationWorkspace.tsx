@@ -166,6 +166,26 @@ const MobileConsultationWorkspace: React.FC = () => {
   const [completing, setCompleting] = useState(false);
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
   
+  // Auto-completion states
+  const AUTO_COMPLETE_SECONDS = 3600;
+  const [autoCompleteTimer, setAutoCompleteTimer] = useState<number | null>(null);
+  const [autoCompleteTimeRemaining, setAutoCompleteTimeRemaining] = useState<number>(AUTO_COMPLETE_SECONDS);
+  const [showAutoCompleteWarning, setShowAutoCompleteWarning] = useState(false);
+
+  const calculateAutoCompleteTimeRemaining = (consultation: Consultation | null) => {
+    if (!consultation || !consultation.actual_start_time) {
+      return AUTO_COMPLETE_SECONDS;
+    }
+
+    const startedAt = new Date(consultation.actual_start_time);
+    if (Number.isNaN(startedAt.getTime())) {
+      return AUTO_COMPLETE_SECONDS;
+    }
+
+    const elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+    return Math.max(0, AUTO_COMPLETE_SECONDS - elapsedSeconds);
+  };
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load consultation data
@@ -415,6 +435,103 @@ const MobileConsultationWorkspace: React.FC = () => {
     }
   };
 
+  // Auto-completion timer - automatically complete consultation after 1 hour
+  useEffect(() => {
+    // Only start timer if consultation is in progress / ongoing
+    if (!consultation || (consultation.status !== 'in_progress' && consultation.status !== 'ongoing')) {
+      if (autoCompleteTimer) {
+        clearInterval(autoCompleteTimer);
+        setAutoCompleteTimer(null);
+      }
+      setAutoCompleteTimeRemaining(AUTO_COMPLETE_SECONDS);
+      setShowAutoCompleteWarning(false);
+      return;
+    }
+
+    const initialRemaining = calculateAutoCompleteTimeRemaining(consultation);
+    setAutoCompleteTimeRemaining(initialRemaining);
+
+    if (initialRemaining <= 0) {
+      handleAutoCompleteConsultation();
+      return;
+    }
+
+    let warningShown = showAutoCompleteWarning;
+    if (initialRemaining <= 900 && !warningShown) {
+      warningShown = true;
+      setShowAutoCompleteWarning(true);
+      toast.info('⏰ Consultation will auto-complete in 15 minutes');
+    }
+
+    const intervalId = setInterval(() => {
+      setAutoCompleteTimeRemaining(prev => {
+        const newTime = prev - 1;
+
+        if (newTime === 900 && !warningShown) {
+          warningShown = true;
+          setShowAutoCompleteWarning(true);
+          toast.info('⏰ Consultation will auto-complete in 15 minutes');
+        }
+
+        if (newTime === 300) {
+          toast.error('⚠️ Consultation will auto-complete in 5 minutes. Complete now to prevent automatic completion.');
+        }
+
+        if (newTime <= 0) {
+          clearInterval(intervalId);
+          handleAutoCompleteConsultation();
+          return 0;
+        }
+
+        return newTime;
+      });
+    }, 1000);
+
+    setAutoCompleteTimer(intervalId as any);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [consultation?.status, consultation?.actual_start_time, consultationId]);
+
+  // Auto-complete function
+  const handleAutoCompleteConsultation = async () => {
+    if (!consultationId || completing) return;
+    
+    try {
+      console.log('🤖 Auto-completing consultation after 1 hour...');
+      setCompleting(true);
+      
+      await doctorConsultationApi.completeConsultation(consultationId);
+      setConsultation(prev => prev ? { ...prev, status: 'completed' } : null);
+      toast.success('✅ Auto-Completed: Consultation has been automatically completed after 1 hour.');
+
+      setTimeout(() => {
+        navigate('/dashboard/consultations');
+      }, 2000);
+    } catch (error) {
+      console.error('Error auto-completing consultation:', error);
+      toast.error('Failed to auto-complete consultation');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  // Format time remaining for display
+  const formatTimeRemaining = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
   // Complete consultation
   const handleCompleteConsultation = async () => {
     if (!consultationId) return;
@@ -477,7 +594,7 @@ const MobileConsultationWorkspace: React.FC = () => {
           </Button>
           <div className="text-center flex-1">
             <h1 className="text-sm font-semibold text-gray-900">Mobile Consultation</h1>
-            <div className="flex items-center justify-center gap-2 mt-0.5">
+            <div className="flex items-center justify-center gap-2 mt-0.5 flex-wrap">
               <p className="text-xs text-gray-500">{consultationId}</p>
               <Badge 
                 variant={consultation?.status === 'completed' ? 'default' : 'outline'}
@@ -491,6 +608,16 @@ const MobileConsultationWorkspace: React.FC = () => {
               >
                 {consultation?.status?.replace('_', ' ')}
               </Badge>
+              
+              {/* Auto-completion timer display */}
+              {(consultation?.status === 'in_progress' || consultation?.status === 'in progress' || consultation?.status === 'ongoing') && (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 rounded text-[10px]">
+                  <Clock className="w-3 h-3 text-yellow-600 animate-pulse" />
+                  <span className="font-semibold text-yellow-700">
+                    {formatTimeRemaining(autoCompleteTimeRemaining)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div className="w-8" /> {/* Spacer */}
