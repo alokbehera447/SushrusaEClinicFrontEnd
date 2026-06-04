@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { useIsMobile } from '@/lib/deviceDetection';
 import MobileConsultationWorkspace from '@/components/mobile/MobileConsultationWorkspace';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/lib/toast';
-import { 
+import {
   ArrowLeft,
   Video,
   Loader2,
@@ -167,6 +168,7 @@ type Consultation = any;
 
 const ConsultationWorkspace: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { consultationId } = useParams<{ consultationId: string }>();
   const isMobile = useIsMobile();
 
@@ -185,7 +187,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [showExistingPrescriptions, setShowExistingPrescriptions] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showEnhancedMedicationTable, setShowEnhancedMedicationTable] = useState(false);
-  
+
   // Section visibility states
   const [showVitalSigns, setShowVitalSigns] = useState(true);
   const [showDiagnosis, setShowDiagnosis] = useState(true);
@@ -193,7 +195,7 @@ const ConsultationWorkspace: React.FC = () => {
   const [showMedications, setShowMedications] = useState(true);
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
   const [showAddTestsForm, setShowAddTestsForm] = useState(false);
-  
+
   // PDF Modal states
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [selectedPrescription, setSelectedPrescription] = useState<ExistingPrescription | null>(null);
@@ -315,7 +317,7 @@ const ConsultationWorkspace: React.FC = () => {
     const meetingUrl = consultation?.doctor_meeting_link || "https://meet.diracai.com/office";
     console.log('🎥 Opening Jitsi Meet iframe with URL:', meetingUrl);
     console.log('🔗 Full iframe URL:', meetingUrl);
-    
+
     // Log the doctor meeting link details
     if (consultation?.doctor_meeting_link) {
       console.log('👨‍⚕️ Doctor meeting link from backend:', consultation.doctor_meeting_link);
@@ -339,15 +341,15 @@ const ConsultationWorkspace: React.FC = () => {
   const fetchVitalSigns = async (consultationId: string) => {
     try {
       console.log('🔍 Fetching vital signs for consultation:', consultationId);
-      
+
       // Try the specific vital signs endpoint first
       const response = await api.get(`/api/consultations/${consultationId}/vital-signs/`);
       console.log('🔍 Vital signs API response:', response.data);
-      
+
       if (response.data && response.data.data) {
         const vitalSigns = response.data.data;
         console.log('🔍 Parsed vital signs data:', vitalSigns);
-        
+
         setFormData(prev => ({
           ...prev,
           vital_signs: {
@@ -359,32 +361,32 @@ const ConsultationWorkspace: React.FC = () => {
             height: vitalSigns.height?.toString() || prev.vital_signs.height,
           }
         }));
-        
+
         setLoadingVitalSigns(false);
         return vitalSigns;
       }
     } catch (error: any) {
       console.log('🔍 Vital signs API error (this is normal if no vital signs exist):', error.response?.status, error.response?.data);
-      
+
       // If 404, it means no vital signs exist yet - this is normal
       if (error.response?.status === 404) {
         console.log('🔍 No vital signs found for this consultation yet');
         setLoadingVitalSigns(false);
         return null;
       }
-      
+
       // For other errors, log them but don't fail
       console.error('Error fetching vital signs:', error);
       setLoadingVitalSigns(false);
     }
-    
+
     return null;
   };
 
   // Function to refresh consultation data
   const refreshConsultationData = async () => {
     if (!consultationId) return;
-    
+
     try {
       // Reload consultation details
       const consultData = await doctorConsultationApi.getConsultationDetails(consultationId);
@@ -417,7 +419,7 @@ const ConsultationWorkspace: React.FC = () => {
     const loadWorkspaceData = async () => {
       if (!consultationId) return;
       setLoading(true);
-      
+
       try {
         // Load consultation details
         const consultData = await doctorConsultationApi.getConsultationDetails(consultationId);
@@ -447,7 +449,7 @@ const ConsultationWorkspace: React.FC = () => {
             console.log('🔍 No vital signs found in consultation data, will try prescription data');
           }
           const patientId = consultData.patient?.id || consultData.patient;
-          
+
           // Load patient profile
           if (patientId) {
             try {
@@ -500,18 +502,18 @@ const ConsultationWorkspace: React.FC = () => {
               console.log('Loading prescription for consultation:', consultationId);
               const prescriptionResponse = await prescriptionApi.getConsultationPrescription(consultationId);
               console.log('Prescription response:', prescriptionResponse);
-              
+
               // The consultation prescription endpoint returns a single prescription
               let prescriptions = [];
               if (prescriptionResponse) {
                 prescriptions = [prescriptionResponse];
               }
-              
+
               console.log('Final prescriptions array:', prescriptions);
               console.log('First prescription sample:', prescriptions[0]);
               console.log('Prescription IDs:', prescriptions.map(p => p?.id));
               console.log('Prescription count:', prescriptions.length);
-              
+
               // Debug: Check if prescriptions have the expected structure
               if (prescriptions.length > 0) {
                 const firstPrescription = prescriptions[0];
@@ -519,7 +521,7 @@ const ConsultationWorkspace: React.FC = () => {
                 console.log('First prescription id type:', typeof firstPrescription.id);
                 console.log('First prescription id value:', firstPrescription.id);
               }
-              
+
               // Load PDF versions for each prescription (only if we have valid IDs)
               const prescriptionsWithPdfs = await Promise.all(
                 prescriptions.map(async (prescription) => {
@@ -527,7 +529,7 @@ const ConsultationWorkspace: React.FC = () => {
                     console.log('Skipping PDF versions for prescription without ID:', prescription);
                     return prescription;
                   }
-                  
+
                   try {
                     console.log(`Loading PDF versions for prescription ${prescription.id}`);
                     const pdfResponse = await prescriptionApi.getPrescriptionPdfVersions(prescription.id.toString());
@@ -546,7 +548,7 @@ const ConsultationWorkspace: React.FC = () => {
                   }
                 })
               );
-              
+
               console.log('Loaded prescriptions with PDFs:', prescriptionsWithPdfs);
               setExistingPrescriptions(prescriptionsWithPdfs);
             } catch (error) {
@@ -559,7 +561,7 @@ const ConsultationWorkspace: React.FC = () => {
           try {
             const pres = await prescriptionApi.getConsultationPrescription(consultationId);
             setPrescription(pres);
-            
+
             // Load medications from prescription into local state
             if (pres.medications && Array.isArray(pres.medications)) {
               const localMedications = pres.medications.map((med: any) => ({
@@ -599,7 +601,7 @@ const ConsultationWorkspace: React.FC = () => {
                 special_instructions: med.special_instructions,
                 notes: med.notes
               })));
-              
+
               console.log('🔍 Raw API medication data:', pres.medications.map((med: any) => ({
                 id: med.id,
                 medicine_name: med.medicine_name,
@@ -611,7 +613,7 @@ const ConsultationWorkspace: React.FC = () => {
               })));
               setMedications(localMedications);
             }
-            
+
             console.log('🔍 Prescription vital signs data:', {
               consultation_vital_signs: (consultData as any)?.vital_signs,
               prescription_pulse: pres.pulse,
@@ -620,7 +622,7 @@ const ConsultationWorkspace: React.FC = () => {
               prescription_weight: pres.weight,
               prescription_height: pres.height
             });
-            
+
             setFormData({
               primary_diagnosis: pres.primary_diagnosis || '',
               patient_previous_history: (pres as any).patient_previous_history || '',
@@ -635,7 +637,7 @@ const ConsultationWorkspace: React.FC = () => {
                 height: (consultData as any)?.vital_signs?.height?.toString() || pres.height?.toString() || (pres as any).vital_signs?.height?.toString() || '',
               },
             });
-            
+
             console.log('🔍 Final vital signs set:', {
               pulse: (consultData as any)?.vital_signs?.heart_rate?.toString() || (consultData as any)?.vital_signs?.pulse?.toString() || pres.pulse?.toString() || (pres as any).vital_signs?.pulse?.toString() || '',
               blood_pressure_systolic: (consultData as any)?.vital_signs?.blood_pressure_systolic?.toString() || pres.blood_pressure_systolic?.toString() || (pres as any).vital_signs?.blood_pressure_systolic?.toString() || '',
@@ -644,7 +646,7 @@ const ConsultationWorkspace: React.FC = () => {
               weight: (consultData as any)?.vital_signs?.weight?.toString() || pres.weight?.toString() || (pres as any).vital_signs?.weight?.toString() || '',
               height: (consultData as any)?.vital_signs?.height?.toString() || pres.height?.toString() || (pres as any).vital_signs?.height?.toString() || '',
             });
-            
+
             setLoadingVitalSigns(false); // Vital signs loaded from prescription
 
             // Load investigations from prescription data (already included in the response)
@@ -743,7 +745,7 @@ const ConsultationWorkspace: React.FC = () => {
     if (!prescription?.id) return;
     setSaving(true);
     try {
-        const updated = await prescriptionApi.saveDraft(prescription.id, {
+      const updated = await prescriptionApi.saveDraft(prescription.id, {
         primary_diagnosis: formData.primary_diagnosis,
         patient_previous_history: formData.patient_previous_history,
         general_instructions: formData.general_instructions,
@@ -818,7 +820,7 @@ const ConsultationWorkspace: React.FC = () => {
           order: index + 1,
         })),
       });
-      
+
       // Refresh prescription to get updated PDF info
       try {
         const refreshed = await prescriptionApi.getPrescription(String(prescription.id));
@@ -826,7 +828,7 @@ const ConsultationWorkspace: React.FC = () => {
       } catch (refreshError) {
         console.error('Error refreshing prescription:', refreshError);
       }
-      
+
       toast.success('Prescription finalized and PDF generated successfully');
     } catch (error) {
       console.error('Finalize error:', error);
@@ -842,17 +844,23 @@ const ConsultationWorkspace: React.FC = () => {
     try {
       // Update consultation status to completed
       const response = await doctorConsultationApi.completeConsultation(consultationId);
-      
+
       if (response && response.success) {
         // Update local consultation state
         setConsultation(prev => prev ? { ...prev, status: 'completed' } : null);
         toast.success('Consultation completed successfully');
-        
+
         // Show success message for longer before redirecting
         setTimeout(() => {
           toast.success('Redirecting to dashboard...');
           setTimeout(() => {
-            navigate('/doctor/dashboard');
+            if (user?.role === 'superadmin') {
+              navigate('/superadmin/dashboard');
+            } else if (user?.role === 'admin') {
+              navigate('/dashboard');
+            } else {
+              navigate('/doctor/dashboard');
+            }
           }, 1500);
         }, 3000);
       } else {
@@ -891,8 +899,8 @@ const ConsultationWorkspace: React.FC = () => {
 
   const handleBulkSaveMedications = async (allMedications: Medication[]) => {
     try {
-      console.log('💾 Saving all medications:', allMedications.map(m => ({ 
-        name: m.medicine_name, 
+      console.log('💾 Saving all medications:', allMedications.map(m => ({
+        name: m.medicine_name,
         dosage: `${m.morning_dose}-${m.afternoon_dose}-${m.evening_dose}`,
         isNew: !(m.id && m.id > 0)
       })));
@@ -948,13 +956,13 @@ const ConsultationWorkspace: React.FC = () => {
         quantity: med.quantity || '',
         order: index + 1,
       }));
-      
+
       console.log('🔄 Updated local medications:', updatedLocalMedications.length);
       setMedications(updatedLocalMedications);
 
       // Close dialog
       setShowEnhancedMedicationTable(false);
-      
+
       // Reload from API to get the latest state with proper IDs for new medications
       if (consultationId) {
         const updatedPrescription = await prescriptionApi.getConsultationPrescription(consultationId);
@@ -1039,11 +1047,11 @@ const ConsultationWorkspace: React.FC = () => {
     if (consultation?.clinic_id) {
       return consultation.clinic_id;
     }
-    
+
     // If consultation doesn't have clinic, try to get from doctor's clinic associations
     // For now, using a default clinic ID - in production, you'd query the doctor's clinic
     return 'CLI011'; // Using a valid clinic ID from the database (CLI011 exists)
-    
+
     // TODO: In production, implement this logic:
     // const doctorClinics = await api.get(`/api/doctors/${consultation.doctor_id}/clinics/`);
     // return doctorClinics.data[0]?.clinic_id || 'CLI011';
@@ -1067,7 +1075,15 @@ const ConsultationWorkspace: React.FC = () => {
       {/* Header */}
       <div className="bg-white border-b px-3 py-2 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/doctor/dashboard')} className="h-7 w-7 p-0">
+          <Button variant="outline" size="sm" onClick={() => {
+            if (user?.role === 'superadmin') {
+              navigate('/superadmin/dashboard');
+            } else if (user?.role === 'admin') {
+              navigate('/dashboard');
+            } else {
+              navigate('/doctor/dashboard');
+            }
+          }} className="h-7 w-7 p-0">
             <ArrowLeft className="w-3.5 h-3.5" />
           </Button>
           <div>
@@ -1080,39 +1096,39 @@ const ConsultationWorkspace: React.FC = () => {
                   <span>{consultation.scheduled_date} at {consultation.scheduled_time}</span>
                   <Separator orientation="vertical" className="h-3" />
                   <Badge variant={
-                    consultation.status === 'scheduled' ? 'default' : 
-                    consultation.status === 'completed' ? 'secondary' : 
-                    consultation.status === 'ongoing' || consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'destructive' :
-                    'default'
+                    consultation.status === 'scheduled' ? 'default' :
+                      consultation.status === 'completed' ? 'secondary' :
+                        consultation.status === 'ongoing' || consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'destructive' :
+                          'default'
                   } className="text-xs px-1.5 py-0">
-                    {consultation.status === 'completed' ? 'Completed' : 
-                     consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'In Progress' :
-                     consultation.status?.replace('_', ' ')}
+                    {consultation.status === 'completed' ? 'Completed' :
+                      consultation.status === 'in progress' || consultation.status === 'in_progress' ? 'In Progress' :
+                        consultation.status?.replace('_', ' ')}
                   </Badge>
                 </>
               )}
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1.5">
           {/* Complete Consultation Button - Show for multiple statuses */}
-          
-          {(consultation?.status === 'ongoing' || 
-            consultation?.status === 'in progress' || 
+
+          {(consultation?.status === 'ongoing' ||
+            consultation?.status === 'in progress' ||
             consultation?.status === 'in_progress' ||
             consultation?.status === 'active') && (
-            <Button 
-              onClick={() => setShowCompleteConfirmation(true)} 
-              disabled={completing} 
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs px-2"
-            >
-              {completing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-              <span className="ml-1">Complete</span>
-            </Button>
-          )}
-          
+              <Button
+                onClick={() => setShowCompleteConfirmation(true)}
+                disabled={completing}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs px-2"
+              >
+                {completing ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                <span className="ml-1">Complete</span>
+              </Button>
+            )}
+
           <Button variant="outline" onClick={handleSaveDraft} disabled={saving || finalizing} size="sm" className="h-7 text-xs px-2">
             {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
             <span className="ml-1">Save</span>
@@ -1244,7 +1260,7 @@ const ConsultationWorkspace: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    
+
 
                     {patientProfile?.allergies && (
                       <div className="p-2 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded">
@@ -1340,9 +1356,9 @@ const ConsultationWorkspace: React.FC = () => {
                             <div className="flex items-center gap-0.5 flex-shrink-0">
                               {record.document_url && (
                                 <>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors"
                                     onClick={() => {
                                       setSelectedRecordUrl(record.document_url);
@@ -1355,9 +1371,9 @@ const ConsultationWorkspace: React.FC = () => {
                                     <Eye className="w-2.5 h-2.5" />
                                   </Button>
                                   <a href={record.document_url} target="_blank" rel="noopener noreferrer">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="h-5 w-5 p-0 hover:bg-emerald-100 transition-colors"
                                       title="Download"
                                     >
@@ -1518,9 +1534,9 @@ const ConsultationWorkspace: React.FC = () => {
                             <div className="flex items-center gap-0.5 flex-shrink-0">
                               {doc.file_url && (
                                 <>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-5 w-5 p-0 hover:bg-amber-100 transition-colors"
                                     onClick={() => {
                                       setSelectedRecordUrl(doc.file_url);
@@ -1533,9 +1549,9 @@ const ConsultationWorkspace: React.FC = () => {
                                     <Eye className="w-2.5 h-2.5" />
                                   </Button>
                                   <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="h-5 w-5 p-0 hover:bg-amber-100 transition-colors"
                                       title="Download"
                                     >
@@ -1625,9 +1641,9 @@ const ConsultationWorkspace: React.FC = () => {
                                   </a>
                                 )}
                                 {pres.pdf_versions && pres.pdf_versions.length > 0 && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-5 w-5 p-0 hover:bg-indigo-100 transition-colors"
                                     onClick={() => {
                                       setSelectedPrescription(pres);
@@ -1688,7 +1704,7 @@ const ConsultationWorkspace: React.FC = () => {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="flex-1 p-2 bg-slate-50">
                 <div className="w-full h-full relative">
                   {/* Doctor's individual Jitsi Meet iframe */}
@@ -1707,7 +1723,7 @@ const ConsultationWorkspace: React.FC = () => {
                       console.error('❌ Jitsi Meet iframe failed to load:', e);
                     }}
                   />
-                  
+
                   {/* Fallback message if iframe doesn't load */}
                   <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-lg hidden" id="iframe-fallback">
                     <div className="text-center p-4">
@@ -1716,7 +1732,7 @@ const ConsultationWorkspace: React.FC = () => {
                       <p className="text-sm text-gray-600 mb-4">
                         Meeting Link: {consultation?.doctor_meeting_link || "https://meet.diracai.com/office"}
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => window.open(consultation?.doctor_meeting_link || "https://meet.diracai.com/office", '_blank')}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
@@ -1851,7 +1867,7 @@ const ConsultationWorkspace: React.FC = () => {
                       )}
                     </CardContent>
                   )}
-              </Card>
+                </Card>
 
                 {/* Diagnosis */}
                 <Card className="border-slate-200 shadow-sm">
@@ -1873,17 +1889,17 @@ const ConsultationWorkspace: React.FC = () => {
                   </CardHeader>
                   {showDiagnosis && (
                     <CardContent className="space-y-1 bg-white p-2">
-                    <div>
-                      <Label className="text-[10px] text-slate-700">Primary Diagnosis</Label>
-                      <Textarea
-                        rows={2}
-                        value={formData.primary_diagnosis}
-                        onChange={(e) => setFormData({ ...formData, primary_diagnosis: e.target.value })}
-                        placeholder="Enter primary diagnosis..."
-                        className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 focus:outline-none text-xs p-1.5 min-h-[50px]"
-                      />
-                    </div>
-                    {/* <div>
+                      <div>
+                        <Label className="text-[10px] text-slate-700">Primary Diagnosis</Label>
+                        <Textarea
+                          rows={2}
+                          value={formData.primary_diagnosis}
+                          onChange={(e) => setFormData({ ...formData, primary_diagnosis: e.target.value })}
+                          placeholder="Enter primary diagnosis..."
+                          className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 focus:outline-none text-xs p-1.5 min-h-[50px]"
+                        />
+                      </div>
+                      {/* <div>
                       <Label className="text-[10px] text-slate-700">Patient Previous History</Label>
                       <Textarea
                         rows={2}
@@ -1893,41 +1909,41 @@ const ConsultationWorkspace: React.FC = () => {
                         className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 text-xs p-1.5 min-h-[50px]"
                       />
                     </div> */}
-                  </CardContent>
-                )}
-              </Card>
+                    </CardContent>
+                  )}
+                </Card>
 
-              {/* Investigation Tests */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
-                  <div className="flex items-center justify-between w-full">
-                    <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
-                      <Stethoscope className="w-3 h-3 text-blue-600" />
-                      Investigation Tests
-                    </CardTitle>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        onClick={() => setShowAddTestsForm(true)}
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-8 px-4 text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-300 border border-blue-400 hover:border-blue-300"
-                      >
-                        <Plus className="w-4 h-4 mr-1.5" />
-                        Add Tests
-                      </Button>
+                {/* Investigation Tests */}
+                <Card className="border-slate-200 shadow-sm">
+                  <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                    <div className="flex items-center justify-between w-full">
+                      <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                        <Stethoscope className="w-3 h-3 text-blue-600" />
+                        Investigation Tests
+                      </CardTitle>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          onClick={() => setShowAddTestsForm(true)}
+                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white h-8 px-4 text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-300 border border-blue-400 hover:border-blue-300"
+                        >
+                          <Plus className="w-4 h-4 mr-1.5" />
+                          Add Tests
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="bg-white p-2">
-                  <InvestigationSelector
-                    prescriptionId={prescription?.id || 0}
-                    onInvestigationsUpdated={handleInvestigationsUpdated}
-                    existingInvestigations={prescriptionInvestigations}
-                    showAddForm={showAddTestsForm}
-                    onShowAddFormChange={setShowAddTestsForm}
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent className="bg-white p-2">
+                    <InvestigationSelector
+                      prescriptionId={prescription?.id || 0}
+                      onInvestigationsUpdated={handleInvestigationsUpdated}
+                      existingInvestigations={prescriptionInvestigations}
+                      showAddForm={showAddTestsForm}
+                      onShowAddFormChange={setShowAddTestsForm}
+                    />
+                  </CardContent>
+                </Card>
 
-              {/* Medications Summary */}
+                {/* Medications Summary */}
                 <Card className="border-slate-200 shadow-sm">
                   <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
                     <div className="flex items-center justify-between">
@@ -1944,7 +1960,7 @@ const ConsultationWorkspace: React.FC = () => {
                         >
                           {showMedications ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                         </Button>
-                        <Button 
+                        <Button
                           onClick={handleAddMedication}
                           className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white h-8 px-4 text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-300 border border-purple-400 hover:border-purple-300 w-full"
                         >
@@ -1979,9 +1995,9 @@ const ConsultationWorkspace: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="flex gap-0.5">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-5 w-5 p-0 hover:bg-red-100 text-red-600"
                                     onClick={() => handleDeleteMedication(index)}
                                   >
@@ -2002,61 +2018,61 @@ const ConsultationWorkspace: React.FC = () => {
                   )}
                 </Card>
 
-              {/* Patient Instructions & Follow-up - Moved to Bottom */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
-                      <Clock className="w-3 h-3 text-purple-600" />
-                      Follow-up & Instructions
-                    </CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowInstructions(!showInstructions)}
-                      className="h-5 w-5 p-0 hover:bg-purple-100"
-                    >
-                      {showInstructions ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                    </Button>
-                  </div>
-                </CardHeader>
-                {showInstructions && (
-                  <CardContent className="space-y-2 bg-white p-2">
-                    <div>
-                      <Label className="text-[10px] text-slate-700">Patient Instructions</Label>
-                      <Textarea
-                        rows={3}
-                        value={formData.general_instructions}
-                        onChange={(e) => setFormData({ ...formData, general_instructions: e.target.value })}
-                        placeholder="Enter special instructions for the patient (e.g., rest, diet, lifestyle advice)..."
-                        className="border-slate-300 focus:border-purple-500 focus:ring-purple-500 focus:ring-1 focus:outline-none text-xs p-1.5 min-h-[60px]"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-[10px] text-slate-700">Next Visit</Label>
-                      <Select
-                        value={formData.next_visit}
-                        onValueChange={(value) => setFormData({ ...formData, next_visit: value })}
+                {/* Patient Instructions & Follow-up - Moved to Bottom */}
+                <Card className="border-slate-200 shadow-sm">
+                  <CardHeader className="pb-1.5 pt-2 px-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xs flex items-center gap-1 text-slate-800 font-semibold">
+                        <Clock className="w-3 h-3 text-purple-600" />
+                        Follow-up & Instructions
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowInstructions(!showInstructions)}
+                        className="h-5 w-5 p-0 hover:bg-purple-100"
                       >
-                        <SelectTrigger className="border-slate-300 focus:border-purple-500 focus:ring-purple-500 focus:ring-1 focus:outline-none h-7 text-xs">
-                          <SelectValue placeholder="Select next visit timing" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1 week">1 week</SelectItem>
-                          <SelectItem value="2 weeks">2 weeks</SelectItem>
-                          <SelectItem value="3 weeks">3 weeks</SelectItem>
-                          <SelectItem value="4 weeks">4 weeks</SelectItem>
-                          <SelectItem value="6 weeks">6 weeks</SelectItem>
-                          <SelectItem value="8 weeks">8 weeks</SelectItem>
-                          <SelectItem value="10 weeks">10 weeks</SelectItem>
-                          <SelectItem value="12 weeks">12 weeks</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {showInstructions ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      </Button>
                     </div>
-                  </CardContent>
-                )}
-              </Card>
+                  </CardHeader>
+                  {showInstructions && (
+                    <CardContent className="space-y-2 bg-white p-2">
+                      <div>
+                        <Label className="text-[10px] text-slate-700">Patient Instructions</Label>
+                        <Textarea
+                          rows={3}
+                          value={formData.general_instructions}
+                          onChange={(e) => setFormData({ ...formData, general_instructions: e.target.value })}
+                          placeholder="Enter special instructions for the patient (e.g., rest, diet, lifestyle advice)..."
+                          className="border-slate-300 focus:border-purple-500 focus:ring-purple-500 focus:ring-1 focus:outline-none text-xs p-1.5 min-h-[60px]"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] text-slate-700">Next Visit</Label>
+                        <Select
+                          value={formData.next_visit}
+                          onValueChange={(value) => setFormData({ ...formData, next_visit: value })}
+                        >
+                          <SelectTrigger className="border-slate-300 focus:border-purple-500 focus:ring-purple-500 focus:ring-1 focus:outline-none h-7 text-xs">
+                            <SelectValue placeholder="Select next visit timing" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1 week">1 week</SelectItem>
+                            <SelectItem value="2 weeks">2 weeks</SelectItem>
+                            <SelectItem value="3 weeks">3 weeks</SelectItem>
+                            <SelectItem value="4 weeks">4 weeks</SelectItem>
+                            <SelectItem value="6 weeks">6 weeks</SelectItem>
+                            <SelectItem value="8 weeks">8 weeks</SelectItem>
+                            <SelectItem value="10 weeks">10 weeks</SelectItem>
+                            <SelectItem value="12 weeks">12 weeks</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
 
               </div>
             </div>
@@ -2085,7 +2101,7 @@ const ConsultationWorkspace: React.FC = () => {
               View all PDF versions of the prescription
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex flex-col h-full">
             {/* PDF Version Selector */}
             {selectedPrescription?.pdf_versions && selectedPrescription.pdf_versions.length > 0 && (
@@ -2112,8 +2128,8 @@ const ConsultationWorkspace: React.FC = () => {
                 </div>
                 {selectedPdfVersion && (
                   <div className="mt-2 text-xs text-slate-600">
-                    Generated: {new Date(selectedPdfVersion.generated_at).toLocaleString()} • 
-                    Size: {formatFileSize(selectedPdfVersion.file_size)} • 
+                    Generated: {new Date(selectedPdfVersion.generated_at).toLocaleString()} •
+                    Size: {formatFileSize(selectedPdfVersion.file_size)} •
                     By: {selectedPdfVersion.generated_by.name}
                   </div>
                 )}
@@ -2137,9 +2153,9 @@ const ConsultationWorkspace: React.FC = () => {
                   <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-700">
                       If the PDF doesn't display above, you can{' '}
-                      <a 
-                        href={selectedPdfVersion.file_url} 
-                        target="_blank" 
+                      <a
+                        href={selectedPdfVersion.file_url}
+                        target="_blank"
                         rel="noreferrer"
                         className="text-blue-600 underline hover:text-blue-800"
                       >
@@ -2164,7 +2180,7 @@ const ConsultationWorkspace: React.FC = () => {
               <div className="text-sm text-slate-600">
                 {selectedPrescription && (
                   <>
-                    <strong>Prescription:</strong> {selectedPrescription.primary_diagnosis || 'No diagnosis'} • 
+                    <strong>Prescription:</strong> {selectedPrescription.primary_diagnosis || 'No diagnosis'} •
                     <strong>Date:</strong> {new Date(selectedPrescription.issued_date).toLocaleDateString()}
                   </>
                 )}
@@ -2201,36 +2217,36 @@ const ConsultationWorkspace: React.FC = () => {
                 {/* Image controls (only show for non-PDFs) */}
                 {selectedRecordUrl && !/\.pdf(\?|$)/i.test(selectedRecordUrl) && (
                   <div className="flex items-center gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-7 w-7 p-0"
                       onClick={() => setImageRotation((r) => (r + 90) % 360)}
                       title="Rotate"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-7 w-7 p-0"
                       onClick={() => setImageZoom((z) => Math.max(0.25, Number((z - 0.25).toFixed(2))))}
                       title="Zoom Out"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-7 w-7 p-0"
                       onClick={() => setImageZoom((z) => Math.min(4, Number((z + 0.25).toFixed(2))))}
                       title="Zoom In"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-7 px-2 text-xs"
                       onClick={() => { setImageZoom(1); setImageRotation(0); }}
                       title="Reset"
@@ -2240,9 +2256,9 @@ const ConsultationWorkspace: React.FC = () => {
                   </div>
                 )}
                 {selectedRecordUrl && /\.pdf(\?|$)/i.test(selectedRecordUrl) && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="h-7 px-2 text-xs"
                     onClick={() => openPdfInSystemPrintViewer(recordPdfBlobUrl || selectedRecordUrl)}
                     title="Print PDF"
@@ -2258,9 +2274,9 @@ const ConsultationWorkspace: React.FC = () => {
                     </Button>
                   </a>
                 )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="h-7 w-7 p-0"
                   onClick={() => setRecordPreviewFullscreen(!recordPreviewFullscreen)}
                   title={recordPreviewFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
@@ -2304,8 +2320,8 @@ const ConsultationWorkspace: React.FC = () => {
                 ) : (
                   <div className="w-full h-full overflow-auto bg-slate-50">
                     <div className="w-full h-full flex items-center justify-center p-4">
-                      <img 
-                        src={selectedRecordUrl} 
+                      <img
+                        src={selectedRecordUrl}
                         alt={selectedRecordTitle}
                         className="max-w-none object-contain"
                         style={{ transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`, transformOrigin: 'center center' }}
@@ -2338,14 +2354,14 @@ const ConsultationWorkspace: React.FC = () => {
               Complete Consultation
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-700">
                 <strong>Warning:</strong> This action cannot be undone. Once completed, the consultation will be marked as finished.
               </p>
             </div>
-            
+
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-700">
                 <strong>Patient:</strong> {consultation?.patient?.name || consultation?.patient_name}
@@ -2359,14 +2375,14 @@ const ConsultationWorkspace: React.FC = () => {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowCompleteConfirmation(false)}
                 disabled={completing}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={async () => {
                   setShowCompleteConfirmation(false);

@@ -50,7 +50,9 @@ import {
   Receipt,
   Download,
   FileText,
-  Printer
+  Printer,
+  Video,
+  Edit
 } from 'lucide-react';
 import { 
   consultationService, 
@@ -834,6 +836,38 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
+
+                      {/* Copy VC Link Button for admins/superadmins */}
+                      {(userRole === 'admin' || userRole === 'superadmin') && (
+                        <Button
+                          onClick={() => {
+                            const vcLink = consultation.doctor_meeting_link || consultation.meeting_link || "https://meet.diracai.com/office";
+                            navigator.clipboard.writeText(vcLink);
+                            toast({
+                              title: "Copied!",
+                              description: "VC Link copied to clipboard",
+                            });
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                        >
+                          <Video className="h-4 w-4 mr-1" />
+                          Copy VC Link
+                        </Button>
+                      )}
+                      
+                      {/* Write Prescription Button for admins/superadmins */}
+                      {(userRole === 'admin' || userRole === 'superadmin') && (
+                        <Button
+                          onClick={() => navigate(`/consultation/${consultation.id}/workspace`)}
+                          size="sm"
+                          className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Write Prescription
+                        </Button>
+                      )}
                       {/* Add Vital Signs Button (admin only) */}
                       {userRole === 'admin' && (
                         vitalSignsMap[consultation.id] ? (
@@ -1017,6 +1051,38 @@ export const ConsultationManagementDashboard: React.FC<ConsultationManagementDas
                       <div>
                         <label className="text-sm font-medium text-gray-600">Symptoms</label>
                         <p className="text-lg bg-gray-50 p-3 rounded-lg">{selectedConsultation.symptoms}</p>
+                      </div>
+                    )}
+
+                    {(userRole === 'admin' || userRole === 'superadmin') && (
+                      <div className="mt-4 pt-4 border-t flex flex-wrap gap-3 justify-end">
+                        <Button
+                          onClick={() => {
+                            const vcLink = selectedConsultation.doctor_meeting_link || selectedConsultation.meeting_link || "https://meet.diracai.com/office";
+                            navigator.clipboard.writeText(vcLink);
+                            toast({
+                              title: "Copied!",
+                              description: "VC Link copied to clipboard",
+                            });
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-500 text-blue-700 hover:bg-blue-50"
+                        >
+                          <Video className="h-4 w-4 mr-1" />
+                          Copy VC Link
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setSelectedConsultation(null);
+                            navigate(`/consultation/${selectedConsultation.id}/workspace`);
+                          }}
+                          size="sm"
+                          className="bg-[#E17726] hover:bg-[#c9651e] text-white"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Write Prescription
+                        </Button>
                       </div>
                     )}
                   </CardContent>

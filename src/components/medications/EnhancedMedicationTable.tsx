@@ -129,12 +129,12 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
       // Track how many medications existed when we opened the dialog
       const initialCount = existingMedications.length;
       initialMedicationCountRef.current = initialCount;
-      
+
       console.log('🎬 Dialog opening - initializing medications:', {
         existingCount: initialCount,
         existingMedications: existingMedications.map(m => ({ id: m.id, name: m.medicine_name }))
       });
-      
+
       if (existingMedications.length > 0) {
         // Add existing medications plus one empty row for new entries
         setMedications([...existingMedications, {
@@ -176,7 +176,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
       setIsSearching({});
       setIsCreatingMedication({});
     }
-    
+
     // Update the ref to track current state
     previousIsOpenRef.current = isOpen;
   }, [isOpen, existingMedications]); // Run when dialog state or existingMedications changes
@@ -271,11 +271,11 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
     setMedications(prev => {
       // Close any open search dropdown to avoid overlay issues
       setActiveSearchRow(null);
-      
+
       if (prev.length > 1) {
         return prev.filter((_, i) => i !== index);
       }
-      
+
       // If this is the only row, reset it to a blank medication row
       const blankMedication: Medication = {
         medicine_name: '',
@@ -342,7 +342,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
     searchTimeoutRef.current[rowIndex] = setTimeout(async () => {
       try {
         const response = await medicationService.searchMedications(query);
-        
+
         // Handle the new API response structure
         if (response && response.success && response.data) {
           const medications = Array.isArray(response.data) ? response.data : (response.data as unknown as { medications?: MedicationSearchResult[] }).medications || [];
@@ -364,14 +364,14 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
     setMedications(prev => {
       const newMedications = [...prev];
       const updatedMedication = { ...newMedications[rowIndex] };
-      
+
       updatedMedication.medicine_name = medicationResult.name;
       updatedMedication.composition = medicationResult.composition;
       updatedMedication.dosage_form = medicationResult.dosage_form;
-      
+
       // Keep the default timing (with_food) instead of using medication-specific timing
       // This ensures consistent timing options across all medications
-      
+
       newMedications[rowIndex] = updatedMedication;
       return newMedications;
     });
@@ -379,7 +379,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
     // Clear search results for this row and close dropdown
     setSearchResults(prev => ({ ...prev, [rowIndex]: [] }));
     setActiveSearchRow(null);
-    
+
     // Clear dropdown position
     setDropdownPosition(prev => {
       const newPositions = { ...prev };
@@ -399,7 +399,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
   const handleSave = async () => {
     // Send all medications (both new and updated existing ones)
     // Filter out empty medications (no medicine name)
-    const validMedications = medications.filter(med => 
+    const validMedications = medications.filter(med =>
       med.medicine_name && med.medicine_name.trim()
     );
 
@@ -497,30 +497,30 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
 
       if (response && response.success) {
         toast.success('Medication added successfully to database!');
-        
+
         // Get the newly created medication from response
         const newMedication = response.data.medications[0];
         if (newMedication) {
           setMedications(prev => {
             const newMedications = [...prev];
             const updatedMedication = { ...newMedications[rowIndex] };
-            
+
             updatedMedication.medicine_name = newMedication.name;
             updatedMedication.composition = newMedication.composition;
             updatedMedication.dosage_form = newMedication.dosage_form;
-            
+
             // Keep the default timing (with_food) instead of using medication-specific timing
             // This ensures consistent timing options across all medications
-            
+
             newMedications[rowIndex] = updatedMedication;
             return newMedications;
           });
         }
-        
+
         // Clear search results for this row and close dropdown
         setSearchResults(prev => ({ ...prev, [rowIndex]: [] }));
         setActiveSearchRow(null);
-        
+
         // Clear dropdown position
         setDropdownPosition(prev => {
           const newPositions = { ...prev };
@@ -545,7 +545,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
         onClose();
       }
     }} modal={true}>
-      <DialogContent 
+      <DialogContent
         className="max-w-[95vw] flex flex-col overflow-visible"
         onInteractOutside={(e) => {
           // Prevent closing when clicking on portal dropdown
@@ -601,178 +601,178 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
                 {medications.map((medication, index) => (
                   <React.Fragment key={index}>
                     <TableRow className="hover:bg-slate-50">
-                    {/* Medicine Name with Autocomplete */}
-                    <TableCell className="p-2 relative overflow-visible">
-                      <div className="relative overflow-visible">
-                        <Input
-                          ref={(el) => {
-                            if (el) inputRefs.current[index] = el;
+                      {/* Medicine Name with Autocomplete */}
+                      <TableCell className="p-2 relative overflow-visible">
+                        <div className="relative overflow-visible">
+                          <Input
+                            ref={(el) => {
+                              if (el) inputRefs.current[index] = el;
+                            }}
+                            data-row-index={index}
+                            value={medication.medicine_name}
+                            onChange={(e) => {
+                              updateMedication(index, 'medicine_name', e.target.value);
+                              handleMedicationSearch(e.target.value, index);
+                            }}
+                            onKeyDown={(e) => handleKeyDown(e, index, 0)}
+                            placeholder="Search medication..."
+                            className="h-10 text-sm border-slate-200 focus:border-purple-500"
+                            autoFocus={index === medications.length - 1 && !medication.medicine_name}
+                          />
+                          {isSearching[index] && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+
+                        </div>
+                      </TableCell>
+
+                      {/* Dosage (M-A-E) - Dropdown */}
+                      <TableCell className="p-2">
+                        <Select
+                          value={getDosagePattern(medication.morning_dose || 0, medication.afternoon_dose || 0, medication.evening_dose || 0)}
+                          onValueChange={(value) => {
+                            const { morning_dose, afternoon_dose, evening_dose } = parseDosagePattern(value);
+                            updateMedication(index, 'morning_dose', morning_dose);
+                            updateMedication(index, 'afternoon_dose', afternoon_dose);
+                            updateMedication(index, 'evening_dose', evening_dose);
+                            // Auto-update frequency based on dosage pattern
+                            const frequency = getDosageFrequency(morning_dose, afternoon_dose, evening_dose);
+                            updateMedication(index, 'frequency', frequency);
                           }}
-                          data-row-index={index}
-                          value={medication.medicine_name}
-                          onChange={(e) => {
-                            updateMedication(index, 'medicine_name', e.target.value);
-                            handleMedicationSearch(e.target.value, index);
+                        >
+                          <SelectTrigger className="h-10 text-sm border-slate-200 focus:border-purple-500">
+                            <SelectValue placeholder="Select dosage pattern" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DOSAGE_PATTERNS.map((pattern) => (
+                              <SelectItem key={pattern.value} value={pattern.value}>
+                                {pattern.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      {/* Timing */}
+                      <TableCell className="p-2">
+                        <Select
+                          value={medication.timing}
+                          onValueChange={(value) => {
+                            const selectedOption = getTimingOptions(medication).find(opt => opt.value === value);
+
+                            // Update both timing value and display text
+                            updateMedication(index, 'timing', value);
+                            updateMedication(index, 'timing_display_text', selectedOption?.label || value);
                           }}
-                          onKeyDown={(e) => handleKeyDown(e, index, 0)}
-                          placeholder="Search medication..."
-                          className="h-10 text-sm border-slate-200 focus:border-purple-500"
-                          autoFocus={index === medications.length - 1 && !medication.medicine_name}
-                        />
-                        {isSearching[index] && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                          </div>
-                        )}
-                        
-                      </div>
-                    </TableCell>
+                        >
+                          <SelectTrigger className="h-10 text-sm border-slate-200 focus:border-purple-500">
+                            <SelectValue placeholder="Select timing">
+                              {medication.timing_display_text || (getTimingOptions(medication).find(opt => opt.value === medication.timing)?.label) || medication.timing}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getTimingOptions(medication).map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {/* Debug: Show current timing value */}
+                      </TableCell>
 
-                    {/* Dosage (M-A-E) - Dropdown */}
-                    <TableCell className="p-2">
-                      <Select
-                        value={getDosagePattern(medication.morning_dose || 0, medication.afternoon_dose || 0, medication.evening_dose || 0)}
-                        onValueChange={(value) => {
-                          const { morning_dose, afternoon_dose, evening_dose } = parseDosagePattern(value);
-                          updateMedication(index, 'morning_dose', morning_dose);
-                          updateMedication(index, 'afternoon_dose', afternoon_dose);
-                          updateMedication(index, 'evening_dose', evening_dose);
-                          // Auto-update frequency based on dosage pattern
-                          const frequency = getDosageFrequency(morning_dose, afternoon_dose, evening_dose);
-                          updateMedication(index, 'frequency', frequency);
-                        }}
-                      >
-                        <SelectTrigger className="h-10 text-sm border-slate-200 focus:border-purple-500">
-                          <SelectValue placeholder="Select dosage pattern" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DOSAGE_PATTERNS.map((pattern) => (
-                            <SelectItem key={pattern.value} value={pattern.value}>
-                              {pattern.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-
-                    {/* Timing */}
-                    <TableCell className="p-2">
-                      <Select
-                        value={medication.timing}
-                        onValueChange={(value) => {
-                          const selectedOption = getTimingOptions(medication).find(opt => opt.value === value);
-                          
-                          // Update both timing value and display text
-                          updateMedication(index, 'timing', value);
-                          updateMedication(index, 'timing_display_text', selectedOption?.label || value);
-                        }}
-                      >
-                        <SelectTrigger className="h-10 text-sm border-slate-200 focus:border-purple-500">
-                          <SelectValue placeholder="Select timing">
-                            {medication.timing_display_text || (getTimingOptions(medication).find(opt => opt.value === medication.timing)?.label) || medication.timing}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getTimingOptions(medication).map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {/* Debug: Show current timing value */}
-                    </TableCell>
-
-                    {/* Duration */}
-                    <TableCell className="p-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={medication.duration_days || ''}
-                          onChange={(e) => updateMedication(index, 'duration_days', parseInt(e.target.value) || 7)}
-                          onKeyDown={(e) => handleKeyDown(e, index, 4)}
-                          className="w-20 h-10 text-sm border-slate-200 focus:border-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-sm text-slate-500">days</span>
-                      </div>
-                    </TableCell>
+                      {/* Duration */}
+                      <TableCell className="p-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={medication.duration_days || ''}
+                            onChange={(e) => updateMedication(index, 'duration_days', parseInt(e.target.value) || 7)}
+                            onKeyDown={(e) => handleKeyDown(e, index, 4)}
+                            className="w-20 h-10 text-sm border-slate-200 focus:border-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <span className="text-sm text-slate-500">days</span>
+                        </div>
+                      </TableCell>
 
 
-                    {/* Special Instructions - Compact */}
-                    <TableCell className="p-2 text-center">
-                      <div className="flex items-center justify-center">
-                        {medication.special_instructions ? (
-                          <div className="relative group">
+                      {/* Special Instructions - Compact */}
+                      <TableCell className="p-2 text-center">
+                        <div className="flex items-center justify-center">
+                          {medication.special_instructions ? (
+                            <div className="relative group">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setExpandedInstructionsRow(expandedInstructionsRow === index ? null : index)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </Button>
+                              {/* Tooltip showing first 30 chars */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30">
+                                {medication.special_instructions.length > 30
+                                  ? `${medication.special_instructions.substring(0, 30)}...`
+                                  : medication.special_instructions}
+                              </div>
+                            </div>
+                          ) : (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => setExpandedInstructionsRow(expandedInstructionsRow === index ? null : index)}
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <Edit3 className="w-4 h-4" />
                             </Button>
-                            {/* Tooltip showing first 30 chars */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30">
-                              {medication.special_instructions.length > 30 
-                                ? `${medication.special_instructions.substring(0, 30)}...` 
-                                : medication.special_instructions}
-                            </div>
-                          </div>
-                        ) : (
+                          )}
+                        </div>
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell className="p-2 text-center">
+                        {medications.length > 1 && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setExpandedInstructionsRow(expandedInstructionsRow === index ? null : index)}
-                            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                            onClick={() => removeRow(index)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
-                      </div>
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell className="p-2 text-center">
-                      {medications.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeRow(index)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  
-                  {/* Expanded Instructions Row */}
-                  {expandedInstructionsRow === index && (
-                    <TableRow className="bg-slate-50">
-                      <TableCell colSpan={6} className="p-3">
-                        <div className="flex items-center gap-3">
-                          <MessageSquare className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                          <Input
-                            value={medication.special_instructions || ''}
-                            onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
-                            placeholder="Enter special instructions for this medication..."
-                            className="flex-1 h-10 text-sm border-slate-200 focus:border-purple-500"
-                            autoFocus
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setExpandedInstructionsRow(null)}
-                            className="h-10 px-3"
-                          >
-                            Done
-                          </Button>
-                        </div>
                       </TableCell>
                     </TableRow>
-                  )}
-                </React.Fragment>
+
+                    {/* Expanded Instructions Row */}
+                    {expandedInstructionsRow === index && (
+                      <TableRow className="bg-slate-50">
+                        <TableCell colSpan={6} className="p-3">
+                          <div className="flex items-center gap-3">
+                            <MessageSquare className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <Input
+                              value={medication.special_instructions || ''}
+                              onChange={(e) => updateMedication(index, 'special_instructions', e.target.value)}
+                              placeholder="Enter special instructions for this medication..."
+                              className="flex-1 h-10 text-sm border-slate-200 focus:border-purple-500"
+                              autoFocus
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setExpandedInstructionsRow(null)}
+                              className="h-10 px-3"
+                            >
+                              Done
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
@@ -891,7 +891,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
                   </div>
                   <p className="text-xs text-slate-600 mb-1">No medications found for</p>
                   <p className="text-sm font-medium text-slate-800 mb-2">"{medications[activeSearchRow]?.medicine_name}"</p>
-                  <Button 
+                  <Button
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -901,7 +901,7 @@ const EnhancedMedicationTable: React.FC<EnhancedMedicationTableProps> = React.me
                       e.stopPropagation();
                       handleAddNewMedication(activeSearchRow);
                     }}
-                    variant="outline" 
+                    variant="outline"
                     size="sm"
                     disabled={isCreatingMedication[activeSearchRow]}
                     className="text-blue-600 border-blue-600 hover:bg-blue-50 hover:text-blue-700 text-xs"

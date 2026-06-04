@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +33,9 @@ import {
   Heart,
   Activity,
   Thermometer,
-  Scale
+  Scale,
+  Video,
+  Edit
 } from 'lucide-react';
 import { adminConsultationApi, superAdminApi, patientApi, prescriptionApi, api } from '@/lib/api';
 import { formatDate, formatTime, formatDateTime } from '@/lib/utils';
@@ -92,6 +95,7 @@ interface Consultation {
   created_at: string;
   updated_at: string;
   meeting_link?: string;
+  doctor_meeting_link?: string;
   vital_signs?: {
     blood_pressure_systolic?: number;
     blood_pressure_diastolic?: number;
@@ -135,6 +139,7 @@ interface ConsultationFilters {
 }
 
 const SuperAdminConsultationManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [filteredConsultations, setFilteredConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -876,7 +881,7 @@ const SuperAdminConsultationManagement: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button
                         onClick={() => handleViewDetails(consultation)}
                         variant="outline"
@@ -895,6 +900,28 @@ const SuperAdminConsultationManagement: React.FC = () => {
                       >
                         <FileText className="w-3 h-3 mr-1" />
                         Prescription
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const vcLink = consultation.doctor_meeting_link || consultation.meeting_link || "https://meet.diracai.com/office";
+                          navigator.clipboard.writeText(vcLink);
+                          toast.success("VC Link copied to clipboard!");
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8 text-blue-600 hover:text-blue-700"
+                      >
+                        <Video className="w-3 h-3 mr-1" />
+                        Copy VC Link
+                      </Button>
+                      <Button
+                        onClick={() => navigate(`/consultation/${consultation.id}/workspace`)}
+                        variant="default"
+                        size="sm"
+                        className="bg-[#E17726] hover:bg-[#c9651e] text-white text-xs h-8"
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Write Prescription
                       </Button>
                     </div>
                   </div>
@@ -1057,6 +1084,33 @@ const SuperAdminConsultationManagement: React.FC = () => {
                       <span className="font-medium">Type:</span>
                       <span className="capitalize">{selectedConsultation.consultation_type.replace('_', ' ')}</span>
                     </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t justify-end">
+                    <Button
+                      onClick={() => {
+                        const vcLink = selectedConsultation.doctor_meeting_link || selectedConsultation.meeting_link || "https://meet.diracai.com/office";
+                        navigator.clipboard.writeText(vcLink);
+                        toast.success("VC Link copied to clipboard!");
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8 text-blue-600 hover:text-blue-700"
+                    >
+                      <Video className="w-3.5 h-3.5 mr-1" />
+                      Copy VC Link
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        navigate(`/consultation/${selectedConsultation.id}/workspace`);
+                      }}
+                      variant="default"
+                      size="sm"
+                      className="bg-[#E17726] hover:bg-[#c9651e] text-white text-xs h-8"
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-1" />
+                      Write Prescription
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

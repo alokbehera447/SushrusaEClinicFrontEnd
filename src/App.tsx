@@ -173,7 +173,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/consultation/:consultationId/workspace" element={
-              <ProtectedRoute requiredRole="doctor">
+              <ProtectedRoute requiredRole={["doctor", "superadmin", "admin"]}>
                 <ConsultationWorkspace />
               </ProtectedRoute>
             } />
