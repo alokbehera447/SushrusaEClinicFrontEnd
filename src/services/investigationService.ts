@@ -107,10 +107,9 @@ class InvestigationService {
   }
 
   // Create a new investigation test
-  async createTest(data: { name: string; category_id?: number }): Promise<InvestigationTest> {
-    const response = await api.post(`${this.baseUrl}/investigations/auto-create/`, data);
-    // API returns { success, data: { test, source }, ... }
-    return response.data?.data?.test || response.data?.test || response.data;
+  async createTest(data: Partial<InvestigationTest>): Promise<InvestigationTest> {
+    const response = await api.post(`${this.baseUrl}/investigations/tests/`, data);
+    return response.data?.data || response.data;
   }
 
   // Update an investigation test

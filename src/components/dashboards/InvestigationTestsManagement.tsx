@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { investigationService, InvestigationCategory, InvestigationTest } from '@/services/investigationService';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Filter, Search, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   isDarkMode?: boolean;
@@ -124,23 +125,36 @@ const InvestigationTestsManagement: React.FC<Props> = ({ isDarkMode }) => {
       description: form.description?.trim() || undefined,
       preparation_instructions: form.preparation_instructions?.trim() || undefined,
     };
-    if (editing) {
-      await investigationService.updateTest(editing.id, payload);
+
+    try {
+      if (editing) {
+        await investigationService.updateTest(editing.id, payload);
+        toast.success('Investigation test updated successfully');
+      } else {
+        await investigationService.createTest(payload);
+        toast.success('Investigation test created successfully');
+      }
       setShowForm(false);
-      // refresh local list
+      if (!editing) setPage(1);
       fetchTests();
-      return;
+    } catch (error: any) {
+      console.error('Failed to save investigation test:', error);
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to save investigation test';
+      toast.error(message);
     }
-    await investigationService.createTest({ name: payload.name, category_id: payload.category_id });
-    setShowForm(false);
-    setPage(1);
-    fetchTests();
   };
 
   const handleDelete = async (t: InvestigationTest) => {
     if (!confirm(`Delete test "${t.name}"?`)) return;
-    await investigationService.deleteTest(t.id);
-    fetchTests();
+    try {
+      await investigationService.deleteTest(t.id);
+      toast.success('Investigation test deleted successfully');
+      fetchTests();
+    } catch (error: any) {
+      console.error('Failed to delete investigation test:', error);
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to delete investigation test';
+      toast.error(message);
+    }
   };
 
   

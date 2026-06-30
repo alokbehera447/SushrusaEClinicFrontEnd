@@ -413,6 +413,43 @@ const SuperAdminConsultationManagement: React.FC = () => {
     setShowDetailModal(true);
   };
 
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleCompleteConsultationDirectly = async (id: string) => {
+    if (!confirm('Are you sure you want to mark this consultation as Completed?')) return;
+    setProcessingId(id);
+    try {
+      await adminConsultationApi.completeConsultation(id);
+      toast.success('Consultation marked as completed successfully');
+      loadConsultations(currentPage);
+      setShowDetailModal(false);
+    } catch (error: any) {
+      console.error('Failed to complete consultation:', error);
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to complete consultation';
+      toast.error(message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleCancelConsultationDirectly = async (id: string) => {
+    const reason = prompt('Please enter the reason for cancellation (optional):');
+    if (reason === null) return; // User clicked Cancel in prompt
+    setProcessingId(id);
+    try {
+      await adminConsultationApi.cancelConsultation(id, reason.trim() || undefined);
+      toast.success('Consultation cancelled successfully');
+      loadConsultations(currentPage);
+      setShowDetailModal(false);
+    } catch (error: any) {
+      console.error('Failed to cancel consultation:', error);
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to cancel consultation';
+      toast.error(message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleViewPrescription = async (consultationId: string) => {
     try {
       setLoadingPrescription(true);
@@ -923,6 +960,30 @@ const SuperAdminConsultationManagement: React.FC = () => {
                         <Edit className="w-3 h-3 mr-1" />
                         Write Prescription
                       </Button>
+                      {consultation.status !== 'completed' && consultation.status !== 'cancelled' && (
+                        <>
+                          <Button
+                            onClick={() => handleCompleteConsultationDirectly(consultation.id)}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-8 text-green-600 border-green-200 hover:bg-green-50"
+                            disabled={processingId === consultation.id}
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Complete
+                          </Button>
+                          <Button
+                            onClick={() => handleCancelConsultationDirectly(consultation.id)}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-8 text-red-600 border-red-200 hover:bg-red-50"
+                            disabled={processingId === consultation.id}
+                          >
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Cancel
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1111,6 +1172,30 @@ const SuperAdminConsultationManagement: React.FC = () => {
                       <Edit className="w-3.5 h-3.5 mr-1" />
                       Write Prescription
                     </Button>
+                    {selectedConsultation.status !== 'completed' && selectedConsultation.status !== 'cancelled' && (
+                      <>
+                        <Button
+                          onClick={() => handleCompleteConsultationDirectly(selectedConsultation.id)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 text-green-600 border-green-200 hover:bg-green-50"
+                          disabled={processingId === selectedConsultation.id}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          Complete
+                        </Button>
+                        <Button
+                          onClick={() => handleCancelConsultationDirectly(selectedConsultation.id)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 text-red-600 border-red-200 hover:bg-red-50"
+                          disabled={processingId === selectedConsultation.id}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" />
+                          Cancel
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
